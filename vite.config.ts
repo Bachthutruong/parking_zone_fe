@@ -19,4 +19,17 @@ export default defineConfig({
       },
     },
   },
+  // Build configuration for SPA
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+        },
+      },
+    },
+  },
+  // Base path for deployment
+  base: '/',
 }) 
