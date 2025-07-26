@@ -1,82 +1,61 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
 import { 
-//   Calendar,
-  Clock,
-  Car,
-  User,
+//   Calendar, 
+//   Clock, 
+//   Car, 
+  MapPin, 
+//   Building, 
+//   Sun, 
+//   Accessibility,
+  CheckCircle,
+  AlertCircle,
+  Info,
+  ArrowLeft,
+  ArrowRight,
 //   Phone,
 //   Mail,
-  Package,
-//   Users,
-//   Plane,
-  CheckCircle,
-//   AlertCircle,
-  Info,
-  CreditCard,
-//   MapPin,
+  User,
+//   CreditCard,
+  Receipt,
+//   Plus,
+//   Minus,
   ShoppingCart,
-  ArrowRight,
-  ArrowLeft,
-  Check,
-//   X
+  Tag,
+  FileText,
+  Shield,
+//   Star
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getSystemSettings } from '@/services/systemSettings';
-import { getParkingLots } from '@/services/parking';
-import { getAllAddonServices as getAddonServices } from '@/services/addonServices';
-import { createBooking } from '@/services/booking';
-import { validateDiscountCode } from '@/services/discountCodes';
-import type { SystemSettings, ParkingLot, AddonService } from '@/types';
-
-interface BookingFormData {
-  // Step 1: Terms agreement
-  agreedToTerms: boolean;
-  
-  // Step 2: Parking selection
-  parkingLotId: string;
-  checkInTime: string;
-  checkOutTime: string;
-  
-  // Step 3: Addon services
-  selectedAddonServices: string[];
-  
-  // Step 4: Discount code
-  discountCode: string;
-  
-  // Step 5: Customer information
-  driverName: string;
-  phone: string;
-  email: string;
-  licensePlate: string;
-  passengerCount: number;
-  luggageCount: number;
-  estimatedArrivalTime?: string;
-  flightNumber?: string;
-  notes?: string;
-}
+import { getSystemSettings, getParkingLots, getAllAddonServices as getAddonServices, createBooking } from '@/services';
+import type { SystemSettings, ParkingLot, AddonService, BookingFormData } from '@/types';
+import AvailabilityCalendar from '@/components/AvailabilityCalendar';
+import ConflictNotification from '@/components/ConflictNotification';
 
 const BookingPage: React.FC = () => {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
   const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
   const [addonServices, setAddonServices] = useState<AddonService[]>([]);
   const [availableSlots, setAvailableSlots] = useState<any[]>([]);
-  const [pricing, setPricing] = useState<any>(null);
-  console.log(pricing, 'pricing');
   console.log(availableSlots, 'availableSlots');
+  const [pricing, setPricing] = useState<any>(null);
   const [discountInfo, setDiscountInfo] = useState<any>(null);
-  const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
+//   const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [conflictingDays, setConflictingDays] = useState<string[]>([]);
   
   const [formData, setFormData] = useState<BookingFormData>({
     agreedToTerms: false,
@@ -90,7 +69,8 @@ const BookingPage: React.FC = () => {
     email: '',
     licensePlate: '',
     passengerCount: 1,
-    luggageCount: 0
+    luggageCount: 0,
+    termsAccepted: false
   });
 
   // Load initial data
@@ -107,7 +87,6 @@ const BookingPage: React.FC = () => {
         getParkingLots(),
         getAddonServices()
       ]);
-      console.log(settings, 'settings');
       setSystemSettings(settings);
       setParkingLots(lots);
       setAddonServices(services);
@@ -124,6 +103,11 @@ const BookingPage: React.FC = () => {
   useEffect(() => {
     if (formData.parkingLotId && formData.checkInTime && formData.checkOutTime) {
       checkAvailability();
+    } else {
+      // Clear availability data when no parking lot or time is selected
+      setAvailableSlots([]);
+      setPricing(null);
+      setConflictingDays([]);
     }
   }, [formData.parkingLotId, formData.checkInTime, formData.checkOutTime]);
 
@@ -143,64 +127,86 @@ const BookingPage: React.FC = () => {
       if (data.success) {
         setAvailableSlots(data.availableSlots);
         setPricing(data.pricing);
+        setConflictingDays([]); // No conflicts if available
+      } else {
+        setAvailableSlots([]);
+        setPricing(null);
+        // Calculate conflicting days
+        const conflicts = await calculateConflictingDays();
+        setConflictingDays(conflicts);
+        toast.error(data.message || 'Bãi đậu xe đã hết chỗ trong thời gian này');
       }
     } catch (error) {
       console.error('Error checking availability:', error);
+      toast.error('Lỗi kiểm tra tính khả dụng');
     }
   };
 
+  const calculateConflictingDays = async (): Promise<string[]> => {
+    if (!formData.checkInTime || !formData.checkOutTime) {
+      return [];
+    }
+
+    const conflicts: string[] = [];
+    const startDate = new Date(formData.checkInTime);
+    const endDate = new Date(formData.checkOutTime);
+    const currentDate = new Date(startDate);
+
+    while (currentDate <= endDate) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      try {
+        const response = await fetch('/api/bookings/check-availability', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            parkingLotId: formData.parkingLotId,
+            checkInTime: `${dateStr}T00:00:00.000Z`,
+            checkOutTime: `${dateStr}T23:59:59.999Z`
+          })
+        });
+        
+        const data = await response.json();
+        if (!data.success) {
+          conflicts.push(dateStr);
+        }
+      } catch (error) {
+        console.error('Error checking day availability:', error);
+        conflicts.push(dateStr);
+      }
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return conflicts;
+  };
+
   const handleDiscountCodeApply = async () => {
-    if (!formData.discountCode.trim()) {
+    if (!formData.discountCode?.trim()) {
       toast.error('Vui lòng nhập mã giảm giá');
       return;
     }
 
     try {
-      const discount = await validateDiscountCode({
-        code: formData.discountCode,
-        amount: calculateBasePrice() || 0
+      const response = await fetch('/api/bookings/apply-discount', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          discountCode: formData.discountCode,
+          parkingLotId: formData.parkingLotId,
+          checkInTime: formData.checkInTime,
+          checkOutTime: formData.checkOutTime,
+          addonServices: formData.selectedAddonServices
+        })
       });
-      
-      // Validate and clean discount data
-      const validateDiscountData = (data: any) => {
-        const clean = {
-          code: '',
-          type: 'percentage',
-          value: 0,
-          expiryDate: new Date().toISOString(),
-          description: ''
-        };
 
-        try {
-          if (data.code && typeof data.code === 'string') clean.code = data.code;
-          else if (data.discountCode && typeof data.discountCode === 'string') clean.code = data.discountCode;
-          else clean.code = formData.discountCode;
-
-          if (data.type && typeof data.type === 'string') clean.type = data.type;
-          else if (data.discountType && typeof data.discountType === 'string') clean.type = data.discountType;
-
-          if (data.value && typeof data.value === 'number') clean.value = data.value;
-          else if (data.discountValue && typeof data.discountValue === 'number') clean.value = data.discountValue;
-
-          if (data.expiryDate) clean.expiryDate = data.expiryDate;
-          else if (data.validTo) clean.expiryDate = data.validTo;
-
-          if (data.description && typeof data.description === 'string') clean.description = data.description;
-        } catch (error) {
-          console.error('Error validating discount data:', error);
-        }
-
-        return clean;
-      };
-
-      const formattedDiscount = validateDiscountData(discount);
-      
-      // Debug log
-      console.log('Original discount response:', discount);
-      console.log('Formatted discount:', formattedDiscount);
-      
-      setDiscountInfo(formattedDiscount);
-      toast.success('Mã giảm giá hợp lệ!');
+      const data = await response.json();
+      if (data.success) {
+        setDiscountInfo(data.discountInfo);
+        toast.success('Áp dụng mã giảm giá thành công!');
+      } else {
+        toast.error(data.message || 'Mã giảm giá không hợp lệ');
+        setDiscountInfo(null);
+      }
     } catch (error: any) {
       toast.error(error.message || 'Mã giảm giá không hợp lệ');
       setDiscountInfo(null);
@@ -224,22 +230,13 @@ const BookingPage: React.FC = () => {
       return 0;
     }
     
-    const durationHours = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+    const durationMs = checkOut.getTime() - checkIn.getTime();
+    const durationDays = Math.ceil(durationMs / (1000 * 60 * 60 * 24));
     
-    // Calculate total hours (minimum 1 hour)
-    const totalHours = Math.max(1, Math.ceil(durationHours));
+    // Calculate total days (minimum 1 day)
+    const daysToCharge = Math.max(1, durationDays);
     
-    const basePrice = selectedLot.basePrice * totalHours;
-    
-    // Debug log
-    console.log('Price calculation:', {
-      checkIn: formData.checkInTime,
-      checkOut: formData.checkOutTime,
-      durationHours,
-      totalHours,
-      basePricePerHour: selectedLot.basePrice,
-      totalBasePrice: basePrice
-    });
+    const basePrice = selectedLot.pricePerDay * daysToCharge;
     
     return basePrice;
   };
@@ -271,49 +268,27 @@ const BookingPage: React.FC = () => {
     return Math.max(0, total);
   };
 
-  const handleNextStep = () => {
-    if (currentStep === 1 && !formData.agreedToTerms) {
-      toast.error('Vui lòng đồng ý với các quy định');
-      return;
-    }
+  const getDurationText = () => {
+    if (!formData.checkInTime || !formData.checkOutTime) return '';
     
-    if (currentStep === 2) {
-      if (!formData.parkingLotId || !formData.checkInTime || !formData.checkOutTime) {
-        toast.error('Vui lòng chọn đầy đủ thông tin bãi đậu xe');
-        return;
-      }
-      
-      // Validate time
-      const checkIn = new Date(formData.checkInTime);
-      const checkOut = new Date(formData.checkOutTime);
-      if (checkOut <= checkIn) {
-        toast.error('Thời gian rời bãi phải lớn hơn thời gian vào bãi');
-        return;
-      }
-      
-      // Validate minimum duration (1 hour)
-      const durationHours = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
-      if (durationHours < 1) {
-        toast.error('Thời gian đặt chỗ tối thiểu là 1 giờ');
-        return;
+    const checkIn = new Date(formData.checkInTime);
+    const checkOut = new Date(formData.checkOutTime);
+    const durationDays = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Ensure minimum 1 day
+    const totalDays = Math.max(1, durationDays);
+    
+    if (totalDays < 30) { // Assuming 30 days is a reasonable threshold for days
+      return `${totalDays} ngày`;
+    } else {
+      const months = Math.floor(totalDays / 30);
+      const days = totalDays % 30;
+      if (days === 0) {
+        return `${months} tháng`;
+      } else {
+        return `${months} tháng ${days} ngày`;
       }
     }
-    
-    if (currentStep === 5) {
-      // Validate customer information
-      if (!formData.driverName || !formData.phone || !formData.licensePlate) {
-        toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
-        return;
-      }
-      setShowConfirmationDialog(true);
-      return;
-    }
-    
-    setCurrentStep(prev => prev + 1);
-  };
-
-  const handlePrevStep = () => {
-    setCurrentStep(prev => Math.max(1, prev - 1));
   };
 
   const handleSubmitBooking = async () => {
@@ -331,7 +306,7 @@ const BookingPage: React.FC = () => {
         passengerCount: formData.passengerCount,
         luggageCount: formData.luggageCount,
         addonServices: formData.selectedAddonServices,
-        discountCode: discountInfo ? formData.discountCode : undefined,
+        discountCode: discountInfo ? formData.discountCode || '' : undefined,
         estimatedArrivalTime: formData.estimatedArrivalTime,
         flightNumber: formData.flightNumber,
         notes: formData.notes,
@@ -339,26 +314,47 @@ const BookingPage: React.FC = () => {
       };
       
       const result = await createBooking(bookingData);
-      console.log(result, 'result');
+      
+      // Prepare confirmation data
+      const selectedLot = parkingLots.find(lot => lot._id === formData.parkingLotId);
+      const selectedAddonServices = formData.selectedAddonServices.map(serviceId => {
+        const service = addonServices.find(s => s._id === serviceId);
+        return {
+          name: service?.name || '',
+          price: service?.price || 0,
+          icon: service?.icon || ''
+        };
+      });
+
+      const confirmationData = {
+        bookingId: result.booking._id,
+        bookingNumber: result.booking.bookingNumber,
+        parkingLot: {
+          name: selectedLot?.name || '',
+          type: selectedLot?.type || '',
+          location: selectedLot?.location || ''
+        },
+        driverName: formData.driverName,
+        phone: formData.phone,
+        email: formData.email,
+        licensePlate: formData.licensePlate,
+        checkInTime: formData.checkInTime,
+        checkOutTime: formData.checkOutTime,
+        durationDays: pricing?.durationDays || 1,
+        totalAmount: result.booking.totalAmount,
+        finalAmount: result.booking.finalAmount,
+        addonServices: selectedAddonServices,
+        discountAmount: result.booking.discountAmount || 0,
+        paymentMethod: result.booking.paymentMethod || 'cash',
+        status: result.booking.status
+      };
+
       toast.success('Đặt chỗ thành công!');
       
-      // Reset form and redirect
-      setFormData({
-        agreedToTerms: false,
-        parkingLotId: '',
-        checkInTime: '',
-        checkOutTime: '',
-        selectedAddonServices: [],
-        discountCode: '',
-        driverName: '',
-        phone: '',
-        email: '',
-        licensePlate: '',
-        passengerCount: 1,
-        luggageCount: 0
+      // Navigate to confirmation page with data
+      navigate('/booking-confirmation', { 
+        state: { bookingData: confirmationData } 
       });
-      setCurrentStep(1);
-      setShowConfirmationDialog(false);
       
     } catch (error: any) {
       toast.error(error.message || 'Có lỗi xảy ra khi đặt chỗ');
@@ -373,8 +369,7 @@ const BookingPage: React.FC = () => {
   };
 
   const getParkingLotTypeBadge = (type: string) => {
-    const typeConfig = systemSettings?.parkingLotTypes.find(t => t.type === type);
-    console.log(typeConfig, 'typeConfig');
+    // const typeConfig = systemSettings?.parkingLotTypes.find(t => t.type === type);
     const badgeConfig = {
       indoor: { label: 'Trong nhà', variant: 'default' as const, color: 'bg-blue-100 text-blue-800' },
       outdoor: { label: 'Ngoài trời', variant: 'secondary' as const, color: 'bg-green-100 text-green-800' },
@@ -425,34 +420,558 @@ const BookingPage: React.FC = () => {
     });
   };
 
-  const getDurationText = () => {
-    if (!formData.checkInTime || !formData.checkOutTime) return '';
-    
-    const checkIn = new Date(formData.checkInTime);
-    const checkOut = new Date(formData.checkOutTime);
-    const durationHours = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
-    
-    // Ensure minimum 1 hour
-    const totalHours = Math.max(1, Math.ceil(durationHours));
-    
-    if (totalHours < 24) {
-      return `${totalHours} giờ`;
-    } else {
-      const days = Math.floor(totalHours / 24);
-      const hours = totalHours % 24;
-      if (hours === 0) {
-        return `${days} ngày`;
-      } else {
-        return `${days} ngày ${hours} giờ`;
+  const steps = [
+    { id: 1, title: 'Quy định', icon: <FileText className="h-4 w-4" /> },
+    { id: 2, title: 'Chọn bãi', icon: <MapPin className="h-4 w-4" /> },
+    { id: 3, title: 'Dịch vụ', icon: <ShoppingCart className="h-4 w-4" /> },
+    { id: 4, title: 'Giảm giá', icon: <Tag className="h-4 w-4" /> },
+    { id: 5, title: 'Thông tin', icon: <User className="h-4 w-4" /> }
+  ];
+
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Shield className="h-5 w-5 text-blue-600" />
+                  <span>Điều khoản và quy định</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="prose prose-sm max-w-none">
+                  <div dangerouslySetInnerHTML={{ __html: systemSettings?.bookingTerms || 'Đang tải điều khoản...' }} />
+                </div>
+                <Separator />
+                <div className="prose prose-sm max-w-none">
+                  <div dangerouslySetInnerHTML={{ __html: systemSettings?.bookingRules || 'Đang tải quy định...' }} />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <MapPin className="h-5 w-5 text-blue-600" />
+                  <span>Chọn bãi đậu xe và thời gian</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Parking Lot Type Selection */}
+                <div>
+                  <Label className="text-base font-medium">Loại bãi đậu xe</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                    {systemSettings?.parkingLotTypes?.filter(type => type.isActive).map((type) => {
+                      const lotsOfType = parkingLots.filter(lot => lot.type === type.type);
+                      const isSelected = formData.selectedParkingType === type.type;
+                      
+                      return (
+                        <Card 
+                          key={type.type}
+                          className={`cursor-pointer transition-all hover:shadow-md ${
+                            isSelected ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200'
+                          }`}
+                          onClick={() => {
+                            setFormData(prev => ({ 
+                              ...prev, 
+                              selectedParkingType: type.type,
+                              parkingLotId: '' // Reset parking lot selection when changing type
+                            }));
+                          }}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="text-2xl">{type.icon}</div>
+                              <div>
+                                <h3 className="font-medium">{type.name}</h3>
+                                <p className="text-sm text-gray-600">{type.description}</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {lotsOfType.length} bãi có sẵn
+                                </p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Available Parking Lots */}
+                {formData.selectedParkingType && parkingLots.length > 0 && (
+                  <div>
+                    <Label className="text-base font-medium">Bãi đậu xe khả dụng - {systemSettings?.parkingLotTypes?.find(t => t.type === formData.selectedParkingType)?.name}</Label>
+                    <div className="mt-3 space-y-3">
+                      {parkingLots
+                        .filter(lot => lot.type === formData.selectedParkingType)
+                        .map((lot) => (
+                          <Card 
+                            key={lot._id} 
+                            className={`cursor-pointer transition-all hover:shadow-md ${
+                              formData.parkingLotId === lot._id ? 'border-2 border-blue-200 bg-blue-50/50' : 'border-gray-200'
+                            }`}
+                            onClick={() => setFormData(prev => ({ ...prev, parkingLotId: lot._id }))}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <div className="text-2xl">{getParkingLotTypeIcon(lot.type)}</div>
+                                  <div>
+                                    <h3 className="font-medium">{lot.name}</h3>
+                                    <div className="flex items-center space-x-2 mt-1">
+                                      {getParkingLotTypeBadge(lot.type)}
+                                      <span className="text-sm text-gray-600">
+                                        {lot.totalSpaces} chỗ (kiểm tra lịch để biết chỗ trống)
+                                      </span>
+                                    </div>
+                                    {lot.description && (
+                                      <p className="text-sm text-gray-600 mt-1">{safeText(lot.description)}</p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-lg font-bold text-blue-600">
+                                    {formatCurrency(lot.pricePerDay)}/ngày
+                                  </p>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Time Selection */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="checkInTime">Thời gian vào bãi</Label>
+                    <Input
+                      id="checkInTime"
+                      type="datetime-local"
+                      value={formData.checkInTime}
+                      onChange={(e) => setFormData(prev => ({ ...prev, checkInTime: e.target.value }))}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="checkOutTime">Thời gian rời bãi</Label>
+                    <Input
+                      id="checkOutTime"
+                      type="datetime-local"
+                      value={formData.checkOutTime}
+                      onChange={(e) => setFormData(prev => ({ ...prev, checkOutTime: e.target.value }))}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                {/* Booking Information */}
+                {pricing && (
+                  <Card className="border-green-200 bg-green-50/50">
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-2 text-green-800">
+                        <Info className="h-5 w-5" />
+                        <span>Thông tin đặt chỗ</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Thời gian:</span>
+                        <span className="font-medium">
+                          {formatDateTime(formData.checkInTime)} - {formatDateTime(formData.checkOutTime)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Thời lượng:</span>
+                        <span className="font-medium">{getDurationText()}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Phí cơ bản:</span>
+                        <span className="font-bold text-green-600">{formatCurrency(pricing.totalPrice)}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Availability Calendar */}
+                {formData.parkingLotId && formData.checkInTime && formData.checkOutTime && (
+                  <AvailabilityCalendar
+                    parkingLotId={formData.parkingLotId}
+                    checkInTime={formData.checkInTime}
+                    checkOutTime={formData.checkOutTime}
+                    onDateSelect={(date) => {
+                      console.log('Selected date:', date);
+                    }}
+                    onDateRangeSelect={(checkIn, checkOut) => {
+                      // Convert date strings to datetime-local format
+                      const checkInDateTime = `${checkIn}T09:00`;
+                      const checkOutDateTime = `${checkOut}T18:00`;
+                      
+                      setFormData(prev => ({
+                        ...prev,
+                        checkInTime: checkInDateTime,
+                        checkOutTime: checkOutDateTime
+                      }));
+                      
+                      toast.success(`Đã chọn khoảng thời gian: ${new Date(checkIn).toLocaleDateString('vi-VN')} - ${new Date(checkOut).toLocaleDateString('vi-VN')}`);
+                    }}
+                  />
+                )}
+
+                {/* Conflict Notification */}
+                {conflictingDays.length > 0 && formData.checkInTime && formData.checkOutTime && (
+                  <ConflictNotification
+                    checkInTime={formData.checkInTime}
+                    checkOutTime={formData.checkOutTime}
+                    conflictingDays={conflictingDays}
+                    totalDays={Math.ceil((new Date(formData.checkOutTime).getTime() - new Date(formData.checkInTime).getTime()) / (1000 * 60 * 60 * 24))}
+                    availableDays={Math.ceil((new Date(formData.checkOutTime).getTime() - new Date(formData.checkInTime).getTime()) / (1000 * 60 * 60 * 24)) - conflictingDays.length}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <ShoppingCart className="h-5 w-5 text-blue-600" />
+                  <span>Dịch vụ bổ sung</span>
+                </CardTitle>
+                <CardDescription>
+                  Chọn các dịch vụ bổ sung cho chuyến đi của bạn
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {addonServices
+                    .filter(service => service.isActive)
+                    .map((service) => (
+                      <Card 
+                        key={service._id}
+                        className={`cursor-pointer transition-all hover:shadow-md ${
+                          formData.selectedAddonServices.includes(service._id) 
+                            ? 'border-blue-200 bg-blue-50/50' 
+                            : 'border-gray-200'
+                        }`}
+                        onClick={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            selectedAddonServices: prev.selectedAddonServices.includes(service._id)
+                              ? prev.selectedAddonServices.filter(id => id !== service._id)
+                              : [...prev.selectedAddonServices, service._id]
+                          }));
+                        }}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="text-2xl">{service.icon}</div>
+                            <div className="flex-1">
+                              <h3 className="font-medium">{service.name}</h3>
+                              <p className="text-sm text-gray-600">{service.description}</p>
+                              <p className="text-lg font-bold text-blue-600 mt-2">
+                                {formatCurrency(service.price)}
+                              </p>
+                            </div>
+                            {formData.selectedAddonServices.includes(service._id) && (
+                              <CheckCircle className="h-5 w-5 text-blue-600" />
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Tag className="h-5 w-5 text-blue-600" />
+                  <span>Mã giảm giá</span>
+                </CardTitle>
+                <CardDescription>
+                  Nhập mã giảm giá nếu bạn có
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex space-x-2">
+                  <Input
+                    placeholder="Nhập mã giảm giá"
+                    value={formData.discountCode}
+                    onChange={(e) => setFormData(prev => ({ ...prev, discountCode: e.target.value }))}
+                  />
+                  <Button onClick={handleDiscountCodeApply} disabled={!formData.discountCode?.trim()}>
+                    Áp dụng
+                  </Button>
+                </div>
+                
+                {discountInfo && (
+                  <Card className="border-green-200 bg-green-50/50">
+                    <CardContent className="p-4">
+                      <div className="flex items-center space-x-2 text-green-800">
+                        <CheckCircle className="h-5 w-5" />
+                        <span className="font-medium">Mã giảm giá đã được áp dụng!</span>
+                      </div>
+                      <p className="text-sm text-green-700 mt-1">
+                        Giảm {discountInfo.type === 'percentage' ? `${discountInfo.value}%` : formatCurrency(discountInfo.value)}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      case 5:
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <User className="h-5 w-5 text-blue-600" />
+                  <span>Thông tin cá nhân</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="driverName">Tên tài xế *</Label>
+                    <Input
+                      id="driverName"
+                      value={formData.driverName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, driverName: e.target.value }))}
+                      placeholder="Nhập tên tài xế"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="licensePlate">Biển số xe *</Label>
+                    <Input
+                      id="licensePlate"
+                      value={formData.licensePlate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, licensePlate: e.target.value }))}
+                      placeholder="Nhập biển số xe"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">Số điện thoại *</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="Nhập số điện thoại"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="email">Email *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="Nhập email"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="passengerCount">Số hành khách</Label>
+                    <Select
+                      value={formData.passengerCount.toString()}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, passengerCount: parseInt(value) }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
+                          <SelectItem key={num} value={num.toString()}>
+                            {num} người
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="luggageCount">Số hành lý</Label>
+                    <Select
+                      value={formData.luggageCount.toString()}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, luggageCount: parseInt(value) }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(num => (
+                          <SelectItem key={num} value={num.toString()}>
+                            {num} kiện
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="notes">Ghi chú</Label>
+                  <Textarea
+                    id="notes"
+                    value={formData.notes || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Ghi chú thêm (tùy chọn)"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="agreedToTerms"
+                    checked={formData.agreedToTerms}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, agreedToTerms: checked as boolean }))}
+                  />
+                  <Label htmlFor="agreedToTerms" className="text-sm">
+                    Tôi đồng ý với <span className="text-blue-600 hover:underline cursor-pointer">điều khoản và quy định</span>
+                  </Label>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Order Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Receipt className="h-5 w-5 text-blue-600" />
+                  <span>Tóm tắt đơn hàng</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Phí cơ bản ({pricing?.durationDays || 0} ngày)</span>
+                  <span className="font-semibold">{formatCurrency(calculateBasePrice())}</span>
+                </div>
+                
+                {formData.selectedAddonServices.length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-700">Dịch vụ bổ sung:</p>
+                      {formData.selectedAddonServices.map(serviceId => {
+                        const service = addonServices.find(s => s._id === serviceId);
+                        return (
+                          <div key={serviceId} className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">{service?.name}</span>
+                            <span>{formatCurrency(service?.price || 0)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+                
+                {discountInfo && (
+                  <>
+                    <Separator />
+                    <div className="flex justify-between items-center text-green-600">
+                      <span>Giảm giá</span>
+                      <span>-{discountInfo.type === 'percentage' ? `${discountInfo.value}%` : formatCurrency(discountInfo.value)}</span>
+                    </div>
+                  </>
+                )}
+                
+                <Separator />
+                <div className="flex justify-between items-center text-lg font-bold">
+                  <span>Tổng cộng</span>
+                  <span className="text-blue-600">{formatCurrency(calculateTotal())}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  const canProceedToNext = () => {
+    switch (currentStep) {
+      case 1:
+        return true; // Always can proceed from terms
+      case 2:
+        // Check if there are major conflicts
+        const totalDays = formData.checkInTime && formData.checkOutTime ? 
+          Math.ceil((new Date(formData.checkOutTime).getTime() - new Date(formData.checkInTime).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+        const conflictRatio = totalDays > 0 ? conflictingDays.length / totalDays : 0;
+        
+        return formData.parkingLotId && 
+               formData.checkInTime && 
+               formData.checkOutTime && 
+               pricing && 
+               conflictRatio < 0.5; // Allow if less than 50% conflicts
+      case 3:
+        return true; // Services are optional
+      case 4:
+        return true; // Discount is optional
+      case 5:
+        return formData.driverName && formData.phone && formData.email && formData.licensePlate && formData.agreedToTerms;
+      default:
+        return false;
+    }
+  };
+
+  const canGoBack = () => {
+    return currentStep > 1;
+  };
+
+  const handleNext = () => {
+    if (canProceedToNext()) {
+      setCurrentStep(prev => Math.min(prev + 1, 5));
+    } else if (currentStep === 2) {
+      // Show specific message for step 2 conflicts
+      const totalDays = formData.checkInTime && formData.checkOutTime ? 
+        Math.ceil((new Date(formData.checkOutTime).getTime() - new Date(formData.checkInTime).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+      const conflictRatio = totalDays > 0 ? conflictingDays.length / totalDays : 0;
+      
+      if (conflictRatio >= 0.5) {
+        toast.error('Có quá nhiều ngày xung đột. Vui lòng chọn khoảng thời gian khác.');
+      } else if (!formData.parkingLotId || !formData.checkInTime || !formData.checkOutTime) {
+        toast.error('Vui lòng chọn đầy đủ thông tin bãi đậu xe và thời gian.');
+      } else if (!pricing) {
+        toast.error('Vui lòng chờ hệ thống tính toán giá.');
       }
     }
   };
 
-  if (loading && !systemSettings) {
+  const handleBack = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 1));
+  };
+
+  if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Đang tải...</p>
         </div>
       </div>
     );
@@ -460,565 +979,103 @@ const BookingPage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h2 className="text-red-800 font-semibold">Lỗi</h2>
-          <p className="text-red-700">{error}</p>
-          <Button 
-            onClick={() => window.location.reload()} 
-            className="mt-2"
-            variant="outline"
-          >
-            Thử lại
-          </Button>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h1 className="text-xl font-bold text-gray-800 mb-2">Có lỗi xảy ra</h1>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={loadInitialData}>Thử lại</Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Đặt chỗ đậu xe</h1>
-        <p className="text-gray-600">Hoàn thành các bước để đặt chỗ đậu xe</p>
-        {process.env.NODE_ENV === 'development' && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={debugData}
-            className="mt-2"
-          >
-            Debug Data
-          </Button>
-        )}
-      </div>
-
-      {/* Progress Steps */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          {[1, 2, 3, 4, 5].map((step) => (
-            <div key={step} className="flex items-center">
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                currentStep >= step ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
-              }`}>
-                {currentStep > step ? <Check className="h-4 w-4" /> : step}
-              </div>
-              {step < 5 && (
-                <div className={`w-16 h-1 mx-2 ${
-                  currentStep > step ? 'bg-blue-600' : 'bg-gray-200'
-                }`} />
-              )}
-            </div>
-          ))}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
+      <div className="container mx-auto px-4 max-w-4xl">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Đặt chỗ đậu xe</h1>
+          <p className="text-gray-600">Chọn bãi đậu xe và thời gian phù hợp</p>
         </div>
-        <div className="flex justify-between mt-2 text-sm text-gray-600">
-          <span>Quy định</span>
-          <span>Chọn bãi</span>
-          <span>Dịch vụ</span>
-          <span>Giảm giá</span>
-          <span>Thông tin</span>
-        </div>
-      </div>
 
-      {/* Step 1: Terms and Conditions */}
-      {currentStep === 1 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Info className="h-5 w-5" />
-              <span>Quy định và điều khoản</span>
-            </CardTitle>
-            <CardDescription>
-              Vui lòng đọc kỹ các quy định trước khi đặt chỗ
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-semibold mb-2">Lưu ý quan trọng:</h4>
-              <div className="text-sm text-gray-700 whitespace-pre-line">
-                {systemSettings?.bookingTerms || 'Vui lòng đọc kỹ các quy định và điều khoản trước khi đặt chỗ đậu xe.'}
-              </div>
-            </div>
-            
-            <div className="bg-yellow-50 p-4 rounded-lg">
-              <h4 className="font-semibold mb-2">Quy định bãi đậu xe:</h4>
-              <div className="text-sm text-gray-700 whitespace-pre-line">
-                {systemSettings?.bookingRules || `1. Khách hàng phải đến đúng giờ đã đặt.
-2. Không được để xe quá thời gian đã đặt.
-3. Tuân thủ các quy định an toàn của bãi đậu xe.
-4. Khách hàng chịu trách nhiệm về tài sản trong xe.
-5. Bãi đậu xe không chịu trách nhiệm về thiệt hại do thiên tai.`}
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="agreedToTerms"
-                checked={formData.agreedToTerms}
-                onCheckedChange={(checked) => 
-                  setFormData(prev => ({ ...prev, agreedToTerms: checked as boolean }))
-                }
-              />
-              <Label htmlFor="agreedToTerms" className="text-sm">
-                Tôi đã đọc và đồng ý với các quy định trên
-              </Label>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 2: Parking Selection */}
-      {currentStep === 2 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Car className="h-5 w-5" />
-              <span>Chọn bãi đậu xe và thời gian</span>
-            </CardTitle>
-            <CardDescription>
-              Chọn loại bãi đậu xe và thời gian vào/rời bãi
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Parking Lot Selection */}
-            <div>
-              <Label className="text-base font-medium">Loại bãi đậu xe</Label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-                {parkingLots.map((lot) => (
-                  <Card
-                    key={lot._id}
-                    className={`cursor-pointer transition-all ${
-                      formData.parkingLotId === lot._id
-                        ? 'ring-2 ring-blue-500 bg-blue-50'
-                        : 'hover:shadow-md'
-                    }`}
-                    onClick={() => setFormData(prev => ({ ...prev, parkingLotId: lot._id }))}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-2xl">{getParkingLotTypeIcon(lot.type)}</span>
-                        {getParkingLotTypeBadge(lot.type)}
-                      </div>
-                      <div>
-                        <h4 className="font-semibold">{safeText(lot.name)}</h4>
-                        <p className="text-sm text-gray-600 mb-2">{safeText(lot.description)}</p>
-                        <p className="text-sm font-medium text-blue-600">
-                          {formatCurrency(lot.basePrice)}/giờ
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-
-            {/* Time Selection */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="checkInTime">Thời gian vào bãi</Label>
-                <Input
-                  id="checkInTime"
-                  type="datetime-local"
-                  value={formData.checkInTime}
-                  onChange={(e) => setFormData(prev => ({ ...prev, checkInTime: e.target.value }))}
-                  min={new Date().toISOString().slice(0, 16)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="checkOutTime">Thời gian rời bãi</Label>
-                <Input
-                  id="checkOutTime"
-                  type="datetime-local"
-                  value={formData.checkOutTime}
-                  onChange={(e) => setFormData(prev => ({ ...prev, checkOutTime: e.target.value }))}
-                  min={formData.checkInTime || new Date().toISOString().slice(0, 16)}
-                />
-                {formData.checkInTime && formData.checkOutTime && 
-                 new Date(formData.checkOutTime) <= new Date(formData.checkInTime) && (
-                  <p className="text-red-500 text-sm mt-1">Thời gian rời bãi phải lớn hơn thời gian vào bãi</p>
-                )}
-              </div>
-            </div>
-
-            {/* Duration and Pricing Preview */}
-            {formData.checkInTime && formData.checkOutTime && (
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Clock className="h-5 w-5 text-blue-600" />
-                  <span className="font-semibold text-blue-800">Thông tin đặt chỗ</span>
-                </div>
-                <div className="text-sm text-blue-700 space-y-1">
-                  <p>Thời gian: {formatDateTime(formData.checkInTime)} - {formatDateTime(formData.checkOutTime)}</p>
-                  <p>Thời lượng: {getDurationText()}</p>
-                  {formData.parkingLotId && (
-                    <p>Phí cơ bản: {formatCurrency(calculateBasePrice())}</p>
+        {/* Progress Bar */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            {steps.map((step, index) => (
+              <div key={step.id} className="flex items-center">
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                  currentStep >= step.id 
+                    ? 'bg-blue-600 border-blue-600 text-white' 
+                    : 'bg-white border-gray-300 text-gray-500'
+                }`}>
+                  {currentStep > step.id ? (
+                    <CheckCircle className="h-4 w-4" />
+                  ) : (
+                    step.icon
                   )}
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 3: Addon Services */}
-      {currentStep === 3 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Package className="h-5 w-5" />
-              <span>Dịch vụ bổ sung</span>
-            </CardTitle>
-            <CardDescription>
-              Chọn các dịch vụ bổ sung (tùy chọn)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {addonServices.map((service) => (
-                <Card
-                  key={service._id}
-                  className={`cursor-pointer transition-all ${
-                    formData.selectedAddonServices.includes(service._id)
-                      ? 'ring-2 ring-blue-500 bg-blue-50'
-                      : 'hover:shadow-md'
-                  }`}
-                  onClick={() => {
-                    const isSelected = formData.selectedAddonServices.includes(service._id);
-                    setFormData(prev => ({
-                      ...prev,
-                      selectedAddonServices: isSelected
-                        ? prev.selectedAddonServices.filter(id => id !== service._id)
-                        : [...prev.selectedAddonServices, service._id]
-                    }));
-                  }}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-2xl">{service.icon || '📦'}</span>
-                        <div>
-                          <h4 className="font-semibold">{safeText(service.name) || 'Dịch vụ'}</h4>
-                          <p className="text-sm text-gray-600">{safeText(service.description) || 'Mô tả dịch vụ'}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium text-blue-600">
-                          {service.price === 0 ? 'Miễn phí' : formatCurrency(service.price)}
-                        </p>
-                        {formData.selectedAddonServices.includes(service._id) && (
-                          <CheckCircle className="h-5 w-5 text-green-600 mt-1" />
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 4: Discount Code */}
-      {currentStep === 4 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <CreditCard className="h-5 w-5" />
-              <span>Mã giảm giá</span>
-            </CardTitle>
-            <CardDescription>
-              Nhập mã giảm giá nếu có (tùy chọn)
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex space-x-2">
-              <div className="flex-1">
-                <Label htmlFor="discountCode">Mã giảm giá</Label>
-                <Input
-                  id="discountCode"
-                  placeholder="Nhập mã giảm giá"
-                  value={formData.discountCode}
-                  onChange={(e) => setFormData(prev => ({ ...prev, discountCode: e.target.value }))}
-                />
-              </div>
-              <div className="flex items-end">
-                <Button onClick={handleDiscountCodeApply}>
-                  Áp dụng
-                </Button>
-              </div>
-            </div>
-
-            {discountInfo && discountInfo.code && (
-              <div className="bg-green-50 p-4 rounded-lg">
-                <div className="flex items-center space-x-2 mb-2">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="font-semibold text-green-800">Mã giảm giá hợp lệ</span>
-                </div>
-                <div className="text-sm text-green-700">
-                  {(() => {
-                    try {
-                      return (
-                        <>
-                          <p>Mã: {safeText(discountInfo.code)}</p>
-                          <p>Giảm giá: {discountInfo.type === 'percentage' ? `${discountInfo.value || 0}%` : formatCurrency(discountInfo.value || 0)}</p>
-                          {discountInfo.expiryDate && (
-                            <p>Hạn sử dụng: {new Date(discountInfo.expiryDate).toLocaleDateString('vi-VN')}</p>
-                          )}
-                        </>
-                      );
-                    } catch (error) {
-                      console.error('Error rendering discount info:', error);
-                      return <p>Lỗi hiển thị thông tin mã giảm giá</p>;
-                    }
-                  })()}
-                </div>
-              </div>
-            )}
-
-            {/* Price Summary */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-semibold mb-2">Tóm tắt giá</h4>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span>Phí đậu xe ({getDurationText()}):</span>
-                  <span>{formatCurrency(calculateBasePrice())}</span>
-                </div>
-                {formData.selectedAddonServices.length > 0 && (
-                  <div className="flex justify-between">
-                    <span>Dịch vụ bổ sung:</span>
-                    <span>{formatCurrency(
-                      formData.selectedAddonServices.reduce((total, serviceId) => {
-                        const service = addonServices.find(s => s._id === serviceId);
-                        return total + (service?.price || 0);
-                      }, 0)
-                    )}</span>
-                  </div>
+                <span className={`ml-2 text-sm font-medium ${
+                  currentStep >= step.id ? 'text-blue-600' : 'text-gray-500'
+                }`}>
+                  {step.title}
+                </span>
+                {index < steps.length - 1 && (
+                  <div className={`w-16 h-0.5 mx-4 ${
+                    currentStep > step.id ? 'bg-blue-600' : 'bg-gray-300'
+                  }`} />
                 )}
-                {discountInfo && discountInfo.value && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Giảm giá:</span>
-                    <span>-{discountInfo.type === 'percentage' ? 
-                      formatCurrency((calculateBasePrice() * discountInfo.value / 100)) : 
-                      formatCurrency(discountInfo.value)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between font-semibold border-t pt-1">
-                  <span>Tổng cộng:</span>
-                  <span>{formatCurrency(calculateTotal())}</span>
-                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 5: Customer Information */}
-      {currentStep === 5 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <User className="h-5 w-5" />
-              <span>Thông tin khách hàng</span>
-            </CardTitle>
-            <CardDescription>
-              Điền thông tin cá nhân để hoàn tất đặt chỗ
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Basic Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="driverName">Họ tên tài xế *</Label>
-                <Input
-                  id="driverName"
-                  placeholder="Nhập họ tên"
-                  value={formData.driverName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, driverName: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone">Số điện thoại *</Label>
-                <Input
-                  id="phone"
-                  placeholder="Nhập số điện thoại"
-                  value={formData.phone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Nhập email"
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="licensePlate">Biển số xe *</Label>
-                <Input
-                  id="licensePlate"
-                  placeholder="Nhập biển số xe"
-                  value={formData.licensePlate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, licensePlate: e.target.value.toUpperCase() }))}
-                />
-              </div>
-            </div>
-
-            {/* Passenger and Luggage */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="passengerCount">Số lượng hành khách</Label>
-                <Select
-                  value={formData.passengerCount.toString()}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, passengerCount: parseInt(value) }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
-                      <SelectItem key={num} value={num.toString()}>
-                        {num} người
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="luggageCount">Số lượng hành lý</Label>
-                <Select
-                  value={formData.luggageCount.toString()}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, luggageCount: parseInt(value) }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(num => (
-                      <SelectItem key={num} value={num.toString()}>
-                        {num} kiện
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Additional Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="estimatedArrivalTime">Thời gian dự kiến đến</Label>
-                <Input
-                  id="estimatedArrivalTime"
-                  type="datetime-local"
-                  value={formData.estimatedArrivalTime || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, estimatedArrivalTime: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="flightNumber">Số chuyến bay</Label>
-                <Input
-                  id="flightNumber"
-                  placeholder="Nhập số chuyến bay"
-                  value={formData.flightNumber || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, flightNumber: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="notes">Ghi chú</Label>
-              <Textarea
-                id="notes"
-                placeholder="Ghi chú thêm (nếu có)"
-                value={formData.notes || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                rows={3}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Navigation Buttons */}
-      <div className="flex justify-between mt-8">
-        <Button
-          variant="outline"
-          onClick={handlePrevStep}
-          disabled={currentStep === 1}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Quay lại
-        </Button>
-        
-        <Button
-          onClick={handleNextStep}
-          disabled={loading}
-        >
-          {currentStep === 5 ? (
-            <>
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              Gửi đặt chỗ
-            </>
-          ) : (
-            <>
-              Tiếp tục
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </>
-          )}
-        </Button>
-      </div>
-
-      {/* Confirmation Dialog */}
-      <Dialog open={showConfirmationDialog} onOpenChange={setShowConfirmationDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Xác nhận đặt chỗ</DialogTitle>
-            <DialogDescription>
-              Vui lòng kiểm tra lại thông tin trước khi xác nhận
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-semibold mb-2">Thông tin đặt chỗ:</h4>
-              <div className="text-sm space-y-1">
-                <p><strong>Bãi đậu:</strong> {parkingLots.find(l => l._id === formData.parkingLotId)?.name}</p>
-                <p><strong>Thời gian:</strong> {formatDateTime(formData.checkInTime)} - {formatDateTime(formData.checkOutTime)}</p>
-                <p><strong>Thời lượng:</strong> {getDurationText()}</p>
-                <p><strong>Tổng tiền:</strong> {formatCurrency(calculateTotal())}</p>
-              </div>
-            </div>
-            
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-semibold mb-2">Thông tin khách hàng:</h4>
-              <div className="text-sm space-y-1">
-                <p><strong>Tên:</strong> {formData.driverName}</p>
-                <p><strong>Điện thoại:</strong> {formData.phone}</p>
-                <p><strong>Biển số:</strong> {formData.licensePlate}</p>
-              </div>
-            </div>
+            ))}
           </div>
+          <Progress value={(currentStep / steps.length) * 100} className="h-2" />
+        </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmationDialog(false)}>
-              Hủy
+        {/* Step Content */}
+        <div className="mb-8">
+          {renderStepContent()}
+        </div>
+
+        {/* Navigation */}
+        <div className="flex justify-between items-center">
+          <Button
+            variant="outline"
+            onClick={handleBack}
+            disabled={!canGoBack()}
+            className="flex items-center space-x-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Quay lại</span>
+          </Button>
+
+          {currentStep === 5 ? (
+            <Button
+              onClick={handleSubmitBooking}
+              disabled={!canProceedToNext() || loading}
+              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
+            >
+              <span>Đặt chỗ</span>
+              <ArrowRight className="h-4 w-4" />
             </Button>
-            <Button onClick={handleSubmitBooking} disabled={loading}>
-              {loading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              ) : (
-                <>
-                  <Check className="h-4 w-4 mr-2" />
-                  Xác nhận đặt chỗ
-                </>
-              )}
+          ) : (
+            <Button
+              onClick={handleNext}
+              disabled={!canProceedToNext()}
+              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
+            >
+              <span>Tiếp tục</span>
+              <ArrowRight className="h-4 w-4" />
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          )}
+        </div>
+
+        {/* Debug Button */}
+        <div className="mt-8 text-center">
+          <Button variant="outline" size="sm" onClick={debugData}>
+            Debug Data
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };

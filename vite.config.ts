@@ -15,6 +15,7 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'https://parking-zone-be.onrender.com',
+        // target: 'http://localhost:5002',
         changeOrigin: true,
       },
     },

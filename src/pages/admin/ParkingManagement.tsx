@@ -29,7 +29,7 @@ interface ParkingLotFormData {
   type: 'indoor' | 'outdoor' | 'disabled';
   totalSpaces: number;
   basePrice: number;
-  pricePerHour: number;
+  pricePerDay: number;
   description: string;
   location: string;
   features: string[];
@@ -57,7 +57,7 @@ const ParkingManagement: React.FC = () => {
     type: 'indoor',
     totalSpaces: 10,
     basePrice: 100,
-    pricePerHour: 50,
+    pricePerDay: 50,
     description: '',
     location: '',
     features: [],
@@ -134,7 +134,7 @@ const ParkingManagement: React.FC = () => {
       type: 'indoor',
       totalSpaces: 10,
       basePrice: 100,
-      pricePerHour: 50,
+      pricePerDay: 50,
       description: '',
       location: '',
       features: [],
@@ -160,7 +160,7 @@ const ParkingManagement: React.FC = () => {
       type: lot.type,
       totalSpaces: lot.totalSpaces,
       basePrice: lot.basePrice,
-      pricePerHour: lot.pricePerHour,
+      pricePerDay: lot.pricePerDay,
       description: lot.description || '',
       location: lot.location || '',
       features: lot.features || [],
@@ -368,7 +368,7 @@ const ParkingManagement: React.FC = () => {
                   <TableCell>
                     <div className="space-y-1 text-sm">
                       <div>Cơ bản: {formatCurrency(lot.basePrice)}</div>
-                      <div>Theo giờ: {formatCurrency(lot.pricePerHour)}</div>
+                      <div>Theo ngày: {formatCurrency(lot.pricePerDay)}</div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -496,13 +496,13 @@ const ParkingManagement: React.FC = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="pricePerHour">Giá theo giờ (TWD) *</Label>
+                <Label htmlFor="pricePerDay">Giá theo ngày (TWD) *</Label>
                 <Input
-                  id="pricePerHour"
+                  id="pricePerDay"
                   type="number"
                   min="0"
-                  value={formData.pricePerHour}
-                  onChange={(e) => setFormData(prev => ({ ...prev, pricePerHour: parseInt(e.target.value) }))}
+                  value={formData.pricePerDay}
+                  onChange={(e) => setFormData(prev => ({ ...prev, pricePerDay: parseInt(e.target.value) }))}
                 />
               </div>
             </div>

@@ -22,7 +22,7 @@ export interface ParkingLot {
   totalSpaces: number;
   availableSpaces: number;
   basePrice: number;
-  pricePerHour: number;
+  pricePerDay: number;
   price?: number; // Current price for selected date
   specialPrices: Array<{
     _id: string;
@@ -103,7 +103,7 @@ export interface Booking {
   actualCheckOutTime?: string;
   createdBy?: User;
   isManualBooking: boolean;
-  durationHours?: number;
+  durationDays?: number;
   isOverdue?: boolean;
   createdAt: string;
   updatedAt: string;
@@ -201,6 +201,7 @@ export interface LoginData {
 
 export interface BookingFormData {
   parkingLotId: string;
+  selectedParkingType?: string;
   checkInTime: string;
   checkOutTime: string;
   addonServices?: string[];
@@ -215,11 +216,15 @@ export interface BookingFormData {
   flightNumber?: string;
   notes?: string;
   termsAccepted: boolean;
+  // Additional fields for the booking form
+  agreedToTerms: boolean;
+  selectedAddonServices: string[];
 }
 
 export interface PriceCalculation {
   basePrice: number;
-  durationHours: number;
+  durationDays: number;
+  daysToCharge: number;
   totalBasePrice: number;
   addonTotal: number;
   addonDetails: Array<{
@@ -273,7 +278,7 @@ export interface ParkingLotStats {
   occupancyRate: number;
   currentBookings: number;
   basePrice: number;
-  pricePerHour: number;
+  pricePerDay: number;
 }
 
 export interface CurrentParkingStatus {

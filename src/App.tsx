@@ -6,6 +6,7 @@ import AdminLayout from './components/AdminLayout'
 import StaffLayout from './components/StaffLayout'
 import HomePage from './pages/HomePage'
 import BookingPage from './pages/BookingPage'
+import BookingConfirmationPage from './pages/BookingConfirmationPage'
 import LookupPage from './pages/LookupPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -33,6 +34,7 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<HomePage />} />
             <Route path="booking" element={<BookingPage />} />
+            <Route path="booking-confirmation" element={<BookingConfirmationPage />} />
             <Route path="lookup" element={<LookupPage />} />
             <Route path="login" element={<LoginPage />} />
             <Route path="register" element={<RegisterPage />} />
