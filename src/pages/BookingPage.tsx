@@ -400,15 +400,6 @@ const BookingPage: React.FC = () => {
     return String(value);
   };
 
-  // Debug function to log all data
-  const debugData = () => {
-    console.log('Current state:', {
-      parkingLots,
-      addonServices,
-      discountInfo,
-      formData
-    });
-  };
 
   const formatDateTime = (dateTime: string) => {
     return new Date(dateTime).toLocaleString('vi-VN', {
@@ -1067,13 +1058,6 @@ const BookingPage: React.FC = () => {
               <ArrowRight className="h-4 w-4" />
             </Button>
           )}
-        </div>
-
-        {/* Debug Button */}
-        <div className="mt-8 text-center">
-          <Button variant="outline" size="sm" onClick={debugData}>
-            Debug Data
-          </Button>
         </div>
       </div>
     </div>
