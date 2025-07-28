@@ -2,9 +2,9 @@ import type { ParkingType, AddonService } from './types';
 import { Building, Sun, Accessibility, Car, Luggage, Wind, Sparkles, Plane } from 'lucide-react';
 
 export const parkingTypes: ParkingType[] = [
-  { id: 'indoor', name: 'Trong nhà', icon: Building, basePrice: 100 },
-  { id: 'outdoor', name: 'Ngoài trời', icon: Sun, basePrice: 80 },
-  { id: 'disabled', name: 'Khu vực dành cho người khuyết tật', icon: Accessibility, basePrice: 80 },
+  { id: 'indoor', name: 'Trong nhà', icon: Building, pricePerDay: 100 },
+  { id: 'outdoor', name: 'Ngoài trời', icon: Sun, pricePerDay: 80 },
+  { id: 'disabled', name: 'Khu vực dành cho người khuyết tật', icon: Accessibility, pricePerDay: 80 },
 ];
 
 export const addonServices: (Omit<AddonService, 'id'> & { id: string, icon: any})[] = [

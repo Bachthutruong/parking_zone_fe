@@ -9,7 +9,7 @@ import {
   Building2,
   Package,
   Tag,
-  FileText,
+  // FileText,
   MessageSquare,
   // BarChart3,
   Settings,
@@ -39,11 +39,10 @@ const AdminLayout: React.FC = () => {
 
     const adminOnlyItems = [
       { path: '/admin/users', icon: Users, label: 'Người dùng', exact: false, roles: ['admin'] },
-      { path: '/admin/parking', icon: Car, label: 'Bãi đậu xe', exact: false, roles: ['admin'] },
-      { path: '/admin/parking-types', icon: Building2, label: 'Loại bãi đậu xe', exact: false, roles: ['admin'] },
+      { path: '/admin/parking-types', icon: Building2, label: 'Bãi đậu xe', exact: false, roles: ['admin'] },
       { path: '/admin/services', icon: Package, label: 'Dịch vụ bổ sung', exact: false, roles: ['admin'] },
       { path: '/admin/discounts', icon: Tag, label: 'Mã giảm giá', exact: false, roles: ['admin'] },
-      { path: '/admin/terms', icon: FileText, label: 'Điều khoản', exact: false, roles: ['admin'] },
+      // { path: '/admin/terms', icon: FileText, label: 'Điều khoản', exact: false, roles: ['admin'] },
       { path: '/admin/notifications', icon: MessageSquare, label: 'Thông báo', exact: false, roles: ['admin'] },
 
       { path: '/admin/settings', icon: Settings, label: 'Cài đặt hệ thống', exact: false, roles: ['admin'] },

@@ -14,11 +14,8 @@ import AdminDashboard from './pages/admin/Dashboard'
 import AdminBookings from './pages/admin/Bookings'
 import AdminUsers from './pages/admin/Users'
 import AdminSettings from './pages/admin/Settings'
-import AdminParking from './pages/admin/ParkingManagement'
 import AdminParkingTypes from './pages/admin/ParkingTypes'
 import AdminDiscounts from './pages/admin/Discounts'
-import AdminTerms from './pages/admin/Terms'
-
 import AdminServices from './pages/admin/Services'
 import AdminNotifications from './pages/admin/Notifications'
 import StaffDashboard from './pages/staff/Dashboard'
@@ -47,13 +44,10 @@ function App() {
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="bookings" element={<AdminBookings />} />
               <Route path="users" element={<AdminUsers />} />
-              <Route path="parking" element={<AdminParking />} />
               <Route path="parking-types" element={<AdminParkingTypes />} />
               <Route path="services" element={<AdminServices />} />
               <Route path="discounts" element={<AdminDiscounts />} />
-              <Route path="terms" element={<AdminTerms />} />
               <Route path="notifications" element={<AdminNotifications />} />
-
               <Route path="settings" element={<AdminSettings />} />
             </Route>
           </Route>

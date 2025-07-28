@@ -73,8 +73,10 @@ const BookingsPage: React.FC = () => {
       setSelectedBooking(null);
       setNewStatus('pending');
       loadBookings();
-    } catch (error) {
-      toast.error('Cập nhật trạng thái thất bại');
+    } catch (error: any) {
+      console.error('Status update error:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Cập nhật trạng thái thất bại';
+      toast.error(errorMessage);
     }
   };
 
@@ -253,10 +255,10 @@ const BookingsPage: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <div className="font-medium">{booking.parkingLot.name}</div>
+                          <div className="font-medium">{booking.parkingType.name}</div>
                           <div className="text-sm text-gray-600">
-                            {booking.parkingLot.type === 'indoor' ? '🏢 Trong nhà' : 
-                             booking.parkingLot.type === 'outdoor' ? '🌤 Ngoài trời' : '♿️ Khuyết tật'}
+                            {(booking.parkingType.type || 'indoor') === 'indoor' ? '🏢 Trong nhà' : 
+                             (booking.parkingType.type || 'indoor') === 'outdoor' ? '🌤 Ngoài trời' : '♿️ Khuyết tật'}
                           </div>
                         </div>
                       </TableCell>
@@ -377,8 +379,8 @@ const BookingsPage: React.FC = () => {
                 <div>
                   <h4 className="font-semibold mb-2">Thông tin đặt chỗ</h4>
                   <div className="space-y-2 text-sm">
-                    <div><strong>Bãi đậu:</strong> {selectedBooking.parkingLot.name}</div>
-                    <div><strong>Loại:</strong> {selectedBooking.parkingLot.type}</div>
+                    <div><strong>Bãi đậu:</strong> {selectedBooking.parkingType.name}</div>
+                    <div><strong>Loại:</strong> {selectedBooking.parkingType.type || 'indoor'}</div>
                     <div><strong>Vào:</strong> {formatDateTime(selectedBooking.checkInTime)}</div>
                     <div><strong>Ra:</strong> {formatDateTime(selectedBooking.checkOutTime)}</div>
                     <div><strong>Trạng thái:</strong> {getStatusBadge(selectedBooking.status)}</div>

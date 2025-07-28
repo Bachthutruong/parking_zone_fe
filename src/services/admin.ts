@@ -1,5 +1,5 @@
 import api from './api';
-import { DashboardStats, Booking, User, ParkingLot, SystemSettings, BookingStats, ParkingLotStats, CurrentParkingStatus } from '../types';
+import { DashboardStats, Booking, User, SystemSettings, BookingStats, ParkingTypeStats, CurrentParkingStatus } from '../types';
 
 // Dashboard
 export const getDashboardStats = async (): Promise<DashboardStats> => {
@@ -17,9 +17,9 @@ export const getBookingStats = async (period: string): Promise<BookingStats> => 
   return response.data;
 };
 
-export const getParkingLotStats = async (): Promise<ParkingLotStats[]> => {
-  const response = await api.get('/admin/parking-lots/stats');
-  return response.data.parkingLots;
+export const getParkingTypeStats = async (): Promise<ParkingTypeStats[]> => {
+  const response = await api.get('/admin/parking-types/stats');
+  return response.data.parkingTypes;
 };
 
 export const getCurrentParkingStatus = async (): Promise<CurrentParkingStatus> => {
@@ -32,6 +32,8 @@ export const getAllBookings = async (params?: {
   status?: string;
   dateFrom?: string;
   dateTo?: string;
+  search?: string;
+  parkingTypeId?: string;
   page?: number;
   limit?: number;
 }): Promise<{ bookings: Booking[]; total: number; page: number; totalPages: number }> => {
@@ -40,7 +42,7 @@ export const getAllBookings = async (params?: {
 };
 
 export const updateBookingStatus = async (bookingId: string, status: string) => {
-  const response = await api.put(`/admin/bookings/${bookingId}/status`, { status });
+  const response = await api.patch(`/admin/bookings/${bookingId}/status`, { status });
   return response.data;
 };
 
@@ -60,14 +62,34 @@ export const getAllUsers = async (params?: {
   return response.data;
 };
 
-export const updateUserVIP = async (userId: string, isVIP: boolean) => {
-  const response = await api.put(`/admin/users/${userId}/vip`, { isVIP });
+export const updateUserVIP = async (userId: string, isVIP: boolean, vipDiscount?: number) => {
+  console.log('🔍 Frontend VIP Update Request:', {
+    userId,
+    isVIP,
+    vipDiscount,
+    url: `/admin/users/${userId}/vip`,
+    data: { isVIP, vipDiscount }
+  });
+  
+  const response = await api.patch(`/admin/users/${userId}/vip`, { isVIP, vipDiscount });
+  console.log('🔍 Frontend VIP Update Response:', response.data);
   return response.data;
 };
 
 export const updateUser = async (userId: string, userData: Partial<User>) => {
   const response = await api.put(`/admin/users/${userId}`, userData);
   return response.data;
+};
+
+// Get user statistics
+export const getUserStats = async (userId: string) => {
+  try {
+    const response = await api.get(`/admin/users/${userId}/stats`);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting user stats:', error);
+    throw error;
+  }
 };
 
 export const createUser = async (userData: Partial<User>) => {
@@ -77,32 +99,6 @@ export const createUser = async (userData: Partial<User>) => {
 
 export const deleteUser = async (userId: string) => {
   const response = await api.delete(`/admin/users/${userId}`);
-  return response.data;
-};
-
-// Parking Lots Management
-export const getAllParkingLots = async (params?: {
-  type?: string;
-  isActive?: boolean;
-  page?: number;
-  limit?: number;
-}): Promise<{ parkingLots: ParkingLot[]; total: number; page: number; totalPages: number }> => {
-  const response = await api.get('/admin/parking-lots', { params });
-  return response.data;
-};
-
-export const createParkingLot = async (parkingLotData: Partial<ParkingLot>) => {
-  const response = await api.post('/admin/parking-lots', parkingLotData);
-  return response.data;
-};
-
-export const updateParkingLot = async (parkingLotId: string, parkingLotData: Partial<ParkingLot>) => {
-  const response = await api.put(`/admin/parking-lots/${parkingLotId}`, parkingLotData);
-  return response.data;
-};
-
-export const deleteParkingLot = async (parkingLotId: string) => {
-  const response = await api.delete(`/admin/parking-lots/${parkingLotId}`);
   return response.data;
 };
 
@@ -209,7 +205,7 @@ export const getRevenueReport = async (params: {
 export const getOccupancyReport = async (params: {
   dateFrom: string;
   dateTo: string;
-  parkingLotId?: string;
+  parkingTypeId?: string;
 }) => {
   const response = await api.get('/admin/reports/occupancy', { params });
   return response.data;
@@ -272,5 +268,32 @@ export const updateNotificationTemplate = async (id: string, data: {
 
 export const deleteNotificationTemplate = async (id: string) => {
   const response = await api.delete(`/admin/notification-templates/${id}`);
+  return response.data;
+};
+
+// ===== NOTIFICATION TEST SERVICES =====
+
+export const testNotification = async (data: {
+  templateName: string;
+  type: 'email' | 'sms' | 'push';
+  recipient: string;
+  variables?: Record<string, string>;
+}) => {
+  const response = await api.post('/admin/notifications/test', data);
+  return response.data;
+};
+
+export const sendBulkNotification = async (data: {
+  templateName: string;
+  type: 'email' | 'sms' | 'push';
+  recipients: string[];
+  variables?: Record<string, string>;
+}) => {
+  const response = await api.post('/admin/notifications/bulk', data);
+  return response.data;
+};
+
+export const getNotificationStats = async () => {
+  const response = await api.get('/admin/notifications/stats');
   return response.data;
 }; 

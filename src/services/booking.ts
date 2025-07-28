@@ -1,29 +1,20 @@
 import api from './api';
-import type { ParkingLot } from '@/types';
+import type { Booking, ParkingType } from '@/types';
 
-export interface BookingTerms {
-  terms: string;
-  rules: string;
-  timeSlotInterval: number;
+export interface CheckAvailabilityParams {
+  parkingTypeId: string;
+  checkInTime: string;
+  checkOutTime: string;
 }
 
-export interface AvailableParkingLotsParams {
+export interface AvailableParkingTypesParams {
   type: string;
   checkInTime: string;
   checkOutTime: string;
 }
 
-export interface CalculatePriceParams {
-  parkingLotId: string;
-  checkInTime: string;
-  checkOutTime: string;
-  addonServices: string[];
-  discountCode?: string | null;
-  isVIP?: boolean;
-}
-
 export interface CreateBookingParams {
-  parkingLotId: string;
+  parkingTypeId: string;
   checkInTime: string;
   checkOutTime: string;
   driverName: string;
@@ -33,31 +24,41 @@ export interface CreateBookingParams {
   passengerCount: number;
   luggageCount: number;
   addonServices: string[];
-  discountCode?: string | null;
+  discountCode?: string;
   estimatedArrivalTime?: string;
   flightNumber?: string;
   notes?: string;
   termsAccepted: boolean;
 }
 
-export interface BookingSearchParams {
-  phone?: string;
-  licensePlate?: string;
+export interface CalculatePriceParams {
+  parkingTypeId: string;
+  checkInTime: string;
+  checkOutTime: string;
+  addonServices: string[];
+  discountCode?: string;
+  isVIP?: boolean;
 }
 
-// Get booking terms and rules
-export const getBookingTerms = async (): Promise<BookingTerms> => {
+// Get booking terms
+export const getBookingTerms = async () => {
   const response = await api.get('/bookings/terms');
   return response.data;
 };
 
-// Get available parking lots by type
-export const getAvailableParkingLots = async (params: AvailableParkingLotsParams): Promise<ParkingLot[]> => {
-  const response = await api.get('/bookings/available-lots', { params });
-  return response.data.parkingLots;
+// Check availability
+export const checkAvailability = async (params: CheckAvailabilityParams) => {
+  const response = await api.post('/bookings/check-availability', params);
+  return response.data;
 };
 
-// Calculate booking price
+// Get available parking types by type
+export const getAvailableParkingTypes = async (params: AvailableParkingTypesParams): Promise<ParkingType[]> => {
+  const response = await api.get('/bookings/available-types', { params });
+  return response.data.parkingTypes;
+};
+
+// Calculate price
 export const calculatePrice = async (params: CalculatePriceParams) => {
   const response = await api.post('/bookings/calculate-price', params);
   return response.data;
@@ -70,31 +71,23 @@ export const createBooking = async (params: CreateBookingParams) => {
 };
 
 // Get booking by search
-export const getBookingBySearch = async (params: BookingSearchParams) => {
+export const getBookingBySearch = async (phone?: string, licensePlate?: string): Promise<Booking[]> => {
+  const params: any = {};
+  if (phone) params.phone = phone;
+  if (licensePlate) params.licensePlate = licensePlate;
+  
   const response = await api.get('/bookings/search', { params });
-  return response.data;
+  return response.data.bookings;
 };
 
 // Get booking details
-export const getBookingDetails = async (id: string) => {
+export const getBookingDetails = async (id: string): Promise<Booking> => {
   const response = await api.get(`/bookings/${id}`);
-  return response.data;
+  return response.data.booking;
 };
 
 // Update booking status
 export const updateBookingStatus = async (id: string, status: string, notes?: string) => {
-  const response = await api.patch(`/bookings/${id}/status`, { status, notes });
-  return response.data;
-};
-
-// Get user bookings
-export const getMyBookings = async () => {
-  const response = await api.get('/bookings/my-bookings');
-  return response.data;
-};
-
-// Cancel booking
-export const cancelBooking = async (id: string) => {
-  const response = await api.put(`/bookings/${id}/cancel`);
+  const response = await api.put(`/bookings/${id}/status`, { status, notes });
   return response.data;
 }; 

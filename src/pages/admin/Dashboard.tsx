@@ -35,8 +35,8 @@ import {
   PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
 } from 'recharts';
 import { toast } from 'react-hot-toast';
-import { getDashboardStats, getBookingStats, getParkingLotStats, getCurrentParkingStatus } from '@/services/admin';
-import type { DashboardStats, BookingStats, ParkingLotStats, CurrentParkingStatus } from '@/types';
+import { getDashboardStats, getBookingStats, getParkingTypeStats, getCurrentParkingStatus } from '@/services/admin';
+import type { DashboardStats, BookingStats, ParkingTypeStats, CurrentParkingStatus } from '@/types';
 
 const PIE_COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F'];
 
@@ -101,7 +101,7 @@ const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [bookingStats, setBookingStats] = useState<BookingStats | null>(null);
   console.log(bookingStats);
-  const [parkingStats, setParkingStats] = useState<ParkingLotStats[]>([]);
+  const [parkingStats, setParkingStats] = useState<ParkingTypeStats[]>([]);
   const [currentStatus, setCurrentStatus] = useState<CurrentParkingStatus | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [dateRange, setDateRange] = useState('7d');
@@ -116,7 +116,7 @@ const Dashboard: React.FC = () => {
       const [dashboardStats, bookingStatsData, parkingStatsData, currentStatusData] = await Promise.all([
         getDashboardStats(),
         getBookingStats('today'),
-        getParkingLotStats(),
+        getParkingTypeStats(),
         getCurrentParkingStatus()
       ]);
 
@@ -666,9 +666,9 @@ const Dashboard: React.FC = () => {
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-2">
                           <h3 className="font-semibold">{lot.name}</h3>
-                          <Badge variant={lot.type === 'indoor' ? 'default' : 'secondary'}>
-                            {lot.type === 'indoor' ? '🏢 Trong nhà' : 
-                             lot.type === 'outdoor' ? '🌤 Ngoài trời' : '♿️ Khuyết tật'}
+                          <Badge variant={(lot.type || 'indoor') === 'indoor' ? 'default' : 'secondary'}>
+                            {(lot.type || 'indoor') === 'indoor' ? '🏢 Trong nhà' : 
+                             (lot.type || 'indoor') === 'outdoor' ? '🌤 Ngoài trời' : '♿️ Khuyết tật'}
                           </Badge>
                         </div>
                         
@@ -683,7 +683,7 @@ const Dashboard: React.FC = () => {
                           </div>
                           <div className="flex justify-between">
                             <span>Giá cơ bản:</span>
-                            <span className="font-medium">{formatCurrency(lot.basePrice)}/giờ</span>
+                            <span className="font-medium">{formatCurrency(lot.pricePerDay)}/ngày</span>
                           </div>
                         </div>
 

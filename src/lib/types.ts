@@ -4,7 +4,7 @@ export interface ParkingType {
   id: string;
   name: string;
   icon: LucideIcon;
-  basePrice: number;
+  pricePerDay: number;
 }
 
 export interface AddonService {
@@ -38,6 +38,6 @@ export interface ParkingLot {
   name: string;
   type: 'Trong nhà' | 'Ngoài trời' | 'Khu vực dành cho người khuyết tật';
   capacity: number;
-  basePrice: number;
+  pricePerDay: number;
   status: 'Hoạt động' | 'Bảo trì' | 'Đầy';
 }

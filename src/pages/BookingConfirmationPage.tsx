@@ -32,7 +32,7 @@ import type { SystemSettings } from '@/types';
 interface BookingConfirmationData {
   bookingId: string;
   bookingNumber: string;
-  parkingLot: {
+  parkingType: {
     name: string;
     type: string;
     location?: string;
@@ -52,6 +52,8 @@ interface BookingConfirmationData {
     icon: string;
   }>;
   discountAmount: number;
+  vipDiscount?: number;
+  isVIP?: boolean;
   paymentMethod: string;
   status: string;
 }
@@ -251,10 +253,10 @@ const BookingConfirmationPage: React.FC = () => {
                   <div>
                     <p className="text-sm text-gray-600">Bãi đậu xe</p>
                     <div className="flex items-center space-x-2">
-                      {getParkingTypeIcon(bookingData.parkingLot.type)}
-                      <p className="font-semibold">{bookingData.parkingLot.name}</p>
+                      {getParkingTypeIcon(bookingData.parkingType.type || 'indoor')}
+                      <p className="font-semibold">{bookingData.parkingType.name}</p>
                       <Badge variant="outline" className="text-xs">
-                        {getParkingTypeLabel(bookingData.parkingLot.type)}
+                        {getParkingTypeLabel(bookingData.parkingType.type || 'indoor')}
                       </Badge>
                     </div>
                   </div>
@@ -268,6 +270,11 @@ const BookingConfirmationPage: React.FC = () => {
                 <CardTitle className="flex items-center space-x-2">
                   <User className="h-5 w-5 text-blue-600" />
                   <span>Thông tin khách hàng</span>
+                  {bookingData.isVIP && (
+                    <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0">
+                      👑 VIP Member
+                    </Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -334,20 +341,58 @@ const BookingConfirmationPage: React.FC = () => {
                     </>
                   )}
                   
+                  {/* Voucher Discount */}
                   {bookingData.discountAmount > 0 && (
                     <>
                       <Separator />
-                      <div className="flex justify-between items-center text-green-600">
-                        <span>Giảm giá</span>
-                        <span>-{formatCurrency(bookingData.discountAmount)}</span>
+                      <div className="flex justify-between items-center py-2 bg-green-50 rounded-lg px-3">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-green-600">🎫 Voucher Discount:</span>
+                        </div>
+                        <span className="font-semibold text-green-600">-{formatCurrency(bookingData.discountAmount)}</span>
+                      </div>
+                    </>
+                  )}
+
+                  {/* VIP Discount */}
+                  {bookingData.vipDiscount && bookingData.vipDiscount > 0 && (
+                    <>
+                      <Separator />
+                      <div className="flex justify-between items-center py-2 bg-blue-50 rounded-lg px-3">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-blue-600">👑 VIP Discount:</span>
+                        </div>
+                        <span className="font-semibold text-blue-600">-{formatCurrency(bookingData.vipDiscount)}</span>
                       </div>
                     </>
                   )}
                   
                   <Separator />
-                  <div className="flex justify-between items-center text-lg font-bold">
-                    <span>Tổng cộng</span>
-                    <span className="text-blue-600">{formatCurrency(bookingData.finalAmount)}</span>
+                  <div className="bg-gradient-to-r from-emerald-100 to-teal-100 p-3 rounded-lg border-2 border-emerald-300">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">Tổng tiền gốc:</span>
+                        <span className="font-semibold">{formatCurrency(bookingData.totalAmount)}</span>
+                      </div>
+                      
+                      {(bookingData.discountAmount > 0 || (bookingData.vipDiscount && bookingData.vipDiscount > 0)) && (
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold text-green-700">Tổng giảm giá:</span>
+                          <span className="font-bold text-green-700 text-lg">
+                            -{formatCurrency((bookingData.discountAmount || 0) + (bookingData.vipDiscount || 0))}
+                          </span>
+                        </div>
+                      )}
+                      
+                      <div className="border-t pt-2">
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-lg">Tổng thanh toán:</span>
+                          <span className="font-bold text-emerald-800 text-xl">
+                            {formatCurrency(bookingData.finalAmount)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   
                   <div className="flex items-center space-x-2 text-sm text-gray-600">

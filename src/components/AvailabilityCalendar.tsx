@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-// import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { api } from '@/services';
 
 interface AvailabilityCalendarProps {
-  parkingLotId: string;
+  parkingTypeId: string;
   checkInTime: string;
   checkOutTime: string;
   onDateSelect?: (date: string) => void;
@@ -21,7 +21,7 @@ interface DayInfo {
 }
 
 const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
-  parkingLotId,
+  parkingTypeId,
   checkInTime,
   checkOutTime,
   onDateSelect,
@@ -34,10 +34,10 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   const [selectedEndDate, setSelectedEndDate] = useState<string | null>(null);
 
   useEffect(() => {
-    if (parkingLotId) {
+    if (parkingTypeId) {
       loadAvailabilityData();
     }
-  }, [parkingLotId, currentMonth]);
+  }, [parkingTypeId, currentMonth]);
 
   const loadAvailabilityData = async () => {
     setLoading(true);
@@ -55,21 +55,22 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
         const isInRange = checkInTime && checkOutTime && 
           currentDate >= new Date(checkInTime) && currentDate <= new Date(checkOutTime);
         
-        // Check availability for this specific day
-        const { isAvailable, availableSpaces } = await checkDayAvailability(dateStr);
-        
         days.push({
           date: dateStr,
-          isAvailable: Boolean(isAvailable),
+          isAvailable: true, // Default to available, will be updated by API
           isSelected: Boolean(isInRange),
           isInRange: Boolean(isInRange),
-          conflictingBookings: availableSpaces // Simplified for demo
+          conflictingBookings: 0
         });
         
         currentDate.setDate(currentDate.getDate() + 1);
       }
       
       setAvailabilityData(days);
+      
+      // Make a single API call to get availability for the entire month
+      await checkMonthAvailability(firstDay, lastDay);
+      
     } catch (error) {
       console.error('Error loading availability data:', error);
     } finally {
@@ -77,27 +78,41 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
     }
   };
 
-  const checkDayAvailability = async (date: string): Promise<{ isAvailable: boolean; availableSpaces: number }> => {
+  const checkMonthAvailability = async (firstDay: Date, lastDay: Date) => {
     try {
-      // Use the parking lot availability API
-      const response = await fetch(`/api/parking/${parkingLotId}/availability?date=${date}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+      const startDate = firstDay.toISOString().split('T')[0];
+      const endDate = lastDay.toISOString().split('T')[0];
+      
+      // Make a single API call for the entire month
+      const response = await api.post('/bookings/check-availability', {
+        parkingTypeId,
+        checkInTime: `${startDate}T00:00:00.000Z`,
+        checkOutTime: `${endDate}T23:59:59.999Z`
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        return { 
-          isAvailable: data.isAvailable, 
-          availableSpaces: data.availableSpaces || 0 
-        };
+      if (response.data.success) {
+        // Update availability data based on the response
+        setAvailabilityData(prev => prev.map(day => ({
+          ...day,
+          isAvailable: true, // If the month is available, all days are available
+          conflictingBookings: 0
+        })));
       } else {
-        console.error('Error response:', response.status, response.statusText);
-        return { isAvailable: false, availableSpaces: 0 };
+        // If the month is not available, mark all days as unavailable
+        setAvailabilityData(prev => prev.map(day => ({
+          ...day,
+          isAvailable: false,
+          conflictingBookings: 1
+        })));
       }
     } catch (error) {
-      console.error('Error checking day availability:', error);
-      return { isAvailable: false, availableSpaces: 0 };
+      console.error('Error checking month availability:', error);
+      // On error, assume all days are available
+      setAvailabilityData(prev => prev.map(day => ({
+        ...day,
+        isAvailable: true,
+        conflictingBookings: 0
+      })));
     }
   };
 
@@ -106,31 +121,45 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
     const isInSelectionRange = selectedStartDate && selectedEndDate && 
       day.date >= selectedStartDate && day.date <= selectedEndDate;
     
-    if (isSelected) {
-      return { icon: <CheckCircle className="h-4 w-4" />, color: 'text-blue-600', bg: 'bg-blue-100 ring-2 ring-blue-500' };
-    }
+    if (isSelected) return 'selected';
+    if (isInSelectionRange) return 'in-range';
+    if (day.isInRange) return 'in-booking-range';
+    if (!day.isAvailable) return 'unavailable';
+    return 'available';
+  };
+
+  const getDayClassName = (day: DayInfo) => {
+    const baseClasses = 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium cursor-pointer transition-all duration-200';
+    const status = getDayStatus(day);
     
-    if (isInSelectionRange) {
-      return { icon: null, color: 'text-blue-600', bg: 'bg-blue-50' };
-    }
-    
-    if (day.isInRange) {
-      if (day.isAvailable) {
-        return { icon: <CheckCircle className="h-4 w-4" />, color: 'text-green-600', bg: 'bg-green-50' };
-      } else {
-        return { icon: <XCircle className="h-4 w-4" />, color: 'text-red-600', bg: 'bg-red-50' };
-      }
-    }
-    if (day.isAvailable) {
-      return { icon: null, color: 'text-gray-600', bg: 'bg-white' };
-    } else {
-      return { icon: <AlertTriangle className="h-4 w-4" />, color: 'text-orange-600', bg: 'bg-orange-50' };
+    switch (status) {
+      case 'selected':
+        return `${baseClasses} bg-blue-600 text-white shadow-lg`;
+      case 'in-range':
+        return `${baseClasses} bg-blue-200 text-blue-800`;
+      case 'in-booking-range':
+        return `${baseClasses} bg-green-100 text-green-800 border-2 border-green-300`;
+      case 'unavailable':
+        return `${baseClasses} bg-red-100 text-red-600 cursor-not-allowed opacity-50`;
+      default:
+        return `${baseClasses} bg-gray-100 text-gray-700 hover:bg-gray-200`;
     }
   };
 
-//   const formatDate = (dateStr: string) => {
-//     return new Date(dateStr).getDate();
-//   };
+  const getDayIcon = (day: DayInfo) => {
+    const status = getDayStatus(day);
+    
+    switch (status) {
+      case 'selected':
+        return <CheckCircle className="h-4 w-4" />;
+      case 'unavailable':
+        return <XCircle className="h-4 w-4" />;
+      case 'in-booking-range':
+        return <Clock className="h-4 w-4" />;
+      default:
+        return null;
+    }
+  };
 
   const getMonthName = (date: Date) => {
     return date.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
@@ -154,23 +183,26 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay());
+    const endDate = new Date(lastDay);
     
     const days = [];
     const currentDate = new Date(startDate);
     
-    while (currentDate <= lastDay || currentDate.getDay() !== 0) {
+    // Add empty cells for days before the first day of the month
+    const firstDayOfWeek = firstDay.getDay();
+    for (let i = 0; i < firstDayOfWeek; i++) {
+      days.push(null);
+    }
+    
+    // Add all days in the month
+    while (currentDate <= endDate) {
       const dateStr = currentDate.toISOString().split('T')[0];
-      const dayInfo = availabilityData.find(d => d.date === dateStr);
+      const dayInfo = availabilityData.find(day => day.date === dateStr);
       
       days.push({
         date: dateStr,
         day: currentDate.getDate(),
-        isCurrentMonth: currentDate.getMonth() === month,
-        isAvailable: dayInfo?.isAvailable ?? true,
-        isSelected: dayInfo?.isSelected ?? false,
-        isInRange: dayInfo?.isInRange ?? false,
-        conflictingBookings: dayInfo?.conflictingBookings ?? 0
+        ...dayInfo
       });
       
       currentDate.setDate(currentDate.getDate() + 1);
@@ -180,43 +212,37 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   };
 
   const handleDateClick = (dateStr: string) => {
-    if (!selectedStartDate) {
-      // First click - set start date
+    if (!dateStr) return;
+    
+    const dayInfo = availabilityData.find(day => day.date === dateStr);
+    if (!dayInfo || !dayInfo.isAvailable) return;
+    
+    if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
       setSelectedStartDate(dateStr);
       setSelectedEndDate(null);
-    } else if (!selectedEndDate) {
-      // Second click - set end date
-      const start = new Date(selectedStartDate);
-      const end = new Date(dateStr);
-      
-      if (end < start) {
-        // If end date is before start date, swap them
+      onDateSelect?.(dateStr);
+    } else {
+      if (dateStr >= selectedStartDate) {
+        setSelectedEndDate(dateStr);
+        onDateRangeSelect?.(selectedStartDate, dateStr);
+      } else {
         setSelectedStartDate(dateStr);
         setSelectedEndDate(selectedStartDate);
         onDateRangeSelect?.(dateStr, selectedStartDate);
-      } else {
-        setSelectedEndDate(dateStr);
-        onDateRangeSelect?.(selectedStartDate, dateStr);
       }
-    } else {
-      // Third click - reset and start new selection
-      setSelectedStartDate(dateStr);
-      setSelectedEndDate(null);
     }
-    
-    onDateSelect?.(dateStr);
   };
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Calendar className="h-5 w-5 text-blue-600" />
+      <Card className="border-0 shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+          <CardTitle className="flex items-center space-x-3 text-blue-900">
+            <Calendar className="h-6 w-6 text-blue-600" />
             <span>Lịch khả dụng</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <div className="flex items-center justify-center h-32">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
@@ -226,112 +252,99 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Calendar className="h-5 w-5 text-blue-600" />
+    <Card className="border-0 shadow-lg">
+      <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+        <CardTitle className="flex items-center space-x-3 text-blue-900">
+          <Calendar className="h-6 w-6 text-blue-600" />
           <span>Lịch khả dụng</span>
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        {/* Instructions */}
-        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-          <h4 className="font-medium text-blue-800 mb-2">Hướng dẫn sử dụng:</h4>
-          <div className="text-sm text-blue-700 space-y-1">
-            <p>• Click ngày đầu tiên để chọn ngày bắt đầu</p>
-            <p>• Click ngày thứ hai để chọn ngày kết thúc</p>
-            <p>• Click lại để chọn khoảng thời gian mới</p>
-          </div>
-        </div>
-
+      <CardContent className="p-6">
         {/* Month Navigation */}
-        <div className="flex items-center justify-between mb-4">
-          <Button variant="outline" size="sm" onClick={goToPreviousMonth}>
-            ←
+        <div className="flex items-center justify-between mb-6">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToPreviousMonth}
+            className="flex items-center space-x-2"
+          >
+            <span>←</span>
+            <span>Tháng trước</span>
           </Button>
-          <h3 className="text-lg font-semibold">{getMonthName(currentMonth)}</h3>
-          <Button variant="outline" size="sm" onClick={goToNextMonth}>
-            →
+          
+          <h3 className="text-lg font-semibold text-gray-900">
+            {getMonthName(currentMonth)}
+          </h3>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToNextMonth}
+            className="flex items-center space-x-2"
+          >
+            <span>Tháng sau</span>
+            <span>→</span>
           </Button>
         </div>
 
         {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-1">
-          {/* Week day headers */}
-          {getWeekDays().map(day => (
-            <div key={day} className="p-2 text-center text-sm font-medium text-gray-500">
-              {day}
-            </div>
-          ))}
-          
-          {/* Calendar days */}
-          {getDaysInMonth().map((day, index) => {
-            const status = getDayStatus(day);
-            return (
-              <div
-                key={index}
-                className={`
-                  p-2 text-center text-sm border rounded cursor-pointer transition-colors
-                  ${day.isCurrentMonth ? status.color : 'text-gray-300'}
-                  ${status.bg}
-                  hover:bg-gray-50
-                `}
-                onClick={() => handleDateClick(day.date)}
-              >
-                <div className="flex items-center justify-center space-x-1">
-                  <span>{day.day}</span>
-                  {status.icon}
-                </div>
-                {day.conflictingBookings !== undefined && (
-                  <div className="text-xs mt-1">
-                    {day.conflictingBookings > 0 ? (
-                      <span className="text-green-600 font-medium">{day.conflictingBookings} chỗ</span>
-                    ) : (
-                      <span className="text-red-600 font-medium">Hết chỗ</span>
-                    )}
-                  </div>
-                )}
+        <div className="space-y-4">
+          {/* Week Days Header */}
+          <div className="grid grid-cols-7 gap-1">
+            {getWeekDays().map((day, index) => (
+              <div key={index} className="text-center text-sm font-medium text-gray-600 py-2">
+                {day}
               </div>
-            );
-          })}
+            ))}
+          </div>
+
+          {/* Calendar Days */}
+          <div className="grid grid-cols-7 gap-1">
+            {getDaysInMonth().map((day, index) => {
+              if (!day) {
+                return <div key={index} className="w-8 h-8" />;
+              }
+
+                             const dayInfo = availabilityData.find(d => d.date === day.date);
+               const status = getDayStatus(dayInfo || { ...day, isAvailable: true, isSelected: false, isInRange: false });
+               const className = getDayClassName(dayInfo || { ...day, isAvailable: true, isSelected: false, isInRange: false });
+               const icon = getDayIcon(dayInfo || { ...day, isAvailable: true, isSelected: false, isInRange: false });
+
+              return (
+                <div
+                  key={index}
+                  className={className}
+                  onClick={() => handleDateClick(day.date)}
+                  title={`${day.date} - ${status}`}
+                >
+                  {icon || day.day}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Legend */}
-        <div className="mt-4 space-y-2">
-          <div className="flex items-center space-x-2 text-sm">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <span>Còn chỗ</span>
-          </div>
-          <div className="flex items-center space-x-2 text-sm">
-            <XCircle className="h-4 w-4 text-red-600" />
-            <span>Hết chỗ (trong khoảng thời gian đã chọn)</span>
-          </div>
-          <div className="flex items-center space-x-2 text-sm">
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
-            <span>Hết chỗ (ngày khác)</span>
-          </div>
-        </div>
-
-        {/* Summary */}
-        {checkInTime && checkOutTime && (
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-            <h4 className="font-medium text-blue-800 mb-2">Tóm tắt khoảng thời gian đã chọn:</h4>
-            <div className="text-sm text-blue-700 space-y-1">
-              <div className="flex items-center space-x-2">
-                <Clock className="h-4 w-4" />
-                <span>
-                  {new Date(checkInTime).toLocaleDateString('vi-VN')} - {new Date(checkOutTime).toLocaleDateString('vi-VN')}
-                </span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4" />
-                <span>
-                  {availabilityData.filter(d => d.isInRange && d.isAvailable).length} ngày còn chỗ / {availabilityData.filter(d => d.isInRange).length} ngày
-                </span>
-              </div>
+        <div className="mt-6 pt-4 border-t">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-gray-100 rounded-full"></div>
+              <span className="text-gray-600">Có sẵn</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-green-100 border-2 border-green-300 rounded-full"></div>
+              <span className="text-gray-600">Đã đặt</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-red-100 rounded-full opacity-50"></div>
+              <span className="text-gray-600">Hết chỗ</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-blue-600 rounded-full"></div>
+              <span className="text-gray-600">Đã chọn</span>
             </div>
           </div>
-        )}
+        </div>
       </CardContent>
     </Card>
   );

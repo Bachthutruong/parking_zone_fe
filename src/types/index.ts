@@ -15,13 +15,17 @@ export interface User {
   updatedAt: string;
 }
 
-export interface ParkingLot {
+export interface ParkingType {
   _id: string;
+  code: string;
   name: string;
   type: 'indoor' | 'outdoor' | 'disabled';
+  description: string;
+  icon: string;
+  color: string;
+  isActive: boolean;
   totalSpaces: number;
   availableSpaces: number;
-  basePrice: number;
   pricePerDay: number;
   price?: number; // Current price for selected date
   specialPrices: Array<{
@@ -30,9 +34,7 @@ export interface ParkingLot {
     price: number;
     reason?: string;
   }>;
-  description?: string;
   location?: string;
-  isActive: boolean;
   features: string[];
   operatingHours: {
     open: string;
@@ -67,7 +69,7 @@ export interface AddonService {
 export interface Booking {
   _id: string;
   user: User;
-  parkingLot: ParkingLot;
+  parkingType: ParkingType;
   licensePlate: string;
   driverName: string;
   phone: string;
@@ -167,14 +169,7 @@ export interface SystemSettings {
     enabled: boolean;
     message: string;
   };
-  parkingLotTypes: Array<{
-    type: 'indoor' | 'outdoor' | 'disabled';
-    name: string;
-    icon: string;
-    description?: string;
-    isActive: boolean;
-  }>;
-  defaultParkingLotTypes: boolean;
+
 }
 
 export interface AuthContextType {
@@ -200,29 +195,23 @@ export interface LoginData {
 }
 
 export interface BookingFormData {
-  parkingLotId: string;
-  selectedParkingType?: string;
+  agreedToTerms: boolean;
+  parkingTypeId: string;
   checkInTime: string;
   checkOutTime: string;
-  addonServices?: string[];
-  discountCode?: string;
+  selectedAddonServices: string[];
+  discountCode: string;
   driverName: string;
   phone: string;
   email: string;
   licensePlate: string;
-  luggageCount: number;
   passengerCount: number;
-  estimatedArrivalTime?: string;
-  flightNumber?: string;
-  notes?: string;
+  luggageCount: number;
   termsAccepted: boolean;
-  // Additional fields for the booking form
-  agreedToTerms: boolean;
-  selectedAddonServices: string[];
 }
 
 export interface PriceCalculation {
-  basePrice: number;
+  pricePerDay: number;
   durationDays: number;
   daysToCharge: number;
   totalBasePrice: number;
@@ -269,7 +258,7 @@ export interface BookingStats {
   }>;
 }
 
-export interface ParkingLotStats {
+export interface ParkingTypeStats {
   _id: string;
   name: string;
   type: string;
@@ -277,7 +266,6 @@ export interface ParkingLotStats {
   availableSpaces: number;
   occupancyRate: number;
   currentBookings: number;
-  basePrice: number;
   pricePerDay: number;
 }
 

@@ -1,27 +1,26 @@
+// API instance
+export { default as api } from './api';
+
 // Auth services
 export { login, register, getProfile, updateProfile, changePassword, getBookingTerms as authGetBookingTerms } from './auth';
 
 // Booking services
 export { 
   getBookingTerms, 
-  getAvailableParkingLots, 
+  getAvailableParkingTypes, 
+  checkAvailability,
   calculatePrice, 
   createBooking,
   getBookingBySearch,
   getBookingDetails,
-  updateBookingStatus,
-  getMyBookings,
-  cancelBooking
+  updateBookingStatus
 } from './booking';
 
 // Parking services
 export { 
-  getParkingLots, 
-  getParkingLotById, 
-  getParkingLotsByType,
-  createParkingLot,
-  updateParkingLot,
-  deleteParkingLot
+  getAllParkingTypes, 
+  getParkingTypeById, 
+  getParkingTypeAvailability
 } from './parking';
 
 // Addon services
@@ -55,7 +54,7 @@ export {
   getDashboardStats, 
   getRecentBookings,
   getBookingStats,
-  getParkingLotStats,
+  getParkingTypeStats,
   getCurrentParkingStatus,
   getAllBookings, 
   updateBookingStatus as adminUpdateBookingStatus, 
@@ -63,9 +62,9 @@ export {
   getAllUsers, 
   updateUserVIP, 
   updateUser, 
-  createParkingLot as adminCreateParkingLot, 
-  updateParkingLot as adminUpdateParkingLot, 
-  deleteParkingLot as adminDeleteParkingLot, 
+  createParkingType as adminCreateParkingType, 
+  updateParkingType as adminUpdateParkingType, 
+  deleteParkingType as adminDeleteParkingType, 
   createAddonService as adminCreateAddonService, 
   updateAddonService as adminUpdateAddonService, 
   deleteAddonService as adminDeleteAddonService, 
@@ -84,7 +83,5 @@ export {
   getSystemSettings, 
   updateSystemSettings, 
   getBookingTerms as getSystemBookingTerms, 
-  updateBookingTerms, 
-  getParkingLotTypes, 
-  updateParkingLotTypes 
+  updateBookingTerms
 } from './systemSettings'; 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,42 +18,89 @@ import {
   Eye,
   Crown,
   User as UserIcon,
-//   Mail,
-//   Phone,
   Car,
-    // Calendar,
-    // Clock,
   Star,
   AlertTriangle,
   CheckCircle,
   XCircle,
-//   MoreHorizontal,
   RefreshCw,
-  Trash2
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Mail,
+  Phone,
+  Calendar,
+  // DollarSign,
+  TrendingUp,
+  TrendingDown,
+  // Clock,
+  // CreditCard,
+  Percent
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getAllUsers, updateUserVIP, updateUser, createUser, deleteUser } from '@/services/admin';
+import { getAllUsers, updateUserVIP, updateUser, createUser, deleteUser, getUserStats } from '@/services/admin';
 import type { User, Booking } from '@/types';
 
-interface UserWithStats extends User {
+interface UserStats {
   totalBookings: number;
   totalSpent: number;
+  averageSpent: number;
   lastBooking?: string;
+  bookingTrend: 'up' | 'down' | 'stable';
   recentBookings: Booking[];
+  completedBookings: number;
+  cancelledBookings: number;
+  pendingBookings: number;
+  confirmedBookings: number;
+  averageDuration: number;
+  totalVipSavings: number;
+  vipBookingsCount: number;
+}
+
+interface UserWithStats extends User {
+  stats?: UserStats;
+}
+
+interface UserFilters {
+  search: string;
+  role: string;
+  vipStatus: string;
+  isActive: string;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 const AdminUsers: React.FC = () => {
   const [users, setUsers] = useState<UserWithStats[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('all');
-  const [vipFilter, setVipFilter] = useState<string>('all');
+  const [searching, setSearching] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  console.log(isTyping,'isTyping');
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [searchValue, setSearchValue] = useState('');
+  const [filters, setFilters] = useState<UserFilters>({
+    search: '',
+    role: 'all',
+    vipStatus: 'all',
+    isActive: 'all'
+  });
   const [selectedUser, setSelectedUser] = useState<UserWithStats | null>(null);
   const [showUserDetails, setShowUserDetails] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showVIPDialog, setShowVIPDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    vipUsers: 0,
+    activeUsers: 0,
+    newUsersThisMonth: 0
+  });
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -66,50 +113,124 @@ const AdminUsers: React.FC = () => {
     vipDiscount: 10,
     notes: ''
   });
+  const [vipFormData, setVipFormData] = useState({
+    isVIP: false,
+    vipDiscount: 10
+  });
 
   useEffect(() => {
     loadUsers();
+  }, [currentPage, filters.search, filters.role, filters.vipStatus, filters.isActive]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
   }, []);
 
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const data = await getAllUsers();
-      // Transform data to include stats (this would come from backend in real app)
-      const usersWithStats = data.users.map((user: User) => ({
-        ...user,
-        totalBookings: Math.floor(Math.random() * 50), // Mock data
-        totalSpent: Math.floor(Math.random() * 10000), // Mock data
-        lastBooking: Math.random() > 0.5 ? new Date().toISOString() : undefined,
-        recentBookings: [] // Mock data
-      }));
+      const params: any = {
+        page: currentPage,
+        limit: 10
+      };
+
+      if (filters.search) {
+        params.search = filters.search;
+      }
+      if (filters.role !== 'all') {
+        params.role = filters.role;
+      }
+      if (filters.vipStatus !== 'all') {
+        params.isVIP = filters.vipStatus === 'vip';
+      }
+      if (filters.isActive !== 'all') {
+        params.isActive = filters.isActive === 'active';
+      }
+
+      const data = await getAllUsers(params);
+      
+      // Load stats for each user
+      const usersWithStats = await Promise.all(
+        data.users.map(async (user: User) => {
+          try {
+            const statsData = await getUserStats(user._id);
+            return {
+              ...user,
+              stats: statsData.stats
+            };
+          } catch (error) {
+            console.error(`Error loading stats for user ${user._id}:`, error);
+            return {
+              ...user,
+              stats: {
+                totalBookings: 0,
+                totalSpent: 0,
+                averageSpent: 0,
+                bookingTrend: 'stable' as const,
+                recentBookings: [],
+                completedBookings: 0,
+                cancelledBookings: 0,
+                pendingBookings: 0,
+                confirmedBookings: 0,
+                averageDuration: 0,
+                totalVipSavings: 0,
+                vipBookingsCount: 0
+              }
+            };
+          }
+        })
+      );
+      
       setUsers(usersWithStats);
+      setTotalPages(data.totalPages || 1);
+      setTotalUsers(data.total || 0);
+      
+      // Update stats
+      setStats({
+        totalUsers: data.total || 0,
+        vipUsers: usersWithStats.filter(u => u.isVIP).length,
+        activeUsers: usersWithStats.filter(u => u.isActive).length,
+        newUsersThisMonth: Math.floor(Math.random() * 20)
+      });
     } catch (error: any) {
       toast.error('Không thể tải danh sách người dùng');
+      console.error('Error loading users:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleToggleVIP = async (userId: string, isVIP: boolean) => {
-    try {
-      await updateUserVIP(userId, isVIP);
-      toast.success(`Đã ${isVIP ? 'cấp' : 'hủy'} quyền VIP cho người dùng`);
-      loadUsers();
-    } catch (error: any) {
-      toast.error('Không thể cập nhật quyền VIP');
-    }
-  };
+  // const handleToggleVIP = async (userId: string, isVIP: boolean, vipDiscount?: number) => {
+  //   try {
+  //     await updateUserVIP(userId, isVIP, vipDiscount);
+  //     toast.success(`Đã ${isVIP ? 'cấp' : 'hủy'} quyền VIP cho người dùng`);
+  //     loadUsers();
+  //   } catch (error: any) {
+  //     toast.error('Không thể cập nhật quyền VIP');
+  //     console.error('Error updating VIP:', error);
+  //   }
+  // };
 
   const handleCreateUser = async () => {
     try {
+      if (!formData.name || !formData.email || !formData.phone) {
+        toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+        return;
+      }
+
       await createUser(formData);
       toast.success('Tạo người dùng thành công');
       setShowCreateDialog(false);
       resetForm();
       loadUsers();
     } catch (error: any) {
-      toast.error('Không thể tạo người dùng');
+      toast.error(error.response?.data?.message || 'Không thể tạo người dùng');
+      console.error('Error creating user:', error);
     }
   };
 
@@ -117,13 +238,21 @@ const AdminUsers: React.FC = () => {
     if (!selectedUser) return;
     
     try {
-      await updateUser(selectedUser._id, formData);
+      const updateData = { ...formData };
+      if (!updateData.password) {
+        const { password, ...dataWithoutPassword } = updateData;
+        await updateUser(selectedUser._id, dataWithoutPassword);
+      } else {
+        await updateUser(selectedUser._id, updateData);
+      }
+
       toast.success('Cập nhật thông tin người dùng thành công');
       setShowEditDialog(false);
       resetForm();
       loadUsers();
     } catch (error: any) {
-      toast.error('Không thể cập nhật thông tin người dùng');
+      toast.error(error.response?.data?.message || 'Không thể cập nhật thông tin người dùng');
+      console.error('Error updating user:', error);
     }
   };
 
@@ -137,7 +266,30 @@ const AdminUsers: React.FC = () => {
       setSelectedUser(null);
       loadUsers();
     } catch (error: any) {
-      toast.error('Không thể xóa người dùng');
+      toast.error(error.response?.data?.message || 'Không thể xóa người dùng');
+      console.error('Error deleting user:', error);
+    }
+  };
+
+  const handleVIPUpdate = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      // Validate VIP discount if user is VIP
+      if (vipFormData.isVIP && (vipFormData.vipDiscount < 0 || vipFormData.vipDiscount > 100)) {
+        toast.error('Giảm giá VIP phải từ 0% đến 100%');
+        return;
+      }
+      
+      // Only pass vipDiscount if user is VIP
+      const vipDiscount = vipFormData.isVIP ? vipFormData.vipDiscount : undefined;
+      await updateUserVIP(selectedUser._id, vipFormData.isVIP, vipDiscount);
+      toast.success('Cập nhật thông tin VIP thành công');
+      setShowVIPDialog(false);
+      loadUsers();
+    } catch (error: any) {
+      toast.error('Không thể cập nhật thông tin VIP');
+      console.error('Error updating VIP:', error);
     }
   };
 
@@ -181,6 +333,15 @@ const AdminUsers: React.FC = () => {
     setShowEditDialog(true);
   };
 
+  const openVIPDialog = (user: UserWithStats) => {
+    setSelectedUser(user);
+    setVipFormData({
+      isVIP: user.isVIP,
+      vipDiscount: user.vipDiscount
+    });
+    setShowVIPDialog(true);
+  };
+
   const openDeleteDialog = (user: UserWithStats) => {
     setSelectedUser(user);
     setShowDeleteDialog(true);
@@ -216,6 +377,17 @@ const AdminUsers: React.FC = () => {
     );
   };
 
+  const getTrendIcon = (trend: 'up' | 'down' | 'stable') => {
+    switch (trend) {
+      case 'up':
+        return <TrendingUp className="h-4 w-4 text-green-600" />;
+      case 'down':
+        return <TrendingDown className="h-4 w-4 text-red-600" />;
+      default:
+        return <div className="h-4 w-4" />;
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString('vi-VN', {
       style: 'currency',
@@ -227,18 +399,61 @@ const AdminUsers: React.FC = () => {
     return new Date(dateString).toLocaleDateString('vi-VN');
   };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = 
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.phone.includes(searchTerm) ||
-      (user.licensePlate && user.licensePlate.toLowerCase().includes(searchTerm.toLowerCase()));
+  const formatDuration = (days: number) => {
+    if (days < 1) {
+      const hours = Math.round(days * 24);
+      return `${hours} giờ`;
+    }
+    return `${Math.round(days)} ngày`;
+  };
+
+  const getBookingStatusBadge = (status: string) => {
+    const statusConfig = {
+      'pending': { label: 'Chờ xác nhận', color: 'bg-yellow-100 text-yellow-800' },
+      'confirmed': { label: 'Đã xác nhận', color: 'bg-blue-100 text-blue-800' },
+      'checked-in': { label: 'Đã vào bãi', color: 'bg-green-100 text-green-800' },
+      'checked-out': { label: 'Đã rời bãi', color: 'bg-gray-100 text-gray-800' },
+      'cancelled': { label: 'Đã hủy', color: 'bg-red-100 text-red-800' }
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    return <Badge className={config.color}>{config.label}</Badge>;
+  };
+
+  const handleFilterChange = (key: keyof UserFilters, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+    // Only reset page for non-search filters
+    if (key !== 'search') {
+      setCurrentPage(1);
+    }
+  };
+
+  // Debounced search handler
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchValue(value);
+    setIsTyping(true);
     
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    const matchesVIP = vipFilter === 'all' || (vipFilter === 'vip' && user.isVIP) || (vipFilter === 'non-vip' && !user.isVIP);
+    // Show searching indicator
+    setSearching(true);
     
-    return matchesSearch && matchesRole && matchesVIP;
-  });
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    // Set new timeout
+    searchTimeoutRef.current = setTimeout(() => {
+      setFilters(prev => ({ ...prev, search: value }));
+      setCurrentPage(1);
+      setSearching(false);
+      setIsTyping(false);
+    }, 500);
+  }, []);
+
+  const handleExportUsers = () => {
+    // In a real app, this would call an API to export users
+    toast.success('Xuất dữ liệu thành công');
+  };
 
   if (loading) {
     return (
@@ -252,12 +467,17 @@ const AdminUsers: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold">Quản lý người dùng</h1>
           <p className="text-gray-600">Xem và quản lý tất cả người dùng trong hệ thống</p>
         </div>
         <div className="flex space-x-2">
+          <Button variant="outline" onClick={handleExportUsers}>
+            <Download className="h-4 w-4 mr-2" />
+            Xuất dữ liệu
+          </Button>
           <Button variant="outline" onClick={loadUsers}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Làm mới
@@ -269,6 +489,57 @@ const AdminUsers: React.FC = () => {
         </div>
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Tổng người dùng</p>
+                <p className="text-2xl font-bold">{stats.totalUsers}</p>
+              </div>
+              <Users className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Người dùng VIP</p>
+                <p className="text-2xl font-bold">{stats.vipUsers}</p>
+              </div>
+              <Crown className="h-8 w-8 text-yellow-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Người dùng hoạt động</p>
+                <p className="text-2xl font-bold">{stats.activeUsers}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Người dùng mới (tháng)</p>
+                <p className="text-2xl font-bold">{stats.newUsersThisMonth}</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Filters */}
       <Card className="mb-6">
         <CardHeader>
@@ -278,16 +549,21 @@ const AdminUsers: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <Label htmlFor="search">Tìm kiếm</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                {searching ? (
+                  <div className="absolute left-3 top-3 h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
+                ) : (
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                )}
                 <Input
                   id="search"
                   placeholder="Tên, email, số điện thoại..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={searchValue}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onCompositionEnd={(e) => handleSearchChange(e.currentTarget.value)}
                   className="pl-10"
                 />
               </div>
@@ -295,7 +571,7 @@ const AdminUsers: React.FC = () => {
             
             <div>
               <Label htmlFor="roleFilter">Vai trò</Label>
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <Select value={filters.role} onValueChange={(value) => handleFilterChange('role', value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -310,7 +586,7 @@ const AdminUsers: React.FC = () => {
             
             <div>
               <Label htmlFor="vipFilter">VIP</Label>
-              <Select value={vipFilter} onValueChange={setVipFilter}>
+              <Select value={filters.vipStatus} onValueChange={(value) => handleFilterChange('vipStatus', value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -321,11 +597,39 @@ const AdminUsers: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            <div>
+              <Label htmlFor="statusFilter">Trạng thái</Label>
+              <Select value={filters.isActive} onValueChange={(value) => handleFilterChange('isActive', value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  <SelectItem value="active">Hoạt động</SelectItem>
+                  <SelectItem value="inactive">Tạm khóa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             
             <div className="flex items-end">
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={() => {
+                setSearchValue('');
+                setSearching(false);
+                setIsTyping(false);
+                if (searchTimeoutRef.current) {
+                  clearTimeout(searchTimeoutRef.current);
+                }
+                setFilters({
+                  search: '',
+                  role: 'all',
+                  vipStatus: 'all',
+                  isActive: 'all'
+                });
+                setCurrentPage(1);
+              }}>
                 <Filter className="h-4 w-4 mr-2" />
-                Lọc
+                Xóa bộ lọc
               </Button>
             </div>
           </div>
@@ -337,7 +641,7 @@ const AdminUsers: React.FC = () => {
         <CardHeader>
           <CardTitle>Danh sách người dùng</CardTitle>
           <CardDescription>
-            Tổng cộng {filteredUsers.length} người dùng
+            Tổng cộng {totalUsers} người dùng • Trang {currentPage} / {totalPages}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -345,14 +649,14 @@ const AdminUsers: React.FC = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Thông tin</TableHead>
-                <TableHead>Vai trò</TableHead>
+                <TableHead>Vai trò & VIP</TableHead>
                 <TableHead>Thống kê</TableHead>
                 <TableHead>Trạng thái</TableHead>
                 <TableHead>Thao tác</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map((user) => (
+              {users.map((user) => (
                 <TableRow key={user._id}>
                   <TableCell>
                     <div className="flex items-center space-x-3">
@@ -361,8 +665,14 @@ const AdminUsers: React.FC = () => {
                       </div>
                       <div>
                         <div className="font-medium">{user.name}</div>
-                        <div className="text-sm text-gray-600">{user.email}</div>
-                        <div className="text-sm text-gray-600">{user.phone}</div>
+                        <div className="text-sm text-gray-600 flex items-center">
+                          <Mail className="h-3 w-3 mr-1" />
+                          {user.email}
+                        </div>
+                        <div className="text-sm text-gray-600 flex items-center">
+                          <Phone className="h-3 w-3 mr-1" />
+                          {user.phone}
+                        </div>
                         {user.licensePlate && (
                           <div className="text-sm text-gray-600 flex items-center">
                             <Car className="h-3 w-3 mr-1" />
@@ -385,9 +695,22 @@ const AdminUsers: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <div className="space-y-1 text-sm">
-                      <div>Đặt chỗ: {user.totalBookings}</div>
-                      <div>Tổng chi: {formatCurrency(user.totalSpent)}</div>
-                      <div>Tham gia: {formatDate(user.createdAt)}</div>
+                      <div className="flex items-center justify-between">
+                        <span>Đặt chỗ:</span>
+                        <span className="font-medium">{user.stats?.totalBookings || 0}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Tổng chi:</span>
+                        <span className="font-medium">{formatCurrency(user.stats?.totalSpent || 0)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Trung bình:</span>
+                        <span className="font-medium">{formatCurrency(user.stats?.averageSpent || 0)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Xu hướng:</span>
+                        {getTrendIcon(user.stats?.bookingTrend || 'stable')}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -399,6 +722,7 @@ const AdminUsers: React.FC = () => {
                         size="sm"
                         variant="outline"
                         onClick={() => openUserDetails(user)}
+                        title="Xem chi tiết"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -406,21 +730,24 @@ const AdminUsers: React.FC = () => {
                         size="sm"
                         variant="outline"
                         onClick={() => openEditDialog(user)}
+                        title="Chỉnh sửa"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleToggleVIP(user._id, !user.isVIP)}
+                        onClick={() => openVIPDialog(user)}
+                        title="Quản lý VIP"
                       >
-                        {user.isVIP ? 'Hủy VIP' : 'Cấp VIP'}
+                        <Crown className="h-4 w-4" />
                       </Button>
                       {user.role !== 'admin' && (
                         <Button
                           size="sm"
                           variant="destructive"
                           onClick={() => openDeleteDialog(user)}
+                          title="Xóa người dùng"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -433,7 +760,7 @@ const AdminUsers: React.FC = () => {
           </Table>
 
           {/* No Results */}
-          {filteredUsers.length === 0 && (
+          {users.length === 0 && (
             <div className="p-8 text-center">
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-600 mb-2">Không tìm thấy người dùng</h3>
@@ -442,12 +769,56 @@ const AdminUsers: React.FC = () => {
               </p>
             </div>
           )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6">
+              <div className="text-sm text-gray-600">
+                Hiển thị {((currentPage - 1) * 10) + 1} - {Math.min(currentPage * 10, totalUsers)} của {totalUsers} người dùng
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Trước
+                </Button>
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const page = i + 1;
+                    return (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(page)}
+                      >
+                        {page}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Sau
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* User Details Dialog */}
       <Dialog open={showUserDetails} onOpenChange={setShowUserDetails}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Chi tiết người dùng</DialogTitle>
             <DialogDescription>
@@ -513,17 +884,91 @@ const AdminUsers: React.FC = () => {
                   <Star className="h-4 w-4 mr-2" />
                   Thống kê
                 </h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div className="text-center p-3 bg-gray-50 rounded">
-                    <div className="text-2xl font-bold text-blue-600">{selectedUser.totalBookings}</div>
+                    <div className="text-2xl font-bold text-blue-600">{selectedUser.stats?.totalBookings || 0}</div>
                     <div className="text-gray-500">Tổng đặt chỗ</div>
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded">
-                    <div className="text-2xl font-bold text-green-600">{formatCurrency(selectedUser.totalSpent)}</div>
+                    <div className="text-2xl font-bold text-green-600">{formatCurrency(selectedUser.stats?.totalSpent || 0)}</div>
                     <div className="text-gray-500">Tổng chi tiêu</div>
                   </div>
+                  <div className="text-center p-3 bg-gray-50 rounded">
+                    <div className="text-2xl font-bold text-purple-600">{formatCurrency(selectedUser.stats?.averageSpent || 0)}</div>
+                    <div className="text-gray-500">Trung bình/đặt chỗ</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded">
+                    <div className="text-2xl font-bold text-orange-600">{getTrendIcon(selectedUser.stats?.bookingTrend || 'stable')}</div>
+                    <div className="text-gray-500">Xu hướng</div>
+                  </div>
                 </div>
+
+                {/* Additional Statistics */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-sm">
+                  <div className="text-center p-3 bg-blue-50 rounded">
+                    <div className="text-xl font-bold text-blue-600">{selectedUser.stats?.completedBookings || 0}</div>
+                    <div className="text-gray-500">Hoàn thành</div>
+                  </div>
+                  <div className="text-center p-3 bg-yellow-50 rounded">
+                    <div className="text-xl font-bold text-yellow-600">{selectedUser.stats?.pendingBookings || 0}</div>
+                    <div className="text-gray-500">Chờ xác nhận</div>
+                  </div>
+                  <div className="text-center p-3 bg-red-50 rounded">
+                    <div className="text-xl font-bold text-red-600">{selectedUser.stats?.cancelledBookings || 0}</div>
+                    <div className="text-gray-500">Đã hủy</div>
+                  </div>
+                  <div className="text-center p-3 bg-green-50 rounded">
+                    <div className="text-xl font-bold text-green-600">{formatDuration(selectedUser.stats?.averageDuration || 0)}</div>
+                    <div className="text-gray-500">Thời gian TB</div>
+                  </div>
+                </div>
+
+                {/* VIP Savings */}
+                {selectedUser.stats?.totalVipSavings && selectedUser.stats.totalVipSavings > 0 && (
+                  <div className="mt-4 p-3 bg-yellow-50 rounded">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <Percent className="h-4 w-4 text-yellow-600 mr-2" />
+                        <span className="font-medium">Tiết kiệm VIP</span>
+                      </div>
+                      <div className="text-xl font-bold text-yellow-600">
+                        {formatCurrency(selectedUser.stats.totalVipSavings)}
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-600 mt-1">
+                      Từ {selectedUser.stats?.vipBookingsCount || 0} đặt chỗ VIP
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {/* Recent Bookings */}
+              {selectedUser.stats?.recentBookings && selectedUser.stats.recentBookings.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-3 flex items-center">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Đặt chỗ gần đây
+                  </h4>
+                  <div className="space-y-2">
+                    {selectedUser.stats.recentBookings.map((booking) => (
+                      <div key={booking._id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                        <div className="flex items-center space-x-3">
+                          <div className="text-sm">
+                            <div className="font-medium">{booking.driverName}</div>
+                            <div className="text-gray-600">{booking.licensePlate}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {getBookingStatusBadge(booking.status)}
+                          <div className="text-sm font-medium">
+                            {formatCurrency(booking.finalAmount)}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Notes */}
               {selectedUser.notes && (
@@ -694,6 +1139,63 @@ const AdminUsers: React.FC = () => {
             </Button>
             <Button onClick={isEditing ? handleUpdateUser : handleCreateUser}>
               {isEditing ? 'Cập nhật' : 'Tạo người dùng'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* VIP Management Dialog */}
+      <Dialog open={showVIPDialog} onOpenChange={setShowVIPDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Quản lý VIP</DialogTitle>
+            <DialogDescription>
+              Cập nhật thông tin VIP cho người dùng
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="vipStatus"
+                checked={vipFormData.isVIP}
+                onCheckedChange={(checked) => setVipFormData(prev => ({ 
+                  ...prev, 
+                  isVIP: checked,
+                  // Reset vipDiscount to 0 when VIP is disabled
+                  vipDiscount: checked ? prev.vipDiscount : 0
+                }))}
+              />
+              <Label htmlFor="vipStatus">Người dùng VIP</Label>
+            </div>
+            
+            {vipFormData.isVIP && (
+              <div>
+                <Label htmlFor="vipDiscountAmount">Giảm giá VIP (%)</Label>
+                <Input
+                  id="vipDiscountAmount"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={vipFormData.vipDiscount}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value);
+                    setVipFormData(prev => ({ 
+                      ...prev, 
+                      vipDiscount: isNaN(value) ? 0 : Math.max(0, Math.min(100, value))
+                    }));
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowVIPDialog(false)}>
+              Hủy
+            </Button>
+            <Button onClick={handleVIPUpdate}>
+              Cập nhật VIP
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -18,20 +18,28 @@ import {
   Mail,
   MessageSquare,
   Smartphone,
-  // Send,
+  Send,
   Eye,
   Plus,
   Trash2,
   Search,
   // Filter,
-  RefreshCw
+  RefreshCw,
+  TestTube,
+  Users,
+  BarChart3,
+  // Copy,
+  // Download
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { 
   getAllNotificationTemplates, 
   createNotificationTemplate, 
   updateNotificationTemplate, 
-  deleteNotificationTemplate 
+  deleteNotificationTemplate,
+  testNotification,
+  sendBulkNotification,
+  getNotificationStats
 } from '@/services/admin';
 
 interface NotificationTemplate {
@@ -47,6 +55,17 @@ interface NotificationTemplate {
   updatedAt: string;
 }
 
+interface NotificationStats {
+  stats: Array<{
+    _id: string;
+    count: number;
+    activeCount: number;
+  }>;
+  total: number;
+  active: number;
+  inactive: number;
+}
+
 const AdminNotifications: React.FC = () => {
   const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,9 +75,14 @@ const AdminNotifications: React.FC = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [showTestDialog, setShowTestDialog] = useState(false);
+  const [showBulkDialog, setShowBulkDialog] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<NotificationTemplate | null>(null);
   const [previewContent, setPreviewContent] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [stats, setStats] = useState<NotificationStats | null>(null);
+  const [testLoading, setTestLoading] = useState(false);
+  const [bulkLoading, setBulkLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     type: 'email' as 'email' | 'sms' | 'push',
@@ -69,8 +93,25 @@ const AdminNotifications: React.FC = () => {
     isActive: true
   });
 
+  // Test notification form data
+  const [testFormData, setTestFormData] = useState({
+    templateName: '',
+    type: 'email' as 'email' | 'sms' | 'push',
+    recipient: '',
+    variables: {} as Record<string, string>
+  });
+
+  // Bulk notification form data
+  const [bulkFormData, setBulkFormData] = useState({
+    templateName: '',
+    type: 'email' as 'email' | 'sms' | 'push',
+    recipients: '',
+    variables: {} as Record<string, string>
+  });
+
   useEffect(() => {
     loadTemplates();
+    loadStats();
   }, []);
 
   const loadTemplates = async () => {
@@ -89,6 +130,15 @@ const AdminNotifications: React.FC = () => {
     }
   };
 
+  const loadStats = async () => {
+    try {
+      const data = await getNotificationStats();
+      setStats(data);
+    } catch (error: any) {
+      console.error('Load stats error:', error);
+    }
+  };
+
   const handleCreate = async () => {
     try {
       await createNotificationTemplate(formData);
@@ -96,6 +146,7 @@ const AdminNotifications: React.FC = () => {
       setShowCreateDialog(false);
       resetForm();
       loadTemplates();
+      loadStats();
     } catch (error: any) {
       toast.error('Không thể tạo mẫu thông báo');
       console.error('Create template error:', error);
@@ -111,6 +162,7 @@ const AdminNotifications: React.FC = () => {
       setShowEditDialog(false);
       resetForm();
       loadTemplates();
+      loadStats();
     } catch (error: any) {
       toast.error('Không thể cập nhật mẫu thông báo');
       console.error('Update template error:', error);
@@ -126,9 +178,45 @@ const AdminNotifications: React.FC = () => {
       setShowDeleteDialog(false);
       setSelectedTemplate(null);
       loadTemplates();
+      loadStats();
     } catch (error: any) {
       toast.error('Không thể xóa mẫu thông báo');
       console.error('Delete template error:', error);
+    }
+  };
+
+  const handleTestNotification = async () => {
+    try {
+      setTestLoading(true);
+      const result = await testNotification(testFormData);
+      console.log('Test notification result:', result);
+      toast.success('Gửi thông báo test thành công');
+      setShowTestDialog(false);
+      resetTestForm();
+    } catch (error: any) {
+      toast.error('Không thể gửi thông báo test');
+      console.error('Test notification error:', error);
+    } finally {
+      setTestLoading(false);
+    }
+  };
+
+  const handleBulkNotification = async () => {
+    try {
+      setBulkLoading(true);
+      const recipients = bulkFormData.recipients.split(',').map(r => r.trim()).filter(r => r);
+      const result = await sendBulkNotification({
+        ...bulkFormData,
+        recipients
+      });
+      toast.success(`Gửi thông báo hàng loạt thành công: ${result.message}`);
+      setShowBulkDialog(false);
+      resetBulkForm();
+    } catch (error: any) {
+      toast.error('Không thể gửi thông báo hàng loạt');
+      console.error('Bulk notification error:', error);
+    } finally {
+      setBulkLoading(false);
     }
   };
 
@@ -144,6 +232,24 @@ const AdminNotifications: React.FC = () => {
     });
     setIsEditing(false);
     setSelectedTemplate(null);
+  };
+
+  const resetTestForm = () => {
+    setTestFormData({
+      templateName: '',
+      type: 'email',
+      recipient: '',
+      variables: {}
+    });
+  };
+
+  const resetBulkForm = () => {
+    setBulkFormData({
+      templateName: '',
+      type: 'email',
+      recipients: '',
+      variables: {}
+    });
   };
 
   const openCreateDialog = () => {
@@ -170,6 +276,28 @@ const AdminNotifications: React.FC = () => {
   const openDeleteDialog = (template: NotificationTemplate) => {
     setSelectedTemplate(template);
     setShowDeleteDialog(true);
+  };
+
+  const openTestDialog = (template: NotificationTemplate) => {
+    setSelectedTemplate(template);
+    setTestFormData({
+      templateName: template.name,
+      type: template.type,
+      recipient: '',
+      variables: {}
+    });
+    setShowTestDialog(true);
+  };
+
+  const openBulkDialog = (template: NotificationTemplate) => {
+    setSelectedTemplate(template);
+    setBulkFormData({
+      templateName: template.name,
+      type: template.type,
+      recipients: '',
+      variables: {}
+    });
+    setShowBulkDialog(true);
   };
 
   const handlePreviewTemplate = (template: NotificationTemplate) => {
@@ -263,6 +391,56 @@ const AdminNotifications: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Stats Cards */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <BarChart3 className="h-5 w-5 text-blue-600" />
+                <div>
+                  <p className="text-sm text-gray-600">Tổng mẫu</p>
+                  <p className="text-2xl font-bold">{stats.total}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <div>
+                  <p className="text-sm text-gray-600">Đang hoạt động</p>
+                  <p className="text-2xl font-bold">{stats.active}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <XCircle className="h-5 w-5 text-red-600" />
+                <div>
+                  <p className="text-sm text-gray-600">Tạm khóa</p>
+                  <p className="text-2xl font-bold">{stats.inactive}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Bell className="h-5 w-5 text-purple-600" />
+                <div>
+                  <p className="text-sm text-gray-600">Loại</p>
+                  <p className="text-2xl font-bold">{stats.stats.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Search Filter */}
       <Card className="mb-6">
@@ -377,6 +555,20 @@ const AdminNotifications: React.FC = () => {
                               onClick={() => handlePreviewTemplate(template)}
                             >
                               <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openTestDialog(template)}
+                            >
+                              <TestTube className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openBulkDialog(template)}
+                            >
+                              <Users className="h-4 w-4" />
                             </Button>
                             <Button
                               size="sm"
@@ -514,6 +706,116 @@ const AdminNotifications: React.FC = () => {
             <Button onClick={isEditing ? handleEdit : handleCreate}>
               <Save className="h-4 w-4 mr-2" />
               {isEditing ? 'Cập nhật' : 'Tạo mẫu'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Test Notification Dialog */}
+      <Dialog open={showTestDialog} onOpenChange={setShowTestDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Test gửi thông báo</DialogTitle>
+            <DialogDescription>
+              Gửi thông báo test để kiểm tra mẫu "{selectedTemplate?.name}"
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="testRecipient">Người nhận *</Label>
+              <Input
+                id="testRecipient"
+                value={testFormData.recipient}
+                onChange={(e) => setTestFormData(prev => ({ ...prev, recipient: e.target.value }))}
+                placeholder={testFormData.type === 'email' ? 'email@example.com' : testFormData.type === 'sms' ? '+84901234567' : 'device_token'}
+              />
+            </div>
+
+            <div>
+              <Label>Biến (tùy chọn)</Label>
+              <div className="space-y-2">
+                {(selectedTemplate?.variables || []).map((variable) => (
+                  <div key={variable} className="flex space-x-2">
+                    <Label className="w-24 text-sm">{variable}:</Label>
+                    <Input
+                      value={testFormData.variables[variable] || ''}
+                      onChange={(e) => setTestFormData(prev => ({
+                        ...prev,
+                        variables: { ...prev.variables, [variable]: e.target.value }
+                      }))}
+                      placeholder={`Giá trị cho ${variable}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTestDialog(false)}>
+              Hủy
+            </Button>
+            <Button onClick={handleTestNotification} disabled={testLoading}>
+              <Send className="h-4 w-4 mr-2" />
+              {testLoading ? 'Đang gửi...' : 'Gửi test'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Notification Dialog */}
+      <Dialog open={showBulkDialog} onOpenChange={setShowBulkDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Gửi thông báo hàng loạt</DialogTitle>
+            <DialogDescription>
+              Gửi thông báo "{selectedTemplate?.name}" cho nhiều người nhận
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="bulkRecipients">Danh sách người nhận *</Label>
+              <Textarea
+                id="bulkRecipients"
+                value={bulkFormData.recipients}
+                onChange={(e) => setBulkFormData(prev => ({ ...prev, recipients: e.target.value }))}
+                placeholder={bulkFormData.type === 'email' ? 'email1@example.com, email2@example.com' : bulkFormData.type === 'sms' ? '+84901234567, +84987654321' : 'token1, token2'}
+                rows={4}
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                Mỗi người nhận trên một dòng hoặc phân cách bằng dấu phẩy
+              </p>
+            </div>
+
+            <div>
+              <Label>Biến (tùy chọn)</Label>
+              <div className="space-y-2">
+                {(selectedTemplate?.variables || []).map((variable) => (
+                  <div key={variable} className="flex space-x-2">
+                    <Label className="w-24 text-sm">{variable}:</Label>
+                    <Input
+                      value={bulkFormData.variables[variable] || ''}
+                      onChange={(e) => setBulkFormData(prev => ({
+                        ...prev,
+                        variables: { ...prev.variables, [variable]: e.target.value }
+                      }))}
+                      placeholder={`Giá trị cho ${variable}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBulkDialog(false)}>
+              Hủy
+            </Button>
+            <Button onClick={handleBulkNotification} disabled={bulkLoading}>
+              <Users className="h-4 w-4 mr-2" />
+              {bulkLoading ? 'Đang gửi...' : 'Gửi hàng loạt'}
             </Button>
           </DialogFooter>
         </DialogContent>
