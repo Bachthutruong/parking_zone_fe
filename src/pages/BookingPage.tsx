@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getSystemSettings, getAllParkingTypes, getAllAddonServices as getAddonServices, createBooking, api } from '@/services';
+import { checkParkingTypeMaintenance } from '@/services/maintenance';
+import { checkVIPStatus, checkVIPByCode } from '@/services/auth';
 import type { SystemSettings, ParkingType, AddonService, BookingFormData } from '@/types';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import ConflictNotification from '@/components/ConflictNotification';
@@ -47,9 +49,13 @@ const BookingPage: React.FC = () => {
   const [isVIP, setIsVIP] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showVIPCodeInput, setShowVIPCodeInput] = useState(false);
+  const [vipCode, setVipCode] = useState('');
+  const [vipCodeLoading, setVipCodeLoading] = useState(false);
   const [conflictingDays, setConflictingDays] = useState<string[]>([]);
   const [bookingTerms, setBookingTerms] = useState<string>('');
   const [bookingRules, setBookingRules] = useState<string>('');
+  const [maintenanceDays, setMaintenanceDays] = useState<any[]>([]);
   
   const [formData, setFormData] = useState<BookingFormData>({
     agreedToTerms: false,
@@ -82,19 +88,25 @@ const BookingPage: React.FC = () => {
         getAddonServices()
       ]);
       setSystemSettings(settings);
-      setParkingTypes(types);
-      setAddonServices(services);
+      console.log(settings , 'types');
+      // Ensure parkingTypes is always an array
+      setParkingTypes(Array.isArray(types) ? types : []);
+      // Ensure addonServices is always an array
+      setAddonServices(Array.isArray(services) ? services : []);
       // Set booking terms and rules from system settings
-      setBookingTerms(settings.bookingTerms || '');
-      setBookingRules(settings.bookingRules || '');
+      setBookingTerms(settings?.bookingTerms || '');
+      setBookingRules(settings?.bookingRules || '');
       
       // Load VIP status from localStorage
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       setIsVIP(user.isVIP || false);
     } catch (error: any) {
       console.error('Error loading initial data:', error);
-      setError('Không thể tải dữ liệu hệ thống');
-      toast.error('Không thể tải dữ liệu hệ thống');
+      setError('無法載入系統資料');
+      toast.error('無法載入系統資料');
+      // Set empty arrays on error to prevent filter errors
+      setParkingTypes([]);
+      setAddonServices([]);
     } finally {
       setLoading(false);
     }
@@ -104,11 +116,13 @@ const BookingPage: React.FC = () => {
   useEffect(() => {
     if (formData.parkingTypeId && formData.checkInTime && formData.checkOutTime) {
       checkAvailability();
+      checkMaintenanceForSelectedDates();
     } else {
       // Clear availability data when no parking type or time is selected
       setAvailableSlots([]);
       setPricing(null);
       setConflictingDays([]);
+      setMaintenanceDays([]);
     }
   }, [formData.parkingTypeId, formData.checkInTime, formData.checkOutTime]);
 
@@ -116,7 +130,7 @@ const BookingPage: React.FC = () => {
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (formData.email) {
-        checkVIPStatus(formData.email);
+        checkVIPStatusByEmail(formData.email);
       }
     }, 1000); // Debounce 1 second
 
@@ -142,11 +156,33 @@ const BookingPage: React.FC = () => {
         // Calculate conflicting days
         const conflicts = await calculateConflictingDays();
         setConflictingDays(conflicts);
-        toast.error(data.message || 'Bãi đậu xe đã hết chỗ trong thời gian này');
+        toast.error(data.message || '停車場在此時間段已滿');
       }
     } catch (error) {
       console.error('Error checking availability:', error);
-      toast.error('Lỗi kiểm tra tính khả dụng');
+      toast.error('檢查可用性時發生錯誤');
+    }
+  };
+
+  const checkMaintenanceForSelectedDates = async () => {
+    if (!formData.parkingTypeId || !formData.checkInTime || !formData.checkOutTime) {
+      return;
+    }
+
+    try {
+      const result = await checkParkingTypeMaintenance(
+        formData.parkingTypeId,
+        formData.checkInTime,
+        formData.checkOutTime
+      );
+      
+      setMaintenanceDays(result.maintenanceDays);
+      
+      if (result.hasMaintenance) {
+        toast.error('此停車場在選定時間內正在維護');
+      }
+    } catch (error) {
+      console.error('Error checking maintenance:', error);
     }
   };
 
@@ -184,36 +220,86 @@ const BookingPage: React.FC = () => {
     return conflicts;
   };
 
-  const checkVIPStatus = async (email: string) => {
+  const checkVIPStatusByEmail = async (email: string) => {
     if (!email || !email.includes('@')) return;
     
     try {
-      const response = await api.get(`/admin/users?email=${email}`);
-      if (response.data.users && response.data.users.length > 0) {
-        const user = response.data.users[0];
-        setCurrentUser(user);
-        setIsVIP(user.isVIP || false);
-        
-        if (user.isVIP) {
-          toast.success(`🎉 Chào mừng VIP Member! Bạn được hưởng ${user.vipDiscount || 0}% giảm giá!`);
-        }
+      // First try to get user info from localStorage
+      const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+      if (storedUser.email === email && storedUser.isVIP) {
+        setCurrentUser(storedUser);
+        setIsVIP(true);
+        toast.success(`🎉 歡迎VIP會員！您享有${storedUser.vipDiscount || 0}%折扣！`);
+        return;
+      }
+      
+      // Check VIP status from backend
+      const response = await checkVIPStatus(email);
+      
+      if (response.success && response.user && response.user.isVIP) {
+        setCurrentUser(response.user);
+        setIsVIP(true);
+        toast.success(`🎉 歡迎VIP會員！您享有${response.user.vipDiscount || 0}%折扣！`);
       } else {
         setCurrentUser(null);
         setIsVIP(false);
       }
     } catch (error) {
       console.error('Error checking VIP status:', error);
+      setCurrentUser(null);
+      setIsVIP(false);
+    }
+  };
+
+  const handleCheckVIPByCode = async () => {
+    if (!vipCode.trim()) {
+      toast.error('請輸入VIP碼');
+      return;
+    }
+
+    setVipCodeLoading(true);
+    try {
+      const response = await checkVIPByCode(vipCode.trim());
+      
+      if (response.success && response.user && response.user.isVIP) {
+        setCurrentUser(response.user);
+        setIsVIP(true);
+        setShowVIPCodeInput(false);
+        setVipCode('');
+        
+        // Auto-fill form with VIP user info
+        setFormData(prev => ({
+          ...prev,
+          driverName: response.user.name,
+          email: response.user.email,
+          phone: response.user.phone,
+          licensePlate: response.user.licensePlate || ''
+        }));
+        
+        toast.success(`🎉 歡迎VIP會員！您享有${response.user.vipDiscount || 0}%折扣！`);
+      } else {
+        toast.error(response.message || 'VIP碼無效');
+        setCurrentUser(null);
+        setIsVIP(false);
+      }
+    } catch (error) {
+      console.error('Error checking VIP code:', error);
+      toast.error('檢查VIP碼時發生錯誤');
+      setCurrentUser(null);
+      setIsVIP(false);
+    } finally {
+      setVipCodeLoading(false);
     }
   };
 
   const handleDiscountCodeApply = async () => {
     if (!formData.discountCode?.trim()) {
-      toast.error('Vui lòng nhập mã giảm giá');
+      toast.error('請輸入折扣碼');
       return;
     }
 
     if (!formData.parkingTypeId || !formData.checkInTime || !formData.checkOutTime) {
-      toast.error('Vui lòng chọn bãi đậu xe và thời gian trước khi áp dụng mã giảm giá');
+      toast.error('請在應用折扣碼之前選擇停車場和時間');
       return;
     }
 
@@ -226,43 +312,48 @@ const BookingPage: React.FC = () => {
         checkOutTime: formData.checkOutTime,
         addonServices: formData.selectedAddonServices,
         isVIP: isVIP,
-        email: formData.email || user.email
+        userEmail: formData.email || user.email
       });
 
       const data = response.data;
       if (data.success) {
         setDiscountInfo(data.discountInfo);
-        toast.success('Áp dụng mã giảm giá thành công!');
+        toast.success('折扣碼應用成功！');
       } else {
-        toast.error(data.message || 'Mã giảm giá không hợp lệ');
+        toast.error(data.message || '折扣碼無效');
         setDiscountInfo(null);
       }
     } catch (error: any) {
       console.error('Error applying discount:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Không thể áp dụng mã giảm giá';
-      toast.error(errorMessage);
+      // Don't show authentication errors for public booking
+      if (error.response?.status === 401) {
+        toast.error('請登入以使用折扣碼');
+      } else {
+        const errorMessage = error.response?.data?.message || error.message || '無法應用折扣碼';
+        toast.error(errorMessage);
+      }
       setDiscountInfo(null);
     }
   };
 
   const handleSubmit = async () => {
     if (!formData.termsAccepted) {
-      toast.error('Bạn phải đồng ý với các điều khoản');
+      toast.error('您必須同意條款');
       return;
     }
 
     if (!formData.parkingTypeId) {
-      toast.error('Vui lòng chọn loại bãi đậu xe');
+      toast.error('請選擇停車場類型');
       return;
     }
 
     if (!formData.checkInTime || !formData.checkOutTime) {
-      toast.error('Vui lòng chọn thời gian đặt chỗ');
+      toast.error('請選擇預訂時間');
       return;
     }
 
     if (!formData.driverName || !formData.phone || !formData.email || !formData.licensePlate) {
-      toast.error('Vui lòng điền đầy đủ thông tin cá nhân');
+      toast.error('請填寫完整的個人資料');
       return;
     }
 
@@ -289,7 +380,7 @@ const BookingPage: React.FC = () => {
       // Transform booking data for confirmation page
       const confirmationData = {
         bookingId: result.booking._id,
-        bookingNumber: `BK${result.booking._id.slice(-6).toUpperCase()}`,
+        bookingNumber: result.booking.bookingNumber || `BK${result.booking._id.slice(-6).toUpperCase()}`,
         parkingType: {
           name: result.booking.parkingType?.name || 'Unknown',
           type: result.booking.parkingType?.type || 'indoor',
@@ -326,8 +417,13 @@ const BookingPage: React.FC = () => {
       });
     } catch (error: any) {
       console.error('Error creating booking:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Không thể tạo đặt chỗ';
-      toast.error(errorMessage);
+      // Handle authentication errors gracefully for public booking
+      if (error.response?.status === 401) {
+        toast.error('請登入以創建預訂');
+      } else {
+        const errorMessage = error.response?.data?.message || error.message || '無法創建預訂';
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -344,9 +440,9 @@ const BookingPage: React.FC = () => {
 
   const getParkingTypeBadge = (type: string) => {
     const badgeConfig = {
-      indoor: { label: 'Trong nhà', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-      outdoor: { label: 'Ngoài trời', color: 'bg-green-100 text-green-800 border-green-200' },
-      disabled: { label: 'Khuyết tật', color: 'bg-orange-100 text-orange-800 border-orange-200' }
+      indoor: { label: '室內', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+      outdoor: { label: '戶外', color: 'bg-green-100 text-green-800 border-green-200' },
+      disabled: { label: '無障礙', color: 'bg-orange-100 text-orange-800 border-orange-200' }
     };
     
     const config = badgeConfig[type as keyof typeof badgeConfig] || badgeConfig.indoor;
@@ -355,9 +451,11 @@ const BookingPage: React.FC = () => {
 
   const formatCurrency = (amount: number | undefined | null) => {
     if (amount === undefined || amount === null) return '0 TWD';
-    return amount.toLocaleString('vi-VN', {
+    return amount.toLocaleString('zh-TW', {
       style: 'currency',
-      currency: 'TWD'
+      currency: 'TWD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     });
   };
 
@@ -374,11 +472,11 @@ const BookingPage: React.FC = () => {
   };
 
   const steps = [
-    { id: 1, title: 'Quy định', icon: <FileText className="h-4 w-4" /> },
-    { id: 2, title: 'Chọn bãi', icon: <MapPin className="h-4 w-4" /> },
-    { id: 3, title: 'Dịch vụ', icon: <ShoppingCart className="h-4 w-4" /> },
-    { id: 4, title: 'Giảm giá', icon: <Tag className="h-4 w-4" /> },
-    { id: 5, title: 'Thông tin', icon: <User className="h-4 w-4" /> }
+    { id: 1, title: '條款', icon: <FileText className="h-4 w-4" /> },
+    { id: 2, title: '選擇停車場', icon: <MapPin className="h-4 w-4" /> },
+    { id: 3, title: '服務', icon: <ShoppingCart className="h-4 w-4" /> },
+    { id: 4, title: '優惠', icon: <Tag className="h-4 w-4" /> },
+    { id: 5, title: '個人資料', icon: <User className="h-4 w-4" /> }
   ];
 
   const renderStepContent = () => {
@@ -390,12 +488,12 @@ const BookingPage: React.FC = () => {
               <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
                 <CardTitle className="flex items-center space-x-3 text-blue-900">
                   <Shield className="h-6 w-6 text-blue-600" />
-                  <span>Điều khoản và quy định</span>
+                  <span>條款和規定</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
                 <p className="text-gray-600 mb-6 leading-relaxed">
-                  Vui lòng đọc kỹ các quy định và điều khoản trước khi đặt chỗ đậu xe.
+                  請在預訂停車位之前仔細閱讀規定和條款。
                 </p>
                 
                 <div className="space-y-6">
@@ -404,7 +502,7 @@ const BookingPage: React.FC = () => {
                     <div className="bg-blue-50 rounded-lg p-4">
                       <h4 className="font-semibold mb-3 text-blue-800 flex items-center">
                         <FileText className="h-4 w-4 mr-2" />
-                        Điều khoản đặt chỗ
+                        預訂條款
                       </h4>
                       <div className="whitespace-pre-line text-sm leading-relaxed text-gray-700">
                         {bookingTerms}
@@ -417,7 +515,7 @@ const BookingPage: React.FC = () => {
                     <div className="bg-green-50 rounded-lg p-4">
                       <h4 className="font-semibold mb-3 text-green-800 flex items-center">
                         <Shield className="h-4 w-4 mr-2" />
-                        Quy định đặt chỗ
+                        預訂規定
                       </h4>
                       <div className="whitespace-pre-line text-sm leading-relaxed text-gray-700">
                         {bookingRules}
@@ -429,27 +527,27 @@ const BookingPage: React.FC = () => {
                   {!bookingTerms && !bookingRules && (
                     <div className="space-y-4">
                       <div className="bg-blue-50 rounded-lg p-4">
-                        <h4 className="font-semibold mb-3 text-blue-800">Quy định chung</h4>
+                        <h4 className="font-semibold mb-3 text-blue-800">一般規定</h4>
                         <div className="space-y-3 text-sm text-gray-700">
                           <div className="flex items-start space-x-3">
                             <span className="font-bold text-blue-600">1.</span>
-                            <span>Khách hàng phải đến đúng giờ đã đặt.</span>
+                            <span>客戶必須按預訂時間準時到達。</span>
                           </div>
                           <div className="flex items-start space-x-3">
                             <span className="font-bold text-blue-600">2.</span>
-                            <span>Không được để xe quá thời gian đã đặt.</span>
+                            <span>不得超過預訂時間停放車輛。</span>
                           </div>
                           <div className="flex items-start space-x-3">
                             <span className="font-bold text-blue-600">3.</span>
-                            <span>Tuân thủ các quy định an toàn của bãi đậu xe.</span>
+                            <span>遵守停車場安全規定。</span>
                           </div>
                           <div className="flex items-start space-x-3">
                             <span className="font-bold text-blue-600">4.</span>
-                            <span>Khách hàng chịu trách nhiệm về tài sản trong xe.</span>
+                            <span>客戶對車內財物負責。</span>
                           </div>
                           <div className="flex items-start space-x-3">
                             <span className="font-bold text-blue-600">5.</span>
-                            <span>Bãi đậu xe không chịu trách nhiệm về thiệt hại do thiên tai.</span>
+                            <span>停車場對天災造成的損害不承擔責任。</span>
                           </div>
                         </div>
                       </div>
@@ -465,7 +563,7 @@ const BookingPage: React.FC = () => {
                       onCheckedChange={(checked) => setFormData(prev => ({ ...prev, agreedToTerms: !!checked }))}
                     />
                     <Label htmlFor="agreedToTerms" className="text-sm font-medium">
-                      Tôi đã đọc và đồng ý với các điều khoản trên
+                      我已閱讀並同意上述條款
                     </Label>
                   </div>
                 </div>
@@ -481,43 +579,58 @@ const BookingPage: React.FC = () => {
               <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b">
                 <CardTitle className="flex items-center space-x-3 text-green-900">
                   <MapPin className="h-6 w-6 text-green-600" />
-                  <span>Chọn loại bãi đậu xe và thời gian</span>
+                  <span>選擇停車場類型和時間</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 space-y-8">
                 {/* Parking Type Selection */}
                 <div>
-                  <Label className="text-lg font-semibold text-gray-800 mb-4 block">Loại bãi đậu xe</Label>
+                  <Label className="text-lg font-semibold text-gray-800 mb-4 block">停車場類型</Label>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {parkingTypes.filter(type => type.isActive).map((type) => {
+                    {(parkingTypes || []).filter(type => type.isActive).map((type) => {
                       const isSelected = formData.parkingTypeId === type._id;
+                      const isUnderMaintenance = maintenanceDays.some(maintenance => 
+                        maintenance.affectedParkingTypes.some((affectedType: any) => affectedType._id === type._id)
+                      );
+                      
                       return (
                         <Card 
                           key={type._id} 
-                          className={`cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 ${
-                            isSelected 
-                              ? 'border-2 border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg' 
-                              : 'border-gray-200 hover:border-blue-300'
+                          className={`transition-all duration-300 ${
+                            isUnderMaintenance 
+                              ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-300' 
+                              : isSelected 
+                                ? 'cursor-pointer border-2 border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg hover:shadow-xl hover:scale-105' 
+                                : 'cursor-pointer border-gray-200 hover:border-blue-300 hover:shadow-xl hover:scale-105'
                           }`}
-                          onClick={() => setFormData(prev => ({ ...prev, parkingTypeId: type._id }))}
+                          onClick={() => {
+                            if (!isUnderMaintenance) {
+                              setFormData(prev => ({ ...prev, parkingTypeId: type._id }));
+                            }
+                          }}
                         >
                           <CardContent className="p-6">
                             <div className="flex items-start justify-between mb-4">
                               <div className="flex items-center space-x-3">
                                 <div className="text-3xl">{getParkingTypeIcon(type.type || 'indoor')}</div>
-                                <div>
-                                  <h3 className="font-bold text-lg text-gray-900">{type.name}</h3>
-                                  <div className="flex items-center space-x-2 mt-2">
-                                    {getParkingTypeBadge(type.type || 'indoor')}
-                                  </div>
-                                </div>
+                                                              <div>
+                                <h3 className="font-bold text-lg text-gray-900">{type.name}</h3>
+                                                              <div className="flex items-center space-x-2 mt-2">
+                                {getParkingTypeBadge(type.type || 'indoor')}
+                                {isUnderMaintenance && (
+                                  <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-200">
+                                    🔧 維護中
+                                  </Badge>
+                                )}
+                              </div>
+                              </div>
                               </div>
                             </div>
                             
                             <div className="space-y-3">
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">Sức chứa:</span>
-                                <span className="font-medium text-gray-900">{type.totalSpaces} chỗ</span>
+                                <span className="text-sm text-gray-600">容量:</span>
+                                <span className="font-medium text-gray-900">{type.totalSpaces} 位</span>
                               </div>
                               
                               {type.description && (
@@ -531,7 +644,7 @@ const BookingPage: React.FC = () => {
                                   <p className="text-2xl font-bold text-blue-600">
                                     {formatCurrency(type.pricePerDay)}
                                   </p>
-                                  <p className="text-sm text-gray-500">/ngày</p>
+                                  <p className="text-sm text-gray-500">/天</p>
                                 </div>
                               </div>
                             </div>
@@ -546,10 +659,10 @@ const BookingPage: React.FC = () => {
                 {formData.parkingTypeId && (
                   <div className="space-y-6">
                     <div>
-                      <Label className="text-lg font-semibold text-gray-800 mb-4 block">Chọn thời gian đặt chỗ</Label>
+                      <Label className="text-lg font-semibold text-gray-800 mb-4 block">選擇預訂時間</Label>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <Label htmlFor="checkInTime" className="text-sm font-medium text-gray-700">Thời gian vào *</Label>
+                          <Label htmlFor="checkInTime" className="text-sm font-medium text-gray-700">進入時間 *</Label>
                           <div className="relative">
                             <Clock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                             <Input
@@ -563,7 +676,7 @@ const BookingPage: React.FC = () => {
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="checkOutTime" className="text-sm font-medium text-gray-700">Thời gian ra *</Label>
+                          <Label htmlFor="checkOutTime" className="text-sm font-medium text-gray-700">離開時間 *</Label>
                           <div className="relative">
                             <Clock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                             <Input
@@ -598,6 +711,28 @@ const BookingPage: React.FC = () => {
                         availableDays={Math.ceil((new Date(formData.checkOutTime).getTime() - new Date(formData.checkInTime).getTime()) / (1000 * 60 * 60 * 24)) - conflictingDays.length}
                       />
                     )}
+
+                    {/* Maintenance Notification */}
+                    {maintenanceDays.length > 0 && (
+                      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <AlertCircle className="h-5 w-5 text-red-600" />
+                          <span className="font-medium text-red-800">⚠️ 停車場正在維護</span>
+                        </div>
+                        <div className="text-sm text-red-700">
+                          <p>所選停車場在此時間內正在維護:</p>
+                          <ul className="mt-2 space-y-1">
+                            {maintenanceDays.map((maintenance, index) => (
+                              <li key={index} className="flex items-center space-x-2">
+                                <span>•</span>
+                                <span>{new Date(maintenance.date).toLocaleDateString('vi-VN')}: {maintenance.reason}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          <p className="mt-2 font-medium">請選擇其他時間或停車場。</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -620,7 +755,7 @@ const BookingPage: React.FC = () => {
               </CardHeader>
               <CardContent className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {addonServices.filter(service => service.isActive).map((service) => {
+                  {(addonServices || []).filter(service => service.isActive).map((service) => {
                     const isSelected = formData.selectedAddonServices.includes(service._id);
                     return (
                       <Card 
@@ -634,7 +769,7 @@ const BookingPage: React.FC = () => {
                           if (isSelected) {
                             setFormData(prev => ({
                               ...prev,
-                              selectedAddonServices: prev.selectedAddonServices.filter(id => id !== service._id)
+                              selectedAddonServices: (prev.selectedAddonServices || []).filter(id => id !== service._id)
                             }));
                           } else {
                             setFormData(prev => ({
@@ -804,6 +939,50 @@ const BookingPage: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
+                {/* VIP Code Section */}
+                {!isVIP && (
+                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-yellow-800 font-medium">👑 Bạn có phải là thành viên VIP?</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowVIPCodeInput(!showVIPCodeInput)}
+                        className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+                      >
+                        {showVIPCodeInput ? 'Ẩn' : 'Nhập mã VIP'}
+                      </Button>
+                    </div>
+                    
+                    {showVIPCodeInput && (
+                      <div className="space-y-3">
+                        <div className="flex space-x-2">
+                          <Input
+                            placeholder="Nhập mã VIP của bạn"
+                            value={vipCode}
+                            onChange={(e) => setVipCode(e.target.value)}
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            onClick={handleCheckVIPByCode}
+                            disabled={vipCodeLoading}
+                            className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                          >
+                            {vipCodeLoading ? 'Đang kiểm tra...' : 'Kiểm tra'}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-yellow-700">
+                          💡 Mã VIP có định dạng: Năm + Số điện thoại (VD: 1140908805805)
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="driverName" className="text-sm font-medium text-gray-700">Tên tài xế *</Label>
@@ -924,6 +1103,43 @@ const BookingPage: React.FC = () => {
                         <span className="font-semibold text-gray-900">{formatCurrency(pricing.totalPrice)}</span>
                       </div>
                     </div>
+
+                    {/* Daily Prices Breakdown */}
+                    {pricing?.dailyPrices && pricing.dailyPrices.length > 0 && (
+                      <div className="bg-blue-50 p-3 rounded-lg">
+                        <div className="text-sm font-semibold text-blue-700 mb-2">📅 Chi tiết giá từng ngày:</div>
+                        <div className="space-y-2">
+                          {pricing.dailyPrices.map((dayPrice: any, index: number) => (
+                            <div key={index} className="flex justify-between items-center text-sm bg-white p-2 rounded">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-gray-600">
+                                  {new Date(dayPrice.date).toLocaleDateString('vi-VN', {
+                                    weekday: 'short',
+                                    month: 'short',
+                                    day: 'numeric'
+                                  })}
+                                </span>
+                                {dayPrice.isSpecialPrice && (
+                                  <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-200 max-w-32 truncate" title={dayPrice.specialPriceReason}>
+                                    💰 {dayPrice.specialPriceReason || 'Giá đặc biệt'}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                {dayPrice.isSpecialPrice && (
+                                  <span className="text-xs text-gray-500 line-through">
+                                    {formatCurrency(dayPrice.originalPrice)}
+                                  </span>
+                                )}
+                                <span className={`font-semibold ${dayPrice.isSpecialPrice ? 'text-orange-600' : 'text-blue-600'}`}>
+                                  {formatCurrency(dayPrice.price)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     
                     {/* Addon Services */}
                     {formData.selectedAddonServices.length > 0 && (
@@ -942,6 +1158,38 @@ const BookingPage: React.FC = () => {
                               </div>
                             ) : null;
                           })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Luggage Fees */}
+                    {formData.luggageCount > 0 && (
+                      <div className="bg-purple-50 p-3 rounded-lg">
+                        <div className="text-sm font-semibold text-purple-700 mb-2">🧳 Hành lý:</div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center text-sm bg-white p-2 rounded">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-lg">🧳</span>
+                              <span>{formData.luggageCount} hành lý</span>
+                              {systemSettings?.luggageSettings && (
+                                <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
+                                  {formData.luggageCount <= systemSettings.luggageSettings.freeLuggageCount 
+                                    ? 'Miễn phí' 
+                                    : `${systemSettings.luggageSettings.freeLuggageCount} miễn phí + ${formData.luggageCount - systemSettings.luggageSettings.freeLuggageCount} tính phí`
+                                  }
+                                </span>
+                              )}
+                            </div>
+                            <span className="font-semibold text-purple-600">
+                              {(() => {
+                                if (!systemSettings?.luggageSettings) return '0';
+                                const { freeLuggageCount, luggagePricePerItem } = systemSettings.luggageSettings;
+                                const additionalLuggage = Math.max(0, formData.luggageCount - freeLuggageCount);
+                                const luggageFee = additionalLuggage * luggagePricePerItem;
+                                return formatCurrency(luggageFee);
+                              })()}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -986,7 +1234,7 @@ const BookingPage: React.FC = () => {
                         <div className="flex justify-between items-center">
                           <span className="font-semibold text-gray-700">Tổng tiền gốc:</span>
                           <span className="font-semibold text-gray-900">
-                            {formatCurrency(pricing.totalPrice + (addonServices
+                            {formatCurrency(pricing.totalPrice + ((addonServices || [])
                               .filter(service => formData.selectedAddonServices.includes(service._id))
                               .reduce((sum, service) => sum + service.price, 0)
                             ))}
@@ -1001,7 +1249,23 @@ const BookingPage: React.FC = () => {
                               -{formatCurrency(
                                 discountInfo 
                                   ? (discountInfo.totalDiscount || discountInfo.discountAmount) || 0
-                                  : Math.round((pricing?.totalPrice || 0) * (currentUser?.vipDiscount / 100))
+                                  : (() => {
+                                      const baseTotal = (pricing?.totalPrice || 0) + 
+                                        (addonServices
+                                          .filter(service => formData.selectedAddonServices.includes(service._id))
+                                          .reduce((sum, service) => sum + service.price, 0)
+                                        );
+                                      
+                                      const luggageFee = (() => {
+                                        if (!systemSettings?.luggageSettings) return 0;
+                                        const { freeLuggageCount, luggagePricePerItem } = systemSettings.luggageSettings;
+                                        const additionalLuggage = Math.max(0, formData.luggageCount - freeLuggageCount);
+                                        return additionalLuggage * luggagePricePerItem;
+                                      })();
+                                      
+                                      const totalWithLuggage = baseTotal + luggageFee;
+                                      return Math.round(totalWithLuggage * (currentUser?.vipDiscount / 100));
+                                    })()
                               )}
                             </span>
                           </div>
@@ -1011,12 +1275,33 @@ const BookingPage: React.FC = () => {
                           <div className="flex justify-between items-center">
                             <span className="font-bold text-lg text-gray-900">Tổng thanh toán:</span>
                             <span className="text-2xl font-bold text-emerald-600">
-                              {discountInfo 
-                                ? formatCurrency(discountInfo.finalAmount) 
-                                : isVIP && currentUser 
-                                  ? formatCurrency(Math.round((pricing?.totalPrice || 0) * (1 - currentUser.vipDiscount / 100)))
-                                  : formatCurrency(pricing?.totalPrice || 0)
-                              }
+                              {(() => {
+                                // Calculate base total
+                                const baseTotal = (pricing?.totalPrice || 0) + 
+                                  (addonServices
+                                    .filter(service => formData.selectedAddonServices.includes(service._id))
+                                    .reduce((sum, service) => sum + service.price, 0)
+                                  );
+                                
+                                // Calculate luggage fee
+                                const luggageFee = (() => {
+                                  if (!systemSettings?.luggageSettings) return 0;
+                                  const { freeLuggageCount, luggagePricePerItem } = systemSettings.luggageSettings;
+                                  const additionalLuggage = Math.max(0, formData.luggageCount - freeLuggageCount);
+                                  return additionalLuggage * luggagePricePerItem;
+                                })();
+                                
+                                const totalWithLuggage = baseTotal + luggageFee;
+                                
+                                if (discountInfo) {
+                                  return formatCurrency(discountInfo.finalAmount);
+                                } else if (isVIP && currentUser) {
+                                  const vipDiscount = totalWithLuggage * (currentUser.vipDiscount / 100);
+                                  return formatCurrency(Math.round(totalWithLuggage - vipDiscount));
+                                } else {
+                                  return formatCurrency(totalWithLuggage);
+                                }
+                              })()}
                             </span>
                           </div>
                         </div>
@@ -1113,6 +1398,63 @@ const BookingPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Selected Date Information */}
+          {currentStep >= 2 && formData.checkInTime && formData.checkOutTime && (
+            <div className="mb-6">
+              <Card className="border-2 border-blue-200 bg-blue-50/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Clock className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <h3 className="font-semibold text-blue-900">Thời gian đã chọn:</h3>
+                        <div className="flex items-center space-x-4 text-sm text-blue-800">
+                          <span>
+                            <strong>Vào bãi:</strong> {new Date(formData.checkInTime).toLocaleDateString('vi-VN', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                          <span className="text-blue-600">→</span>
+                          <span>
+                            <strong>Rời bãi:</strong> {new Date(formData.checkOutTime).toLocaleDateString('vi-VN', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    {formData.parkingTypeId && (
+                      <div className="text-right">
+                        <div className="text-sm text-blue-700">
+                          <strong>Bãi đậu:</strong> {parkingTypes.find(pt => pt._id === formData.parkingTypeId)?.name || 'Chưa chọn'}
+                        </div>
+                        <div className="text-xs text-blue-600">
+                          {(() => {
+                            const checkIn = new Date(formData.checkInTime);
+                            const checkOut = new Date(formData.checkOutTime);
+                            const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            return `${diffDays} ngày`;
+                          })()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           {/* Step Content */}
           {renderStepContent()}
 
@@ -1130,15 +1472,16 @@ const BookingPage: React.FC = () => {
             
             <div className="flex space-x-3">
               {currentStep < steps.length ? (
-                <Button
-                  onClick={() => setCurrentStep(prev => prev + 1)}
-                  disabled={
-                    (currentStep === 1 && !formData.agreedToTerms) ||
-                    (currentStep === 2 && !formData.parkingTypeId) ||
-                    (currentStep === 2 && (!formData.checkInTime || !formData.checkOutTime))
-                  }
-                  className="px-8 py-3 bg-blue-600 hover:bg-blue-700"
-                >
+                            <Button
+              onClick={() => setCurrentStep(prev => prev + 1)}
+              disabled={
+                (currentStep === 1 && !formData.agreedToTerms) ||
+                (currentStep === 2 && !formData.parkingTypeId) ||
+                (currentStep === 2 && (!formData.checkInTime || !formData.checkOutTime)) ||
+                (currentStep === 2 && maintenanceDays.length > 0)
+              }
+              className="px-8 py-3 bg-blue-600 hover:bg-blue-700"
+            >
                   Tiếp theo
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>

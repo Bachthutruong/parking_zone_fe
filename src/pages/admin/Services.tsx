@@ -73,7 +73,7 @@ const AdminServices: React.FC = () => {
       const data = await getAllAddonServices();
       setServices(data.services);
     } catch (error: any) {
-      toast.error('Không thể tải danh sách dịch vụ');
+      toast.error('無法載入服務清單');
     } finally {
       setLoading(false);
     }
@@ -82,12 +82,12 @@ const AdminServices: React.FC = () => {
   const handleCreate = async () => {
     try {
       await createAddonService(formData);
-      toast.success('Tạo dịch vụ thành công');
+      toast.success('創建服務成功');
       setShowCreateDialog(false);
       resetForm();
       loadServices();
     } catch (error: any) {
-      toast.error('Không thể tạo dịch vụ');
+      toast.error('無法創建服務');
     }
   };
 
@@ -96,7 +96,7 @@ const AdminServices: React.FC = () => {
     
     try {
       await updateAddonService(selectedService._id, formData);
-      toast.success('Cập nhật dịch vụ thành công');
+      toast.success('更新服務成功');
       setShowEditDialog(false);
       resetForm();
       loadServices();
@@ -206,10 +206,12 @@ const AdminServices: React.FC = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    if (amount === 0) return 'Miễn phí';
-    return amount.toLocaleString('vi-VN', {
+    if (amount === 0) return '免費';
+    return amount.toLocaleString('zh-TW', {
       style: 'currency',
-      currency: 'TWD'
+      currency: 'TWD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     });
   };
 
@@ -237,17 +239,17 @@ const AdminServices: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Dịch vụ bổ sung</h1>
-          <p className="text-gray-600">Quản lý các dịch vụ bổ sung cho khách hàng</p>
+          <h1 className="text-3xl font-bold">附加服務</h1>
+          <p className="text-gray-600">管理客戶的附加服務</p>
         </div>
         <div className="flex space-x-2">
           <Button variant="outline" onClick={loadServices}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Làm mới
+            重新整理
           </Button>
           <Button onClick={openCreateDialog}>
             <Plus className="h-4 w-4 mr-2" />
-            Thêm dịch vụ
+            新增服務
           </Button>
         </div>
       </div>

@@ -22,7 +22,8 @@ import {
   XCircle,
   // AlertTriangle,
   Info,
-  Phone
+  Phone,
+  ShoppingCart
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getSystemSettings, updateSystemSettings, updateBookingTerms } from '@/services/systemSettings';
@@ -67,6 +68,12 @@ interface SettingsFormData {
     acceptOnlinePayment: boolean;
     currency: string;
     taxRate: number;
+  };
+
+  // Luggage settings
+  luggageSettings: {
+    freeLuggageCount: number;
+    luggagePricePerItem: number;
   };
   
   // System settings
@@ -270,6 +277,10 @@ const AdminSettings: React.FC = () => {
       currency: 'TWD',
       taxRate: 0
     },
+    luggageSettings: {
+      freeLuggageCount: 1,
+      luggagePricePerItem: 100
+    },
     maintenanceMode: {
       enabled: false,
       message: ''
@@ -311,6 +322,10 @@ const AdminSettings: React.FC = () => {
         paymentSettings: {
           ...prev.paymentSettings,
           ...settings.paymentSettings
+        },
+        luggageSettings: {
+          ...prev.luggageSettings,
+          ...settings.luggageSettings
         },
         maintenanceMode: {
           ...prev.maintenanceMode,
@@ -532,6 +547,7 @@ const AdminSettings: React.FC = () => {
           <TabsTrigger value="booking">Đặt chỗ</TabsTrigger>
           <TabsTrigger value="notifications">Thông báo</TabsTrigger>
           <TabsTrigger value="payment">Thanh toán</TabsTrigger>
+          <TabsTrigger value="luggage">Hành lý</TabsTrigger>
           {/* <TabsTrigger value="terms">Điều khoản</TabsTrigger> */}
         </TabsList>
 
@@ -912,6 +928,74 @@ const AdminSettings: React.FC = () => {
                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, paymentSettings: { ...prev.paymentSettings, acceptOnlinePayment: checked } }))}
                   />
                   <Label htmlFor="acceptOnlinePayment">Chấp nhận thanh toán online</Label>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Luggage Settings */}
+        <TabsContent value="luggage" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <ShoppingCart className="h-5 w-5 text-blue-600" />
+                <span>Cài đặt hành lý</span>
+              </CardTitle>
+              <CardDescription>
+                Cấu hình phí hành lý và số lượng hành lý miễn phí
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="freeLuggageCount">Số lượng hành lý miễn phí</Label>
+                  <Input
+                    id="freeLuggageCount"
+                    type="number"
+                    min="0"
+                    value={formData.luggageSettings.freeLuggageCount}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      luggageSettings: { 
+                        ...prev.luggageSettings, 
+                        freeLuggageCount: parseInt(e.target.value) || 0 
+                      }
+                    }))}
+                    placeholder="1"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Số lượng hành lý được miễn phí cho mỗi đặt chỗ
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="luggagePricePerItem">Giá mỗi hành lý thêm (NT$)</Label>
+                  <Input
+                    id="luggagePricePerItem"
+                    type="number"
+                    min="0"
+                    value={formData.luggageSettings.luggagePricePerItem}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      luggageSettings: { 
+                        ...prev.luggageSettings, 
+                        luggagePricePerItem: parseInt(e.target.value) || 0 
+                      }
+                    }))}
+                    placeholder="100"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Giá phải trả cho mỗi hành lý vượt quá số lượng miễn phí
+                  </p>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-blue-900 mb-2">Ví dụ tính phí:</h4>
+                <div className="text-sm text-blue-800 space-y-1">
+                  <p>• Nếu khách chọn 1 hành lý: Miễn phí (≤ {formData.luggageSettings.freeLuggageCount})</p>
+                  <p>• Nếu khách chọn 2 hành lý: Phí thêm {formData.luggageSettings.luggagePricePerItem} NT$</p>
+                  <p>• Nếu khách chọn 3 hành lý: Phí thêm {formData.luggageSettings.luggagePricePerItem * 2} NT$</p>
                 </div>
               </div>
             </CardContent>

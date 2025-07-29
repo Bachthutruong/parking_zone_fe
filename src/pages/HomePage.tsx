@@ -10,22 +10,22 @@ const HomePage: React.FC = () => {
       <section className="bg-gradient-to-br from-primary/10 to-primary/5 py-20">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Đặt chỗ đậu xe sân bay
-            <span className="text-primary block">dễ dàng và an toàn</span>
+            機場停車預訂
+            <span className="text-primary block">簡單安全</span>
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Dịch vụ đặt chỗ đậu xe sân bay hàng đầu tại Đài Loan. 
-            Đảm bảo xe của bạn được bảo vệ an toàn trong suốt chuyến đi.
+            台灣頂級機場停車預訂服務。
+            確保您的車輛在整個旅程中得到安全保護。
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/booking">
               <Button size="lg" className="text-lg px-8">
-                Đặt chỗ ngay
+                立即預訂
               </Button>
             </Link>
             <Link to="/lookup">
               <Button variant="outline" size="lg" className="text-lg px-8">
-                Tra cứu đặt chỗ
+                查詢預訂
               </Button>
             </Link>
           </div>
@@ -36,34 +36,34 @@ const HomePage: React.FC = () => {
       <section className="py-20">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">
-            Tại sao chọn Parking Zone?
+            為什麼選擇停車區？
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center p-6">
               <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Shield className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">An toàn tuyệt đối</h3>
+              <h3 className="text-xl font-semibold mb-2">絕對安全</h3>
               <p className="text-muted-foreground">
-                Hệ thống bảo mật 24/7 với camera giám sát và nhân viên bảo vệ chuyên nghiệp
+                24/7 安全系統，配備監控攝影機和專業保安人員
               </p>
             </div>
             <div className="text-center p-6">
               <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Clock className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Tiện lợi 24/7</h3>
+              <h3 className="text-xl font-semibold mb-2">24/7 便利服務</h3>
               <p className="text-muted-foreground">
-                Đặt chỗ bất cứ lúc nào, nhận xe nhanh chóng khi trở về
+                隨時預訂，回程時快速取車
               </p>
             </div>
             <div className="text-center p-6">
               <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Star className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Dịch vụ cao cấp</h3>
+              <h3 className="text-xl font-semibold mb-2">高級服務</h3>
               <p className="text-muted-foreground">
-                Nhiều loại bãi đậu và dịch vụ bổ sung đáp ứng mọi nhu cầu
+                多種停車場類型和附加服務，滿足所有需求
               </p>
             </div>
           </div>
@@ -74,42 +74,42 @@ const HomePage: React.FC = () => {
       <section className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">
-            Các loại bãi đậu xe
+            停車場類型
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="bg-background rounded-lg p-6 shadow-sm">
               <div className="text-4xl mb-4">🏢</div>
-              <h3 className="text-xl font-semibold mb-2">Trong nhà</h3>
+              <h3 className="text-xl font-semibold mb-2">室內停車場</h3>
               <p className="text-muted-foreground mb-4">
-                Bãi đậu xe có mái che, bảo vệ xe khỏi thời tiết
+                有遮蓋的停車場，保護車輛免受天氣影響
               </p>
               <Link to="/booking">
                 <Button variant="outline" className="w-full">
-                  Đặt chỗ
+                  預訂
                 </Button>
               </Link>
             </div>
             <div className="bg-background rounded-lg p-6 shadow-sm">
               <div className="text-4xl mb-4">🌤</div>
-              <h3 className="text-xl font-semibold mb-2">Ngoài trời</h3>
+              <h3 className="text-xl font-semibold mb-2">戶外停車場</h3>
               <p className="text-muted-foreground mb-4">
-                Bãi đậu xe rộng rãi với giá cả hợp lý
+                寬敞的停車場，價格合理
               </p>
               <Link to="/booking">
                 <Button variant="outline" className="w-full">
-                  Đặt chỗ
+                  預訂
                 </Button>
               </Link>
             </div>
             <div className="bg-background rounded-lg p-6 shadow-sm">
               <div className="text-4xl mb-4">♿️</div>
-              <h3 className="text-xl font-semibold mb-2">Khu vực khuyết tật</h3>
+              <h3 className="text-xl font-semibold mb-2">無障礙區域</h3>
               <p className="text-muted-foreground mb-4">
-                Bãi đậu xe dành riêng cho người khuyết tật
+                專為身心障礙者設計的停車場
               </p>
               <Link to="/booking">
                 <Button variant="outline" className="w-full">
-                  Đặt chỗ
+                  預訂
                 </Button>
               </Link>
             </div>
@@ -121,14 +121,14 @@ const HomePage: React.FC = () => {
       <section className="py-20">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-4">
-            Sẵn sàng đặt chỗ chưa?
+            準備好預訂了嗎？
           </h2>
           <p className="text-xl text-muted-foreground mb-8">
-            Chỉ mất vài phút để đặt chỗ và đảm bảo xe của bạn được bảo vệ
+            只需幾分鐘即可預訂並確保您的車輛得到保護
           </p>
           <Link to="/booking">
             <Button size="lg" className="text-lg px-8">
-              Bắt đầu đặt chỗ
+              開始預訂
             </Button>
           </Link>
         </div>

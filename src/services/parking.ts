@@ -27,6 +27,6 @@ export const getParkingTypeAvailability = async (id: string, date: string) => {
 
 // Get available parking types by type
 export const getAvailableParkingTypes = async (params: AvailableParkingTypesParams): Promise<ParkingType[]> => {
-  const response = await api.get('/bookings/available-types', { params });
+  const response = await api.get('/bookings/available-parking-types', { params });
   return response.data.parkingTypes;
 }; 

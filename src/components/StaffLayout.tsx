@@ -19,12 +19,12 @@ const StaffLayout: React.FC = () => {
 
   const handleLogout = () => {
     logout();
-    toast.success('Đã đăng xuất thành công');
+    toast.success('登出成功');
   };
 
   const menuItems = [
-    { path: '/staff', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-    { path: '/staff/bookings', icon: Calendar, label: 'Đặt chỗ', exact: false },
+    { path: '/staff', icon: LayoutDashboard, label: '儀表板', exact: true },
+    { path: '/staff/bookings', icon: Calendar, label: '預訂', exact: false },
   ];
 
   const isActive = (path: string, exact: boolean = false) => {

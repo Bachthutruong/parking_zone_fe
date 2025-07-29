@@ -15,8 +15,9 @@ import {
   Car, 
 //   User, 
   Phone, 
-  Edit,
+  // Edit,
   Eye,
+  Printer,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getAllBookings, updateBookingStatus } from '@/services/admin';
@@ -36,8 +37,6 @@ const BookingsPage: React.FC = () => {
   });
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
-  const [showStatusDialog, setShowStatusDialog] = useState(false);
-  const [newStatus, setNewStatus] = useState('pending');
 
   useEffect(() => {
     loadBookings();
@@ -57,36 +56,181 @@ const BookingsPage: React.FC = () => {
       setTotal(response.total);
       setTotalPages(response.totalPages);
     } catch (error) {
-      toast.error('Không thể tải danh sách đặt chỗ');
+      toast.error('無法載入預訂清單');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStatusUpdate = async () => {
-    if (!selectedBooking || !newStatus) return;
-
+  const handleStatusUpdate = async (bookingId: string, newStatus: string) => {
     try {
-      await updateBookingStatus(selectedBooking._id, newStatus);
-      toast.success('Cập nhật trạng thái thành công');
-      setShowStatusDialog(false);
-      setSelectedBooking(null);
-      setNewStatus('pending');
+      await updateBookingStatus(bookingId, newStatus);
+      toast.success('狀態更新成功');
       loadBookings();
     } catch (error: any) {
       console.error('Status update error:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Cập nhật trạng thái thất bại';
+      const errorMessage = error.response?.data?.message || error.message || '狀態更新失敗';
       toast.error(errorMessage);
     }
   };
 
+  const createStatusUpdateHandler = (bookingId: string, newStatus: string) => {
+    return () => handleStatusUpdate(bookingId, newStatus);
+  };
+
+  const printBooking = (booking: Booking) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Chi tiết đặt chỗ - ${booking.driverName}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+          .section { margin-bottom: 20px; }
+          .section h3 { color: #333; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+          .info-item { margin-bottom: 8px; }
+          .label { font-weight: bold; }
+          .status { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+          .status-pending { background-color: #fef3c7; color: #92400e; }
+          .status-confirmed { background-color: #fef3c7; color: #92400e; }
+          .status-checked-in { background-color: #d1fae5; color: #065f46; }
+          .status-checked-out { background-color: #f3f4f6; color: #374151; }
+          .status-cancelled { background-color: #fee2e2; color: #991b1b; }
+          .services { display: flex; flex-wrap: wrap; gap: 5px; }
+          .service-badge { background-color: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+          .total { font-size: 18px; font-weight: bold; color: #333; }
+          @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>預訂詳細資訊</h1>
+          <p>預訂編號: ${booking._id}</p>
+        </div>
+
+        <div class="section">
+          <h3>客戶資訊</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">姓名:</span> ${booking.driverName}
+            </div>
+            <div class="info-item">
+              <span class="label">電話:</span> ${booking.phone}
+            </div>
+            <div class="info-item">
+              <span class="label">電子郵件:</span> ${booking.email || '無'}
+            </div>
+            <div class="info-item">
+              <span class="label">車牌號碼:</span> ${booking.licensePlate}
+            </div>
+            <div class="info-item">
+              <span class="label">乘客:</span> ${booking.passengerCount} 人
+            </div>
+            <div class="info-item">
+              <span class="label">行李:</span> ${booking.luggageCount} 件
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>預訂資訊</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">停車場:</span> ${booking.parkingType.name}
+            </div>
+            <div class="info-item">
+              <span class="label">類型:</span> ${(booking.parkingType.type || 'indoor') === 'indoor' ? '室內' : 
+                (booking.parkingType.type || 'indoor') === 'outdoor' ? '戶外' : '無障礙'}
+            </div>
+            <div class="info-item">
+              <span class="label">進入時間:</span> ${new Date(booking.checkInTime).toLocaleString('zh-TW')}
+            </div>
+            <div class="info-item">
+              <span class="label">離開時間:</span> ${new Date(booking.checkOutTime).toLocaleString('zh-TW')}
+            </div>
+            <div class="info-item">
+              <span class="label">狀態:</span> 
+              <span class="status status-${booking.status}">
+                ${booking.status === 'pending' ? '等待進入停車場' :
+                  booking.status === 'confirmed' ? '等待進入停車場 (舊)' :
+                  booking.status === 'checked-in' ? '已進入停車場' :
+                  booking.status === 'checked-out' ? '已離開停車場' : '已取消'}
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="label">VIP:</span> ${booking.isVIP ? '是' : '否'}
+            </div>
+          </div>
+        </div>
+
+        ${booking.addonServices.length > 0 ? `
+        <div class="section">
+          <h3>附加服務</h3>
+          <div class="services">
+            ${booking.addonServices.map(addon => 
+              `<span class="service-badge">${addon.service.icon} ${addon.service.name} - ${addon.price.toLocaleString('zh-TW')} TWD</span>`
+            ).join('')}
+          </div>
+        </div>
+        ` : ''}
+
+        <div class="section">
+          <h3>付款資訊</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">總金額:</span> ${booking.totalAmount.toLocaleString('zh-TW')} TWD
+            </div>
+            ${booking.discountAmount > 0 ? `
+            <div class="info-item">
+              <span class="label">折扣:</span> -${booking.discountAmount.toLocaleString('zh-TW')} TWD
+            </div>
+            ` : ''}
+            <div class="info-item total">
+              <span class="label">應付金額:</span> ${booking.finalAmount.toLocaleString('zh-TW')} TWD
+            </div>
+            <div class="info-item">
+              <span class="label">付款方式:</span> ${booking.paymentMethod}
+            </div>
+            <div class="info-item">
+              <span class="label">付款狀態:</span> ${booking.paymentStatus}
+            </div>
+          </div>
+        </div>
+
+        ${booking.notes ? `
+        <div class="section">
+          <h3>備註</h3>
+          <p>${booking.notes}</p>
+        </div>
+        ` : ''}
+
+        <div class="no-print" style="margin-top: 30px; text-align: center;">
+          <button onclick="window.print()">列印</button>
+          <button onclick="window.close()">關閉</button>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { label: 'Chờ xác nhận', variant: 'secondary' as const, color: 'bg-yellow-100 text-yellow-800' },
-      confirmed: { label: 'Đã xác nhận', variant: 'default' as const, color: 'bg-blue-100 text-blue-800' },
-      'checked-in': { label: 'Đã vào bãi', variant: 'default' as const, color: 'bg-green-100 text-green-800' },
-      'checked-out': { label: 'Đã rời bãi', variant: 'secondary' as const, color: 'bg-gray-100 text-gray-800' },
-      cancelled: { label: 'Đã hủy', variant: 'destructive' as const, color: 'bg-red-100 text-red-800' }
+      pending: { label: '等待進入停車場', variant: 'secondary' as const, color: 'bg-yellow-100 text-yellow-800' },
+      confirmed: { label: '等待進入停車場', variant: 'secondary' as const, color: 'bg-yellow-100 text-yellow-800' },
+      'checked-in': { label: '已進入停車場', variant: 'default' as const, color: 'bg-green-100 text-green-800' },
+      'checked-out': { label: '已離開停車場', variant: 'secondary' as const, color: 'bg-gray-100 text-gray-800' },
+      cancelled: { label: '已取消', variant: 'destructive' as const, color: 'bg-red-100 text-red-800' }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
@@ -94,7 +238,7 @@ const BookingsPage: React.FC = () => {
   };
 
   const formatDateTime = (dateTime: string) => {
-    return new Date(dateTime).toLocaleString('vi-VN', {
+    return new Date(dateTime).toLocaleString('zh-TW', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -104,9 +248,11 @@ const BookingsPage: React.FC = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return amount.toLocaleString('vi-VN', {
+    return amount.toLocaleString('zh-TW', {
       style: 'currency',
-      currency: 'TWD'
+      currency: 'TWD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     });
   };
 
@@ -117,7 +263,6 @@ const BookingsPage: React.FC = () => {
 
   // Ensure filters.status is always a valid value
   const currentStatus = filters.status || 'all';
-  const currentNewStatus = newStatus || 'pending';
 
   // Don't render until state is ready
   if (loading && bookings.length === 0) {
@@ -133,8 +278,8 @@ const BookingsPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Quản lý đặt chỗ</h1>
-        <p className="text-gray-600">Quản lý tất cả đặt chỗ trong hệ thống</p>
+        <h1 className="text-3xl font-bold">預訂管理</h1>
+        <p className="text-gray-600">管理系統中的所有預訂</p>
       </div>
 
       {/* Filters */}
@@ -142,18 +287,18 @@ const BookingsPage: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Filter className="h-5 w-5" />
-            <span>Bộ lọc</span>
+            <span>篩選</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
-              <Label htmlFor="search">Tìm kiếm</Label>
+              <Label htmlFor="search">搜尋</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
                   id="search"
-                  placeholder="Tên, SĐT, biển số..."
+                  placeholder="姓名、電話、車牌號碼..."
                   value={filters.search}
                   onChange={(e) => handleFilterChange('search', e.target.value)}
                   className="pl-10"
@@ -162,28 +307,28 @@ const BookingsPage: React.FC = () => {
             </div>
 
             <div>
-              <Label htmlFor="status">Trạng thái</Label>
+              <Label htmlFor="status">狀態</Label>
               <Select 
                 value={currentStatus} 
                 onValueChange={(value) => handleFilterChange('status', value)}
                 defaultValue="all"
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Tất cả trạng thái" />
+                  <SelectValue placeholder="所有狀態" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                  <SelectItem value="pending">Chờ xác nhận</SelectItem>
-                  <SelectItem value="confirmed">Đã xác nhận</SelectItem>
-                  <SelectItem value="checked-in">Đã vào bãi</SelectItem>
-                  <SelectItem value="checked-out">Đã rời bãi</SelectItem>
-                  <SelectItem value="cancelled">Đã hủy</SelectItem>
+                  <SelectItem value="all">所有狀態</SelectItem>
+                  <SelectItem value="pending">等待進入停車場</SelectItem>
+                  <SelectItem value="confirmed">等待進入停車場 (舊)</SelectItem>
+                  <SelectItem value="checked-in">已進入停車場</SelectItem>
+                  <SelectItem value="checked-out">已離開停車場</SelectItem>
+                  <SelectItem value="cancelled">已取消</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <Label htmlFor="dateFrom">Từ ngày</Label>
+              <Label htmlFor="dateFrom">開始日期</Label>
               <Input
                 id="dateFrom"
                 type="date"
@@ -193,7 +338,7 @@ const BookingsPage: React.FC = () => {
             </div>
 
             <div>
-              <Label htmlFor="dateTo">Đến ngày</Label>
+              <Label htmlFor="dateTo">結束日期</Label>
               <Input
                 id="dateTo"
                 type="date"
@@ -204,7 +349,7 @@ const BookingsPage: React.FC = () => {
 
             <div className="flex items-end">
               <Button onClick={loadBookings} className="w-full">
-                Lọc
+                篩選
               </Button>
             </div>
           </div>
@@ -214,9 +359,9 @@ const BookingsPage: React.FC = () => {
       {/* Bookings Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Danh sách đặt chỗ</CardTitle>
+          <CardTitle>預訂清單</CardTitle>
           <CardDescription>
-            Tổng cộng {total} đặt chỗ • Trang {page} / {totalPages}
+            共 {total} 筆預訂 • 第 {page} 頁，共 {totalPages} 頁
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -229,12 +374,12 @@ const BookingsPage: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Khách hàng</TableHead>
-                    <TableHead>Bãi đậu</TableHead>
-                    <TableHead>Thời gian</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                    <TableHead>Số tiền</TableHead>
-                    <TableHead>Thao tác</TableHead>
+                    <TableHead>客戶</TableHead>
+                    <TableHead>停車場</TableHead>
+                    <TableHead>時間</TableHead>
+                    <TableHead>狀態</TableHead>
+                    <TableHead>金額</TableHead>
+                    <TableHead>操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -257,8 +402,8 @@ const BookingsPage: React.FC = () => {
                         <div className="space-y-1">
                           <div className="font-medium">{booking.parkingType.name}</div>
                           <div className="text-sm text-gray-600">
-                            {(booking.parkingType.type || 'indoor') === 'indoor' ? '🏢 Trong nhà' : 
-                             (booking.parkingType.type || 'indoor') === 'outdoor' ? '🌤 Ngoài trời' : '♿️ Khuyết tật'}
+                            {(booking.parkingType.type || 'indoor') === 'indoor' ? '🏢 室內' : 
+                             (booking.parkingType.type || 'indoor') === 'outdoor' ? '🌤 戶外' : '♿️ 無障礙'}
                           </div>
                         </div>
                       </TableCell>
@@ -299,16 +444,46 @@ const BookingsPage: React.FC = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
+                          
+                          {/* Status Action Buttons */}
+                          {(booking.status === 'pending' || booking.status === 'confirmed') && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                                onClick={createStatusUpdateHandler(booking._id, 'checked-in')}
+                              >
+                                已進入停車場
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={createStatusUpdateHandler(booking._id, 'cancelled')}
+                              >
+                                取消
+                              </Button>
+                            </>
+                          )}
+                          
+                          {booking.status === 'checked-in' && (
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="bg-blue-600 hover:bg-blue-700 text-white"
+                              onClick={createStatusUpdateHandler(booking._id, 'checked-out')}
+                            >
+                              已離開停車場
+                            </Button>
+                          )}
+                          
+
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => {
-                              setSelectedBooking(booking);
-                              setNewStatus(booking.status || 'pending');
-                              setShowStatusDialog(true);
-                            }}
+                            onClick={() => printBooking(booking)}
                           >
-                            <Edit className="h-4 w-4" />
+                            <Printer className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
@@ -321,7 +496,7 @@ const BookingsPage: React.FC = () => {
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-6">
                   <div className="text-sm text-gray-600">
-                    Hiển thị {((page - 1) * 10) + 1} - {Math.min(page * 10, total)} của {total} kết quả
+                    顯示第 {((page - 1) * 10) + 1} - {Math.min(page * 10, total)} 筆，共 {total} 筆結果
                   </div>
                   <div className="flex items-center space-x-2">
                     <Button
@@ -330,10 +505,10 @@ const BookingsPage: React.FC = () => {
                       onClick={() => setPage(page - 1)}
                       disabled={page === 1}
                     >
-                      Trước
+                      上一頁
                     </Button>
                     <span className="text-sm">
-                      Trang {page} / {totalPages}
+                      第 {page} 頁，共 {totalPages} 頁
                     </span>
                     <Button
                       variant="outline"
@@ -341,7 +516,7 @@ const BookingsPage: React.FC = () => {
                       onClick={() => setPage(page + 1)}
                       disabled={page === totalPages}
                     >
-                      Sau
+                      下一頁
                     </Button>
                   </div>
                 </div>
@@ -355,9 +530,9 @@ const BookingsPage: React.FC = () => {
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Chi tiết đặt chỗ</DialogTitle>
+            <DialogTitle>預訂詳細資訊</DialogTitle>
             <DialogDescription>
-              Thông tin chi tiết về đặt chỗ
+              預訂的詳細資訊
             </DialogDescription>
           </DialogHeader>
           
@@ -365,33 +540,33 @@ const BookingsPage: React.FC = () => {
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-semibold mb-2">Thông tin khách hàng</h4>
+                  <h4 className="font-semibold mb-2">客戶資訊</h4>
                   <div className="space-y-2 text-sm">
-                    <div><strong>Tên:</strong> {selectedBooking.driverName}</div>
-                    <div><strong>Điện thoại:</strong> {selectedBooking.phone}</div>
-                    <div><strong>Email:</strong> {selectedBooking.email}</div>
-                    <div><strong>Biển số:</strong> {selectedBooking.licensePlate}</div>
-                    <div><strong>Hành khách:</strong> {selectedBooking.passengerCount} người</div>
-                    <div><strong>Hành lý:</strong> {selectedBooking.luggageCount} kiện</div>
+                    <div><strong>姓名:</strong> {selectedBooking.driverName}</div>
+                    <div><strong>電話:</strong> {selectedBooking.phone}</div>
+                    <div><strong>電子郵件:</strong> {selectedBooking.email}</div>
+                    <div><strong>車牌號碼:</strong> {selectedBooking.licensePlate}</div>
+                    <div><strong>乘客:</strong> {selectedBooking.passengerCount} 人</div>
+                    <div><strong>行李:</strong> {selectedBooking.luggageCount} 件</div>
                   </div>
                 </div>
                 
                 <div>
-                  <h4 className="font-semibold mb-2">Thông tin đặt chỗ</h4>
+                  <h4 className="font-semibold mb-2">預訂資訊</h4>
                   <div className="space-y-2 text-sm">
-                    <div><strong>Bãi đậu:</strong> {selectedBooking.parkingType.name}</div>
-                    <div><strong>Loại:</strong> {selectedBooking.parkingType.type || 'indoor'}</div>
-                    <div><strong>Vào:</strong> {formatDateTime(selectedBooking.checkInTime)}</div>
-                    <div><strong>Ra:</strong> {formatDateTime(selectedBooking.checkOutTime)}</div>
-                    <div><strong>Trạng thái:</strong> {getStatusBadge(selectedBooking.status)}</div>
-                    <div><strong>VIP:</strong> {selectedBooking.isVIP ? 'Có' : 'Không'}</div>
+                    <div><strong>停車場:</strong> {selectedBooking.parkingType.name}</div>
+                    <div><strong>類型:</strong> {selectedBooking.parkingType.type || 'indoor'}</div>
+                    <div><strong>進入:</strong> {formatDateTime(selectedBooking.checkInTime)}</div>
+                    <div><strong>離開:</strong> {formatDateTime(selectedBooking.checkOutTime)}</div>
+                    <div><strong>狀態:</strong> {getStatusBadge(selectedBooking.status)}</div>
+                    <div><strong>VIP:</strong> {selectedBooking.isVIP ? '是' : '否'}</div>
                   </div>
                 </div>
               </div>
 
               {selectedBooking.addonServices.length > 0 && (
                 <div>
-                  <h4 className="font-semibold mb-2">Dịch vụ bổ sung</h4>
+                  <h4 className="font-semibold mb-2">附加服務</h4>
                   <div className="flex flex-wrap gap-2">
                     {selectedBooking.addonServices.map((addon, index) => (
                       <Badge key={index} variant="outline">
@@ -403,21 +578,21 @@ const BookingsPage: React.FC = () => {
               )}
 
               <div>
-                <h4 className="font-semibold mb-2">Thông tin thanh toán</h4>
+                <h4 className="font-semibold mb-2">付款資訊</h4>
                 <div className="space-y-2 text-sm">
-                  <div><strong>Tổng tiền:</strong> {formatCurrency(selectedBooking.totalAmount)}</div>
+                  <div><strong>總金額:</strong> {formatCurrency(selectedBooking.totalAmount)}</div>
                   {selectedBooking.discountAmount > 0 && (
-                    <div><strong>Giảm giá:</strong> -{formatCurrency(selectedBooking.discountAmount)}</div>
+                    <div><strong>折扣:</strong> -{formatCurrency(selectedBooking.discountAmount)}</div>
                   )}
-                  <div><strong>Thanh toán:</strong> {formatCurrency(selectedBooking.finalAmount)}</div>
-                  <div><strong>Phương thức:</strong> {selectedBooking.paymentMethod}</div>
-                  <div><strong>Trạng thái thanh toán:</strong> {selectedBooking.paymentStatus}</div>
+                  <div><strong>應付金額:</strong> {formatCurrency(selectedBooking.finalAmount)}</div>
+                  <div><strong>付款方式:</strong> {selectedBooking.paymentMethod}</div>
+                  <div><strong>付款狀態:</strong> {selectedBooking.paymentStatus}</div>
                 </div>
               </div>
 
               {selectedBooking.notes && (
                 <div>
-                  <h4 className="font-semibold mb-2">Ghi chú</h4>
+                  <h4 className="font-semibold mb-2">備註</h4>
                   <p className="text-sm bg-gray-50 p-3 rounded">{selectedBooking.notes}</p>
                 </div>
               )}
@@ -426,54 +601,13 @@ const BookingsPage: React.FC = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDetailsDialog(false)}>
-              Đóng
+              關閉
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Status Update Dialog */}
-      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cập nhật trạng thái</DialogTitle>
-            <DialogDescription>
-              Chọn trạng thái mới cho đặt chỗ này
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="newStatus">Trạng thái mới</Label>
-              <Select 
-                value={currentNewStatus} 
-                onValueChange={setNewStatus}
-                defaultValue="pending"
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn trạng thái" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Chờ xác nhận</SelectItem>
-                  <SelectItem value="confirmed">Đã xác nhận</SelectItem>
-                  <SelectItem value="checked-in">Đã vào bãi</SelectItem>
-                  <SelectItem value="checked-out">Đã rời bãi</SelectItem>
-                  <SelectItem value="cancelled">Đã hủy</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowStatusDialog(false)}>
-              Hủy
-            </Button>
-            <Button onClick={handleStatusUpdate} disabled={!newStatus}>
-              Cập nhật
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

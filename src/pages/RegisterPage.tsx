@@ -11,10 +11,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Eye, EyeOff } from 'lucide-react';
 
 const registerSchema = z.object({
-  name: z.string().min(2, 'Tên phải có ít nhất 2 ký tự'),
-  email: z.string().email('Email không hợp lệ'),
-  phone: z.string().min(10, 'Số điện thoại không hợp lệ'),
-  password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
+  name: z.string().min(2, '姓名至少需要2個字符'),
+  email: z.string().email('電子郵件格式無效'),
+  phone: z.string().min(10, '電話號碼無效'),
+  password: z.string().min(6, '密碼至少需要6個字符'),
   licensePlate: z.string().optional(),
 });
 
@@ -50,19 +50,19 @@ const RegisterPage: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-muted/30 py-12">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Đăng ký</CardTitle>
+          <CardTitle className="text-2xl">註冊</CardTitle>
           <CardDescription>
-            Tạo tài khoản mới để sử dụng dịch vụ
+            創建新帳戶以使用服務
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Họ tên</Label>
+              <Label htmlFor="name">姓名</Label>
               <Input
                 id="name"
                 type="text"
-                placeholder="Nhập họ tên của bạn"
+                placeholder="請輸入您的姓名"
                 {...register('name')}
                 className={errors.name ? 'border-red-500' : ''}
               />
@@ -72,11 +72,11 @@ const RegisterPage: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">電子郵件</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="Nhập email của bạn"
+                placeholder="請輸入您的電子郵件"
                 {...register('email')}
                 className={errors.email ? 'border-red-500' : ''}
               />
@@ -86,11 +86,11 @@ const RegisterPage: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Số điện thoại</Label>
+              <Label htmlFor="phone">電話號碼</Label>
               <Input
                 id="phone"
                 type="tel"
-                placeholder="Nhập số điện thoại"
+                placeholder="請輸入電話號碼"
                 {...register('phone')}
                 className={errors.phone ? 'border-red-500' : ''}
               />
@@ -100,22 +100,22 @@ const RegisterPage: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="licensePlate">Biển số xe (tùy chọn)</Label>
+              <Label htmlFor="licensePlate">車牌號碼 (選填)</Label>
               <Input
                 id="licensePlate"
                 type="text"
-                placeholder="Nhập biển số xe"
+                placeholder="請輸入車牌號碼"
                 {...register('licensePlate')}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Mật khẩu</Label>
+              <Label htmlFor="password">密碼</Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Nhập mật khẩu"
+                  placeholder="請輸入密碼"
                   {...register('password')}
                   className={errors.password ? 'border-red-500' : ''}
                 />
@@ -133,15 +133,15 @@ const RegisterPage: React.FC = () => {
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Đang đăng ký...' : 'Đăng ký'}
+              {isLoading ? '註冊中...' : '註冊'}
             </Button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
-              Đã có tài khoản?{' '}
+              已有帳戶？{' '}
               <Link to="/login" className="text-primary hover:underline">
-                Đăng nhập
+                登入
               </Link>
             </p>
           </div>

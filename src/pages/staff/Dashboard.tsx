@@ -23,7 +23,7 @@ const StaffDashboard: React.FC = () => {
           <CardContent>
             <div className="text-2xl font-bold">0</div>
             <p className="text-xs text-muted-foreground">
-              +0 đã xác nhận
+              +0 đặt thành công
             </p>
           </CardContent>
         </Card>

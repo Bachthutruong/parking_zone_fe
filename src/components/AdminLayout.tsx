@@ -15,7 +15,11 @@ import {
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  Wrench,
+  TrendingUp,
+  Plus,
+  Clock
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -27,25 +31,28 @@ const AdminLayout: React.FC = () => {
 
   const handleLogout = () => {
     logout();
-    toast.success('Đã đăng xuất thành công');
+    toast.success('登出成功');
   };
 
   // Define menu items based on user role
   const getMenuItems = () => {
     const baseItems = [
-      { path: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true, roles: ['admin', 'staff'] },
-      { path: '/admin/bookings', icon: Calendar, label: 'Đặt chỗ', exact: false, roles: ['admin', 'staff'] },
+      { path: '/admin', icon: LayoutDashboard, label: '儀表板', exact: true, roles: ['admin', 'staff'] },
+      { path: '/admin/bookings', icon: Calendar, label: '預訂', exact: false, roles: ['admin', 'staff'] },
     ];
 
     const adminOnlyItems = [
-      { path: '/admin/users', icon: Users, label: 'Người dùng', exact: false, roles: ['admin'] },
-      { path: '/admin/parking-types', icon: Building2, label: 'Bãi đậu xe', exact: false, roles: ['admin'] },
-      { path: '/admin/services', icon: Package, label: 'Dịch vụ bổ sung', exact: false, roles: ['admin'] },
-      { path: '/admin/discounts', icon: Tag, label: 'Mã giảm giá', exact: false, roles: ['admin'] },
-      // { path: '/admin/terms', icon: FileText, label: 'Điều khoản', exact: false, roles: ['admin'] },
-      { path: '/admin/notifications', icon: MessageSquare, label: 'Thông báo', exact: false, roles: ['admin'] },
-
-      { path: '/admin/settings', icon: Settings, label: 'Cài đặt hệ thống', exact: false, roles: ['admin'] },
+      { path: '/admin/users', icon: Users, label: '用戶', exact: false, roles: ['admin'] },
+      { path: '/admin/parking-types', icon: Building2, label: '停車場', exact: false, roles: ['admin'] },
+      { path: '/admin/services', icon: Package, label: '附加服務', exact: false, roles: ['admin'] },
+      { path: '/admin/discounts', icon: Tag, label: '折扣碼', exact: false, roles: ['admin'] },
+      // { path: '/admin/terms', icon: FileText, label: '條款', exact: false, roles: ['admin'] },
+      { path: '/admin/notifications', icon: MessageSquare, label: '通知', exact: false, roles: ['admin'] },
+      { path: '/admin/maintenance', icon: Wrench, label: '維護日期', exact: false, roles: ['admin'] },
+      { path: '/admin/special-pricing', icon: TrendingUp, label: '特殊價格', exact: false, roles: ['admin'] },
+      { path: '/admin/manual-booking', icon: Plus, label: '手動預訂', exact: false, roles: ['admin', 'staff'] },
+      { path: '/admin/today-overview', icon: Clock, label: '今日概覽', exact: false, roles: ['admin', 'staff'] },
+      { path: '/admin/settings', icon: Settings, label: '系統設定', exact: false, roles: ['admin'] },
     ];
 
     return [...baseItems, ...adminOnlyItems].filter(item => 

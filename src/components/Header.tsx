@@ -28,7 +28,7 @@ const Header: React.FC = () => {
                 isActive('/') ? 'text-primary' : 'text-muted-foreground'
               }`}
             >
-              Trang chủ
+              首頁
             </Link>
             <Link
               to="/booking"
@@ -36,7 +36,7 @@ const Header: React.FC = () => {
                 isActive('/booking') ? 'text-primary' : 'text-muted-foreground'
               }`}
             >
-              Đặt chỗ
+              預訂
             </Link>
             <Link
               to="/lookup"
@@ -44,7 +44,7 @@ const Header: React.FC = () => {
                 isActive('/lookup') ? 'text-primary' : 'text-muted-foreground'
               }`}
             >
-              Tra cứu
+              查詢
             </Link>
           </nav>
 
@@ -83,12 +83,12 @@ const Header: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Link to="/login">
                   <Button variant="ghost" size="sm">
-                    Đăng nhập
+                    登入
                   </Button>
                 </Link>
                 <Link to="/register">
                   <Button size="sm">
-                    Đăng ký
+                    註冊
                   </Button>
                 </Link>
               </div>

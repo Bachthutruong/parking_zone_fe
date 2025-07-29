@@ -38,6 +38,7 @@ export interface CalculatePriceParams {
   addonServices: string[];
   discountCode?: string;
   isVIP?: boolean;
+  userEmail?: string;
 }
 
 // Get booking terms
@@ -54,7 +55,7 @@ export const checkAvailability = async (params: CheckAvailabilityParams) => {
 
 // Get available parking types by type
 export const getAvailableParkingTypes = async (params: AvailableParkingTypesParams): Promise<ParkingType[]> => {
-  const response = await api.get('/bookings/available-types', { params });
+  const response = await api.get('/bookings/available-parking-types', { params });
   return response.data.parkingTypes;
 };
 

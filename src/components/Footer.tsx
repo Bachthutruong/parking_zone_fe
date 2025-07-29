@@ -13,27 +13,27 @@ const Footer: React.FC = () => {
               <span className="text-lg font-bold">Parking Zone</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Dịch vụ đặt chỗ đậu xe sân bay hàng đầu tại Đài Loan
+              台灣頂級機場停車預訂服務
             </p>
           </div>
 
           {/* Quick links */}
           <div className="space-y-4">
-            <h3 className="font-semibold">Liên kết nhanh</h3>
+            <h3 className="font-semibold">快速連結</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <a href="/booking" className="text-muted-foreground hover:text-primary transition-colors">
-                  Đặt chỗ
+                  預訂
                 </a>
               </li>
               <li>
                 <a href="/lookup" className="text-muted-foreground hover:text-primary transition-colors">
-                  Tra cứu đặt chỗ
+                  查詢預訂
                 </a>
               </li>
               <li>
                 <a href="/login" className="text-muted-foreground hover:text-primary transition-colors">
-                  Đăng nhập
+                  登入
                 </a>
               </li>
             </ul>
@@ -41,18 +41,18 @@ const Footer: React.FC = () => {
 
           {/* Services */}
           <div className="space-y-4">
-            <h3 className="font-semibold">Dịch vụ</h3>
+            <h3 className="font-semibold">服務</h3>
             <ul className="space-y-2 text-sm">
-              <li className="text-muted-foreground">Đậu xe trong nhà</li>
-              <li className="text-muted-foreground">Đậu xe ngoài trời</li>
-              <li className="text-muted-foreground">Khu vực khuyết tật</li>
-              <li className="text-muted-foreground">Dịch vụ bổ sung</li>
+              <li className="text-muted-foreground">室內停車</li>
+              <li className="text-muted-foreground">戶外停車</li>
+              <li className="text-muted-foreground">無障礙區域</li>
+              <li className="text-muted-foreground">附加服務</li>
             </ul>
           </div>
 
           {/* Contact */}
           <div className="space-y-4">
-            <h3 className="font-semibold">Liên hệ</h3>
+            <h3 className="font-semibold">聯絡我們</h3>
             <div className="space-y-2 text-sm">
               <div className="flex items-center space-x-2">
                 <Phone className="h-4 w-4 text-muted-foreground" />
@@ -72,7 +72,7 @@ const Footer: React.FC = () => {
 
         <div className="border-t mt-8 pt-8 text-center">
           <p className="text-sm text-muted-foreground">
-            © 2024 Parking Zone. Tất cả quyền được bảo lưu.
+            © 2024 Parking Zone. 版權所有。
           </p>
         </div>
       </div>

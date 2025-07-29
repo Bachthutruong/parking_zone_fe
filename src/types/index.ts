@@ -6,6 +6,8 @@ export interface User {
   role: 'user' | 'staff' | 'admin';
   isVIP: boolean;
   vipDiscount: number;
+  vipCode?: string;
+  vipCreatedAt?: string;
   licensePlate?: string;
   address?: string;
   isActive: boolean;
@@ -68,6 +70,7 @@ export interface AddonService {
 
 export interface Booking {
   _id: string;
+  bookingNumber?: string;
   user: User;
   parkingType: ParkingType;
   licensePlate: string;
@@ -164,6 +167,10 @@ export interface SystemSettings {
     acceptOnlinePayment: boolean;
     currency: string;
     taxRate: number;
+  };
+  luggageSettings: {
+    freeLuggageCount: number;
+    luggagePricePerItem: number;
   };
   maintenanceMode: {
     enabled: boolean;

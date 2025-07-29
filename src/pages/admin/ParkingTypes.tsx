@@ -73,7 +73,7 @@ const AdminParkingTypes: React.FC = () => {
       setParkingTypes(data.parkingTypes);
     } catch (error: any) {
       console.error('Error loading parking types:', error);
-      toast.error('Không thể tải danh sách bãi đậu xe');
+      toast.error('無法載入停車場清單');
     } finally {
       setLoading(false);
     }
@@ -87,13 +87,13 @@ const AdminParkingTypes: React.FC = () => {
       console.log('🔍 Creating parking type:', createData);
       
       await createParkingType(createData);
-      toast.success('Tạo bãi đậu xe thành công');
+      toast.success('創建停車場成功');
       setShowCreateDialog(false);
       resetForm();
       loadParkingTypes();
     } catch (error: any) {
       console.error('Error creating parking type:', error);
-      toast.error('Không thể tạo bãi đậu xe');
+      toast.error('無法創建停車場');
     }
   };
 
@@ -234,9 +234,11 @@ const AdminParkingTypes: React.FC = () => {
     if (amount === undefined || amount === null) {
       return '0 TWD';
     }
-    return amount.toLocaleString('vi-VN', {
+    return amount.toLocaleString('zh-TW', {
       style: 'currency',
-      currency: 'TWD'
+      currency: 'TWD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     });
   };
 
@@ -262,17 +264,17 @@ const AdminParkingTypes: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Bãi đậu xe</h1>
-          <p className="text-gray-600">Quản lý các bãi đậu xe trong hệ thống</p>
+          <h1 className="text-3xl font-bold">停車場</h1>
+          <p className="text-gray-600">管理系統中的停車場</p>
         </div>
         <div className="flex space-x-2">
           <Button variant="outline" onClick={loadParkingTypes}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Làm mới
+            重新整理
           </Button>
                       <Button onClick={openCreateDialog}>
               <Plus className="h-4 w-4 mr-2" />
-              Thêm bãi đậu xe
+              新增停車場
             </Button>
         </div>
       </div>

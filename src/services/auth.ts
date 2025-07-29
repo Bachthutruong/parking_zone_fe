@@ -32,4 +32,16 @@ export const changePassword = async (currentPassword: string, newPassword: strin
 export const getBookingTerms = async (): Promise<{ terms: string }> => {
   const response = await api.get('/auth/booking-terms');
   return response.data;
+};
+
+// Check VIP status by email
+export const checkVIPStatus = async (email: string) => {
+  const response = await api.post('/auth/check-vip', { email });
+  return response.data;
+};
+
+// Check VIP status by VIP code
+export const checkVIPByCode = async (vipCode: string) => {
+  const response = await api.post('/auth/check-vip-code', { vipCode });
+  return response.data;
 }; 

@@ -198,7 +198,7 @@ const AdminUsers: React.FC = () => {
         newUsersThisMonth: Math.floor(Math.random() * 20)
       });
     } catch (error: any) {
-      toast.error('Không thể tải danh sách người dùng');
+      toast.error('無法載入用戶列表');
       console.error('Error loading users:', error);
     } finally {
       setLoading(false);
@@ -219,17 +219,17 @@ const AdminUsers: React.FC = () => {
   const handleCreateUser = async () => {
     try {
       if (!formData.name || !formData.email || !formData.phone) {
-        toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+        toast.error('請填寫所有必填信息');
         return;
       }
 
       await createUser(formData);
-      toast.success('Tạo người dùng thành công');
+      toast.success('創建用戶成功');
       setShowCreateDialog(false);
       resetForm();
       loadUsers();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Không thể tạo người dùng');
+      toast.error(error.response?.data?.message || '無法創建用戶');
       console.error('Error creating user:', error);
     }
   };
@@ -246,12 +246,12 @@ const AdminUsers: React.FC = () => {
         await updateUser(selectedUser._id, updateData);
       }
 
-      toast.success('Cập nhật thông tin người dùng thành công');
+      toast.success('更新用戶信息成功');
       setShowEditDialog(false);
       resetForm();
       loadUsers();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Không thể cập nhật thông tin người dùng');
+      toast.error(error.response?.data?.message || '無法更新用戶信息');
       console.error('Error updating user:', error);
     }
   };
@@ -261,12 +261,12 @@ const AdminUsers: React.FC = () => {
     
     try {
       await deleteUser(selectedUser._id);
-      toast.success('Xóa người dùng thành công');
+      toast.success('刪除用戶成功');
       setShowDeleteDialog(false);
       setSelectedUser(null);
       loadUsers();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Không thể xóa người dùng');
+      toast.error(error.response?.data?.message || '無法刪除用戶');
       console.error('Error deleting user:', error);
     }
   };
@@ -277,19 +277,34 @@ const AdminUsers: React.FC = () => {
     try {
       // Validate VIP discount if user is VIP
       if (vipFormData.isVIP && (vipFormData.vipDiscount < 0 || vipFormData.vipDiscount > 100)) {
-        toast.error('Giảm giá VIP phải từ 0% đến 100%');
+        toast.error('VIP折扣必須在0%到100%之間');
         return;
       }
       
       // Only pass vipDiscount if user is VIP
       const vipDiscount = vipFormData.isVIP ? vipFormData.vipDiscount : undefined;
       await updateUserVIP(selectedUser._id, vipFormData.isVIP, vipDiscount);
-      toast.success('Cập nhật thông tin VIP thành công');
+      toast.success('更新VIP信息成功');
       setShowVIPDialog(false);
       loadUsers();
     } catch (error: any) {
-      toast.error('Không thể cập nhật thông tin VIP');
+      toast.error('無法更新VIP信息');
       console.error('Error updating VIP:', error);
+    }
+  };
+
+  const handleGenerateVIPCode = async (userId: string) => {
+    try {
+      // Update user to VIP with current discount to trigger VIP code generation
+      const user = users.find(u => u._id === userId);
+      if (!user) return;
+      
+      await updateUserVIP(userId, true, user.vipDiscount);
+      toast.success('創建VIP碼成功');
+      loadUsers();
+    } catch (error: any) {
+      toast.error('無法創建VIP碼');
+      console.error('Error generating VIP code:', error);
     }
   };
 
@@ -354,9 +369,9 @@ const AdminUsers: React.FC = () => {
 
   const getRoleBadge = (role: string) => {
     const roleConfig = {
-      admin: { label: 'Quản trị viên', variant: 'destructive' as const, color: 'bg-red-100 text-red-800' },
-      staff: { label: 'Nhân viên', variant: 'default' as const, color: 'bg-blue-100 text-blue-800' },
-      user: { label: 'Khách hàng', variant: 'secondary' as const, color: 'bg-gray-100 text-gray-800' }
+      admin: { label: '管理員', variant: 'destructive' as const, color: 'bg-red-100 text-red-800' },
+      staff: { label: '員工', variant: 'default' as const, color: 'bg-blue-100 text-blue-800' },
+      user: { label: '客戶', variant: 'secondary' as const, color: 'bg-gray-100 text-gray-800' }
     };
 
     const config = roleConfig[role as keyof typeof roleConfig] || roleConfig.user;
@@ -367,12 +382,12 @@ const AdminUsers: React.FC = () => {
     return isActive ? (
       <Badge variant="default" className="bg-green-100 text-green-800">
         <CheckCircle className="h-3 w-3 mr-1" />
-        Hoạt động
+        活動
       </Badge>
     ) : (
       <Badge variant="secondary" className="bg-red-100 text-red-800">
         <XCircle className="h-3 w-3 mr-1" />
-        Tạm khóa
+        暫時鎖定
       </Badge>
     );
   };
@@ -389,31 +404,33 @@ const AdminUsers: React.FC = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return amount.toLocaleString('vi-VN', {
+    return amount.toLocaleString('zh-TW', {
       style: 'currency',
-      currency: 'TWD'
+      currency: 'TWD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     });
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN');
+    return new Date(dateString).toLocaleDateString('zh-TW');
   };
 
   const formatDuration = (days: number) => {
     if (days < 1) {
       const hours = Math.round(days * 24);
-      return `${hours} giờ`;
+      return `${hours} 小時`;
     }
-    return `${Math.round(days)} ngày`;
+    return `${Math.round(days)} 天`;
   };
 
   const getBookingStatusBadge = (status: string) => {
     const statusConfig = {
-      'pending': { label: 'Chờ xác nhận', color: 'bg-yellow-100 text-yellow-800' },
-      'confirmed': { label: 'Đã xác nhận', color: 'bg-blue-100 text-blue-800' },
-      'checked-in': { label: 'Đã vào bãi', color: 'bg-green-100 text-green-800' },
-      'checked-out': { label: 'Đã rời bãi', color: 'bg-gray-100 text-gray-800' },
-      'cancelled': { label: 'Đã hủy', color: 'bg-red-100 text-red-800' }
+      'pending': { label: '等待確認', color: 'bg-yellow-100 text-yellow-800' },
+      'confirmed': { label: '預訂成功', color: 'bg-blue-100 text-blue-800' },
+      'checked-in': { label: '已進入停車場', color: 'bg-green-100 text-green-800' },
+      'checked-out': { label: '已離開停車場', color: 'bg-gray-100 text-gray-800' },
+      'cancelled': { label: '已取消', color: 'bg-red-100 text-red-800' }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
@@ -452,7 +469,7 @@ const AdminUsers: React.FC = () => {
 
   const handleExportUsers = () => {
     // In a real app, this would call an API to export users
-    toast.success('Xuất dữ liệu thành công');
+    toast.success('導出數據成功');
   };
 
   if (loading) {
@@ -470,21 +487,21 @@ const AdminUsers: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Quản lý người dùng</h1>
-          <p className="text-gray-600">Xem và quản lý tất cả người dùng trong hệ thống</p>
+          <h1 className="text-3xl font-bold">用戶管理</h1>
+          <p className="text-gray-600">查看和管理系統中的所有用戶</p>
         </div>
         <div className="flex space-x-2">
           <Button variant="outline" onClick={handleExportUsers}>
             <Download className="h-4 w-4 mr-2" />
-            Xuất dữ liệu
+            導出數據
           </Button>
           <Button variant="outline" onClick={loadUsers}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Làm mới
+            刷新
           </Button>
           <Button onClick={openCreateDialog}>
             <Plus className="h-4 w-4 mr-2" />
-            Thêm người dùng
+            添加用戶
           </Button>
         </div>
       </div>
@@ -495,7 +512,7 @@ const AdminUsers: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Tổng người dùng</p>
+                <p className="text-sm font-medium text-gray-600">總用戶</p>
                 <p className="text-2xl font-bold">{stats.totalUsers}</p>
               </div>
               <Users className="h-8 w-8 text-blue-600" />
@@ -507,7 +524,7 @@ const AdminUsers: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Người dùng VIP</p>
+                <p className="text-sm font-medium text-gray-600">VIP用戶</p>
                 <p className="text-2xl font-bold">{stats.vipUsers}</p>
               </div>
               <Crown className="h-8 w-8 text-yellow-600" />
@@ -519,7 +536,7 @@ const AdminUsers: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Người dùng hoạt động</p>
+                <p className="text-sm font-medium text-gray-600">活動用戶</p>
                 <p className="text-2xl font-bold">{stats.activeUsers}</p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-600" />
@@ -531,7 +548,7 @@ const AdminUsers: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Người dùng mới (tháng)</p>
+                <p className="text-sm font-medium text-gray-600">新用戶（月）</p>
                 <p className="text-2xl font-bold">{stats.newUsersThisMonth}</p>
               </div>
               <TrendingUp className="h-8 w-8 text-green-600" />
@@ -545,13 +562,13 @@ const AdminUsers: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Filter className="h-5 w-5 mr-2" />
-            Bộ lọc
+            過濾器
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
-              <Label htmlFor="search">Tìm kiếm</Label>
+              <Label htmlFor="search">搜索</Label>
               <div className="relative">
                 {searching ? (
                   <div className="absolute left-3 top-3 h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
@@ -560,7 +577,7 @@ const AdminUsers: React.FC = () => {
                 )}
                 <Input
                   id="search"
-                  placeholder="Tên, email, số điện thoại..."
+                  placeholder="姓名, 電子郵件, 電話號碼..."
                   value={searchValue}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   onCompositionEnd={(e) => handleSearchChange(e.currentTarget.value)}
@@ -570,44 +587,44 @@ const AdminUsers: React.FC = () => {
             </div>
             
             <div>
-              <Label htmlFor="roleFilter">Vai trò</Label>
+              <Label htmlFor="roleFilter">角色</Label>
               <Select value={filters.role} onValueChange={(value) => handleFilterChange('role', value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tất cả vai trò</SelectItem>
-                  <SelectItem value="admin">Quản trị viên</SelectItem>
-                  <SelectItem value="staff">Nhân viên</SelectItem>
-                  <SelectItem value="user">Khách hàng</SelectItem>
+                  <SelectItem value="all">所有角色</SelectItem>
+                  <SelectItem value="admin">管理員</SelectItem>
+                  <SelectItem value="staff">員工</SelectItem>
+                  <SelectItem value="user">客戶</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
             <div>
-              <Label htmlFor="vipFilter">VIP</Label>
+                <Label htmlFor="vipFilter">VIP</Label>
               <Select value={filters.vipStatus} onValueChange={(value) => handleFilterChange('vipStatus', value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
+                  <SelectItem value="all">所有</SelectItem>
                   <SelectItem value="vip">VIP</SelectItem>
-                  <SelectItem value="non-vip">Không VIP</SelectItem>
+                  <SelectItem value="non-vip">非VIP</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <Label htmlFor="statusFilter">Trạng thái</Label>
+              <Label htmlFor="statusFilter">狀態</Label>
               <Select value={filters.isActive} onValueChange={(value) => handleFilterChange('isActive', value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
-                  <SelectItem value="active">Hoạt động</SelectItem>
-                  <SelectItem value="inactive">Tạm khóa</SelectItem>
+                  <SelectItem value="all">所有</SelectItem>
+                  <SelectItem value="active">活動</SelectItem>
+                  <SelectItem value="inactive">暫時鎖定</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -629,7 +646,7 @@ const AdminUsers: React.FC = () => {
                 setCurrentPage(1);
               }}>
                 <Filter className="h-4 w-4 mr-2" />
-                Xóa bộ lọc
+                清除過濾器
               </Button>
             </div>
           </div>
@@ -639,20 +656,20 @@ const AdminUsers: React.FC = () => {
       {/* Users Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Danh sách người dùng</CardTitle>
+          <CardTitle>用戶列表</CardTitle>
           <CardDescription>
-            Tổng cộng {totalUsers} người dùng • Trang {currentPage} / {totalPages}
+            總共 {totalUsers} 用戶 • 第 {currentPage} 頁 / {totalPages} 頁
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Thông tin</TableHead>
-                <TableHead>Vai trò & VIP</TableHead>
-                <TableHead>Thống kê</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead>Thao tác</TableHead>
+                <TableHead>信息</TableHead>
+                <TableHead>角色 & VIP</TableHead>
+                <TableHead>統計</TableHead>
+                <TableHead>狀態</TableHead>
+                <TableHead>操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -686,29 +703,42 @@ const AdminUsers: React.FC = () => {
                     <div className="space-y-2">
                       {getRoleBadge(user.role)}
                       {user.isVIP && (
-                        <Badge variant="default" className="bg-yellow-100 text-yellow-800">
-                          <Star className="h-3 w-3 mr-1" />
-                          VIP {user.vipDiscount}%
-                        </Badge>
+                        <div className="space-y-1">
+                          <Badge variant="default" className="bg-yellow-100 text-yellow-800">
+                            <Star className="h-3 w-3 mr-1" />
+                            VIP {user.vipDiscount}%
+                          </Badge>
+                          {user.vipCode ? (
+                            <div className="text-xs">
+                              <code className="bg-yellow-50 px-1 py-0.5 rounded text-yellow-700 font-mono">
+                                {user.vipCode}
+                              </code>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-red-600">
+                              ⚠️ 尚未有VIP碼
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="space-y-1 text-sm">
                       <div className="flex items-center justify-between">
-                        <span>Đặt chỗ:</span>
+                        <span>預訂:</span>
                         <span className="font-medium">{user.stats?.totalBookings || 0}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span>Tổng chi:</span>
+                        <span>總支出:</span>
                         <span className="font-medium">{formatCurrency(user.stats?.totalSpent || 0)}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span>Trung bình:</span>
+                        <span>平均:</span>  
                         <span className="font-medium">{formatCurrency(user.stats?.averageSpent || 0)}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span>Xu hướng:</span>
+                        <span>趨勢:</span>  
                         {getTrendIcon(user.stats?.bookingTrend || 'stable')}
                       </div>
                     </div>
@@ -722,7 +752,7 @@ const AdminUsers: React.FC = () => {
                         size="sm"
                         variant="outline"
                         onClick={() => openUserDetails(user)}
-                        title="Xem chi tiết"
+                        title="查看詳細信息"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -730,7 +760,7 @@ const AdminUsers: React.FC = () => {
                         size="sm"
                         variant="outline"
                         onClick={() => openEditDialog(user)}
-                        title="Chỉnh sửa"
+                        title="編輯"   
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -738,16 +768,27 @@ const AdminUsers: React.FC = () => {
                         size="sm"
                         variant="outline"
                         onClick={() => openVIPDialog(user)}
-                        title="Quản lý VIP"
+                        title="管理VIP"
                       >
                         <Crown className="h-4 w-4" />
                       </Button>
+                      {user.isVIP && !user.vipCode && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleGenerateVIPCode(user._id)}
+                          title="創建VIP碼"  
+                          className="bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
+                        >
+                          <Star className="h-4 w-4" />
+                        </Button>
+                      )}
                       {user.role !== 'admin' && (
                         <Button
                           size="sm"
                           variant="destructive"
                           onClick={() => openDeleteDialog(user)}
-                          title="Xóa người dùng"
+                          title="刪除用戶"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -763,9 +804,9 @@ const AdminUsers: React.FC = () => {
           {users.length === 0 && (
             <div className="p-8 text-center">
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-600 mb-2">Không tìm thấy người dùng</h3>
+              <h3 className="text-lg font-semibold text-gray-600 mb-2">找不到用戶</h3>
               <p className="text-gray-500">
-                Không có người dùng nào phù hợp với bộ lọc hiện tại.
+                找不到任何用戶符合當前過濾器。
               </p>
             </div>
           )}
@@ -774,7 +815,7 @@ const AdminUsers: React.FC = () => {
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-6">
               <div className="text-sm text-gray-600">
-                Hiển thị {((currentPage - 1) * 10) + 1} - {Math.min(currentPage * 10, totalUsers)} của {totalUsers} người dùng
+                顯示 {((currentPage - 1) * 10) + 1} - {Math.min(currentPage * 10, totalUsers)} 的 {totalUsers} 用戶
               </div>
               <div className="flex items-center space-x-2">
                 <Button
@@ -784,7 +825,7 @@ const AdminUsers: React.FC = () => {
                   disabled={currentPage === 1}
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  Trước
+                  上一頁
                 </Button>
                 <div className="flex items-center space-x-1">
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -807,7 +848,7 @@ const AdminUsers: React.FC = () => {
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
                 >
-                  Sau
+                  下一頁
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -820,9 +861,9 @@ const AdminUsers: React.FC = () => {
       <Dialog open={showUserDetails} onOpenChange={setShowUserDetails}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Chi tiết người dùng</DialogTitle>
+            <DialogTitle>用戶詳細信息</DialogTitle> 
             <DialogDescription>
-              Thông tin chi tiết về người dùng
+              用戶詳細信息
             </DialogDescription>
           </DialogHeader>
           
@@ -832,18 +873,18 @@ const AdminUsers: React.FC = () => {
               <div>
                 <h4 className="font-semibold mb-3 flex items-center">
                   <UserIcon className="h-4 w-4 mr-2" />
-                  Thông tin cơ bản
+                  基本信息
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div className="space-y-2">
-                    <div><strong>Tên:</strong> {selectedUser.name}</div>
-                    <div><strong>Email:</strong> {selectedUser.email}</div>
-                    <div><strong>Điện thoại:</strong> {selectedUser.phone}</div>
+                    <div><strong>姓名:</strong> {selectedUser.name}</div>    
+                    <div><strong>電子郵件:</strong> {selectedUser.email}</div>
+                    <div><strong>電話號碼:</strong> {selectedUser.phone}</div>
                   </div>
                   <div className="space-y-2">
-                    <div><strong>Vai trò:</strong> {getRoleBadge(selectedUser.role)}</div>
-                    <div><strong>Trạng thái:</strong> {getStatusBadge(selectedUser.isActive)}</div>
-                    <div><strong>Tham gia:</strong> {formatDate(selectedUser.createdAt)}</div>
+                    <div><strong>角色:</strong> {getRoleBadge(selectedUser.role)}</div>  
+                    <div><strong>狀態:</strong> {getStatusBadge(selectedUser.isActive)}</div>
+                    <div><strong>加入:</strong> {formatDate(selectedUser.createdAt)}</div>
                   </div>
                 </div>
               </div>
@@ -853,12 +894,12 @@ const AdminUsers: React.FC = () => {
                 <div>
                   <h4 className="font-semibold mb-3 flex items-center">
                     <Car className="h-4 w-4 mr-2" />
-                    Thông tin xe
+                    車輛信息
                   </h4>
                   <div className="text-sm">
-                    <div><strong>Biển số xe:</strong> {selectedUser.licensePlate}</div>
+                    <div><strong>車牌號碼:</strong> {selectedUser.licensePlate}</div>
                     {selectedUser.address && (
-                      <div><strong>Địa chỉ:</strong> {selectedUser.address}</div>
+                      <div><strong>地址:</strong> {selectedUser.address}</div>
                     )}
                   </div>
                 </div>
@@ -869,11 +910,12 @@ const AdminUsers: React.FC = () => {
                 <div>
                   <h4 className="font-semibold mb-3 flex items-center">
                     <Crown className="h-4 w-4 mr-2" />
-                    Thông tin VIP
+                    VIP信息
                   </h4>
                   <div className="text-sm">
-                    <div><strong>Giảm giá VIP:</strong> {selectedUser.vipDiscount}%</div>
-                    <div><strong>Ngày cấp VIP:</strong> {selectedUser.lastLogin ? formatDate(selectedUser.lastLogin) : 'N/A'}</div>
+                    <div><strong>VIP折扣:</strong> {selectedUser.vipDiscount}%</div>
+                    <div><strong>VIP碼:</strong> <code className="bg-yellow-100 px-2 py-1 rounded text-yellow-800 font-mono">{selectedUser.vipCode || 'N/A'}</code></div>
+                    <div><strong>VIP創建日期:</strong> {selectedUser.vipCreatedAt ? formatDate(selectedUser.vipCreatedAt) : 'N/A'}</div>
                   </div>
                 </div>
               )}
@@ -882,24 +924,24 @@ const AdminUsers: React.FC = () => {
               <div>
                 <h4 className="font-semibold mb-3 flex items-center">
                   <Star className="h-4 w-4 mr-2" />
-                  Thống kê
+                  統計
                 </h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div className="text-center p-3 bg-gray-50 rounded">
                     <div className="text-2xl font-bold text-blue-600">{selectedUser.stats?.totalBookings || 0}</div>
-                    <div className="text-gray-500">Tổng đặt chỗ</div>
+                    <div className="text-gray-500">總預訂</div>
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded">
                     <div className="text-2xl font-bold text-green-600">{formatCurrency(selectedUser.stats?.totalSpent || 0)}</div>
-                    <div className="text-gray-500">Tổng chi tiêu</div>
+                    <div className="text-gray-500">總支出</div>
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded">
                     <div className="text-2xl font-bold text-purple-600">{formatCurrency(selectedUser.stats?.averageSpent || 0)}</div>
-                    <div className="text-gray-500">Trung bình/đặt chỗ</div>
+                    <div className="text-gray-500">平均/預訂</div>
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded">
                     <div className="text-2xl font-bold text-orange-600">{getTrendIcon(selectedUser.stats?.bookingTrend || 'stable')}</div>
-                    <div className="text-gray-500">Xu hướng</div>
+                    <div className="text-gray-500">趨勢</div>
                   </div>
                 </div>
 
@@ -907,19 +949,19 @@ const AdminUsers: React.FC = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-sm">
                   <div className="text-center p-3 bg-blue-50 rounded">
                     <div className="text-xl font-bold text-blue-600">{selectedUser.stats?.completedBookings || 0}</div>
-                    <div className="text-gray-500">Hoàn thành</div>
+                    <div className="text-gray-500">完成</div>
                   </div>
                   <div className="text-center p-3 bg-yellow-50 rounded">
                     <div className="text-xl font-bold text-yellow-600">{selectedUser.stats?.pendingBookings || 0}</div>
-                    <div className="text-gray-500">Chờ xác nhận</div>
+                    <div className="text-gray-500">等待確認</div>
                   </div>
                   <div className="text-center p-3 bg-red-50 rounded">
                     <div className="text-xl font-bold text-red-600">{selectedUser.stats?.cancelledBookings || 0}</div>
-                    <div className="text-gray-500">Đã hủy</div>
+                    <div className="text-gray-500">已取消</div>
                   </div>
                   <div className="text-center p-3 bg-green-50 rounded">
                     <div className="text-xl font-bold text-green-600">{formatDuration(selectedUser.stats?.averageDuration || 0)}</div>
-                    <div className="text-gray-500">Thời gian TB</div>
+                    <div className="text-gray-500">平均時間</div>
                   </div>
                 </div>
 
@@ -929,14 +971,14 @@ const AdminUsers: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
                         <Percent className="h-4 w-4 text-yellow-600 mr-2" />
-                        <span className="font-medium">Tiết kiệm VIP</span>
+                        <span className="font-medium">VIP節省</span>
                       </div>
                       <div className="text-xl font-bold text-yellow-600">
                         {formatCurrency(selectedUser.stats.totalVipSavings)}
                       </div>
                     </div>
                     <div className="text-sm text-gray-600 mt-1">
-                      Từ {selectedUser.stats?.vipBookingsCount || 0} đặt chỗ VIP
+                      從 {selectedUser.stats?.vipBookingsCount || 0} 預訂VIP
                     </div>
                   </div>
                 )}
@@ -947,7 +989,7 @@ const AdminUsers: React.FC = () => {
                 <div>
                   <h4 className="font-semibold mb-3 flex items-center">
                     <Calendar className="h-4 w-4 mr-2" />
-                    Đặt chỗ gần đây
+                    最近預訂
                   </h4>
                   <div className="space-y-2">
                     {selectedUser.stats.recentBookings.map((booking) => (
@@ -975,7 +1017,7 @@ const AdminUsers: React.FC = () => {
                 <div>
                   <h4 className="font-semibold mb-3 flex items-center">
                     <AlertTriangle className="h-4 w-4 mr-2" />
-                    Ghi chú
+                    備註
                   </h4>
                   <div className="text-sm p-3 bg-yellow-50 rounded">
                     {selectedUser.notes}
@@ -987,13 +1029,13 @@ const AdminUsers: React.FC = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowUserDetails(false)}>
-              Đóng
+              關閉
             </Button>
             <Button onClick={() => {
               setShowUserDetails(false);
               if (selectedUser) openEditDialog(selectedUser);
             }}>
-              Chỉnh sửa
+              編輯
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1009,16 +1051,16 @@ const AdminUsers: React.FC = () => {
       }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{isEditing ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới'}</DialogTitle>
+            <DialogTitle>{isEditing ? '編輯用戶' : '添加新用戶'}</DialogTitle>
             <DialogDescription>
-              {isEditing ? 'Cập nhật thông tin người dùng' : 'Tạo người dùng mới trong hệ thống'}
+              {isEditing ? '更新用戶信息' : '在系統中創建新用戶'}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="name">Tên *</Label>
+                <Label htmlFor="name">姓名 *</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -1038,7 +1080,7 @@ const AdminUsers: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="phone">Số điện thoại *</Label>
+                <Label htmlFor="phone">電話號碼 *</Label> 
                 <Input
                   id="phone"
                   value={formData.phone}
@@ -1046,15 +1088,15 @@ const AdminUsers: React.FC = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="role">Vai trò *</Label>
+                <Label htmlFor="role">角色 *</Label>
                 <Select value={formData.role} onValueChange={(value) => setFormData(prev => ({ ...prev, role: value as 'user' | 'staff' | 'admin' }))}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="user">Khách hàng</SelectItem>
-                    <SelectItem value="staff">Nhân viên</SelectItem>
-                    <SelectItem value="admin">Quản trị viên</SelectItem>
+                    <SelectItem value="user">客戶</SelectItem>
+                    <SelectItem value="staff">員工</SelectItem>
+                    <SelectItem value="admin">管理員</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1062,20 +1104,20 @@ const AdminUsers: React.FC = () => {
 
             {!isEditing && (
               <div>
-                <Label htmlFor="password">Mật khẩu {!isEditing && '*'}</Label>
+                <Label htmlFor="password">密碼 {!isEditing && '*'}</Label>
                 <Input
                   id="password"
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                  placeholder={isEditing ? 'Để trống nếu không thay đổi' : 'Nhập mật khẩu'}
+                  placeholder={isEditing ? '留空如果不想更改' : '輸入密碼'}
                 />
               </div>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="licensePlate">Biển số xe</Label>
+                <Label htmlFor="licensePlate">車牌號碼</Label>
                 <Input
                   id="licensePlate"
                   value={formData.licensePlate}
@@ -1083,7 +1125,7 @@ const AdminUsers: React.FC = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="address">Địa chỉ</Label>
+                <Label htmlFor="address">地址</Label>
                 <Input
                   id="address"
                   value={formData.address}
@@ -1099,12 +1141,12 @@ const AdminUsers: React.FC = () => {
                   checked={formData.isVIP}
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isVIP: checked }))}
                 />
-                <Label htmlFor="isVIP">Người dùng VIP</Label>
+                <Label htmlFor="isVIP">VIP用戶</Label>
               </div>
               
               {formData.isVIP && (
                 <div>
-                  <Label htmlFor="vipDiscount">Giảm giá VIP (%)</Label>
+                  <Label htmlFor="vipDiscount">VIP折扣 (%)</Label>
                   <Input
                     id="vipDiscount"
                     type="number"
@@ -1118,13 +1160,13 @@ const AdminUsers: React.FC = () => {
             </div>
 
             <div>
-              <Label htmlFor="notes">Ghi chú</Label>
+              <Label htmlFor="notes">備註</Label>
               <Textarea
                 id="notes"
                 value={formData.notes}
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                 rows={3}
-                placeholder="Ghi chú về người dùng..."
+                placeholder="關於用戶的備註..."
               />
             </div>
           </div>
@@ -1135,10 +1177,10 @@ const AdminUsers: React.FC = () => {
               setShowEditDialog(false);
               resetForm();
             }}>
-              Hủy
+              取消
             </Button>
             <Button onClick={isEditing ? handleUpdateUser : handleCreateUser}>
-              {isEditing ? 'Cập nhật' : 'Tạo người dùng'}
+              {isEditing ? '更新' : '創建用戶'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1148,9 +1190,9 @@ const AdminUsers: React.FC = () => {
       <Dialog open={showVIPDialog} onOpenChange={setShowVIPDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Quản lý VIP</DialogTitle>
+            <DialogTitle>管理VIP</DialogTitle>
             <DialogDescription>
-              Cập nhật thông tin VIP cho người dùng
+              更新用戶的VIP信息
             </DialogDescription>
           </DialogHeader>
           
@@ -1166,12 +1208,12 @@ const AdminUsers: React.FC = () => {
                   vipDiscount: checked ? prev.vipDiscount : 0
                 }))}
               />
-              <Label htmlFor="vipStatus">Người dùng VIP</Label>
+              <Label htmlFor="vipStatus">VIP用戶</Label>
             </div>
             
             {vipFormData.isVIP && (
               <div>
-                <Label htmlFor="vipDiscountAmount">Giảm giá VIP (%)</Label>
+                <Label htmlFor="vipDiscountAmount">VIP折扣 (%)</Label>
                 <Input
                   id="vipDiscountAmount"
                   type="number"
@@ -1192,10 +1234,10 @@ const AdminUsers: React.FC = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowVIPDialog(false)}>
-              Hủy
+              取消
             </Button>
             <Button onClick={handleVIPUpdate}>
-              Cập nhật VIP
+              更新VIP
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1205,18 +1247,18 @@ const AdminUsers: React.FC = () => {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xác nhận xóa</DialogTitle>
+            <DialogTitle>確認刪除</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn xóa người dùng "{selectedUser?.name}"? Hành động này không thể hoàn tác.
+              您確定要刪除用戶 "{selectedUser?.name}"? 此操作無法撤銷。
             </DialogDescription>
           </DialogHeader>
           
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Hủy
+              取消
             </Button>
             <Button variant="destructive" onClick={handleDeleteUser}>
-              Xóa
+              刪除
             </Button>
           </DialogFooter>
         </DialogContent>

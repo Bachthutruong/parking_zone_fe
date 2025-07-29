@@ -40,7 +40,7 @@ import type { DashboardStats, BookingStats, ParkingTypeStats, CurrentParkingStat
 
 const PIE_COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F'];
 
-// Mock data for reports (sẽ được thay thế bằng API thực tế)
+// Mock data for reports (將被實際API取代)
 const revenueData = [
   { name: 'T1', revenue: 4000, bookings: 240 },
   { name: 'T2', revenue: 3000, bookings: 139 },
@@ -62,17 +62,17 @@ const bookingTrendsData = [
 ];
 
 const parkingTypeData = [
-  { name: 'Trong nhà', value: 400, color: '#3B82F6' },
-  { name: 'Ngoài trời', value: 300, color: '#10B981' },
-  { name: 'Khuyết tật', value: 100, color: '#F59E0B' },
+  { name: '室內', value: 400, color: '#3B82F6' },
+  { name: '戶外', value: 300, color: '#10B981' },
+  { name: '無障礙', value: 100, color: '#F59E0B' },
 ];
 
 const topCustomers = [
-  { name: 'Nguyễn Văn A', bookings: 45, totalSpent: 1250000, lastBooking: '2024-01-15' },
-  { name: 'Trần Thị B', bookings: 38, totalSpent: 980000, lastBooking: '2024-01-14' },
-  { name: 'Lê Văn C', bookings: 32, totalSpent: 850000, lastBooking: '2024-01-13' },
-  { name: 'Phạm Thị D', bookings: 28, totalSpent: 720000, lastBooking: '2024-01-12' },
-  { name: 'Hoàng Văn E', bookings: 25, totalSpent: 650000, lastBooking: '2024-01-11' },
+  { name: '王小明', bookings: 45, totalSpent: 1250000, lastBooking: '2024-01-15' },
+  { name: '李小華', bookings: 38, totalSpent: 980000, lastBooking: '2024-01-14' },
+  { name: '張大偉', bookings: 32, totalSpent: 850000, lastBooking: '2024-01-13' },
+  { name: '陳美玲', bookings: 28, totalSpent: 720000, lastBooking: '2024-01-12' },
+  { name: '劉志強', bookings: 25, totalSpent: 650000, lastBooking: '2024-01-11' },
 ];
 
 const peakHoursData = [
@@ -125,25 +125,27 @@ const Dashboard: React.FC = () => {
       setParkingStats(parkingStatsData);
       setCurrentStatus(currentStatusData);
     } catch (error: any) {
-      toast.error('Không thể tải dữ liệu dashboard');
+      toast.error('無法載入儀表板資料');
     } finally {
       setLoading(false);
     }
   };
 
   const handleExportReport = () => {
-    toast.success('Đã xuất báo cáo thành công');
+    toast.success('報告匯出成功');
   };
 
   const formatCurrency = (amount: number) => {
-    return amount.toLocaleString('vi-VN', {
+    return amount.toLocaleString('zh-TW', {
       style: 'currency',
-      currency: 'TWD'
+      currency: 'TWD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     });
   };
 
   const formatDateTime = (dateTime: string) => {
-    return new Date(dateTime).toLocaleString('vi-VN', {
+    return new Date(dateTime).toLocaleString('zh-TW', {
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
@@ -152,16 +154,16 @@ const Dashboard: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN');
+    return new Date(dateString).toLocaleDateString('zh-TW');
   };
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { label: 'Chờ xác nhận', variant: 'secondary' as const, color: 'bg-yellow-100 text-yellow-800' },
-      confirmed: { label: 'Đã xác nhận', variant: 'default' as const, color: 'bg-blue-100 text-blue-800' },
-      'checked-in': { label: 'Đã vào bãi', variant: 'default' as const, color: 'bg-green-100 text-green-800' },
-      'checked-out': { label: 'Đã rời bãi', variant: 'secondary' as const, color: 'bg-gray-100 text-gray-800' },
-      cancelled: { label: 'Đã hủy', variant: 'destructive' as const, color: 'bg-red-100 text-red-800' }
+      pending: { label: '等待確認', variant: 'secondary' as const, color: 'bg-yellow-100 text-yellow-800' },
+      confirmed: { label: '預訂成功', variant: 'default' as const, color: 'bg-blue-100 text-blue-800' },
+      'checked-in': { label: '已進入停車場', variant: 'default' as const, color: 'bg-green-100 text-green-800' },
+      'checked-out': { label: '已離開停車場', variant: 'secondary' as const, color: 'bg-gray-100 text-gray-800' },
+      cancelled: { label: '已取消', variant: 'destructive' as const, color: 'bg-red-100 text-red-800' }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
@@ -213,8 +215,8 @@ const Dashboard: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-gray-600">Tổng quan hệ thống bãi đậu xe</p>
+          <h1 className="text-3xl font-bold">儀表板</h1>
+          <p className="text-gray-600">停車場系統概覽</p>
         </div>
         <div className="flex space-x-2">
           <Select value={dateRange} onValueChange={setDateRange}>
@@ -222,19 +224,19 @@ const Dashboard: React.FC = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="7d">7 ngày</SelectItem>
-              <SelectItem value="30d">30 ngày</SelectItem>
-              <SelectItem value="90d">90 ngày</SelectItem>
-              <SelectItem value="1y">1 năm</SelectItem>
+              <SelectItem value="7d">7天</SelectItem>
+              <SelectItem value="30d">30天</SelectItem>
+              <SelectItem value="90d">90天</SelectItem>
+              <SelectItem value="1y">1年</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" onClick={loadDashboardData}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Làm mới
+            重新整理
           </Button>
           <Button onClick={handleExportReport}>
             <Download className="h-4 w-4 mr-2" />
-            Xuất báo cáo
+            匯出報告
           </Button>
         </div>
       </div>
@@ -243,54 +245,54 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Đặt chỗ hôm nay</CardTitle>
+            <CardTitle className="text-sm font-medium">今日預訂</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.todayBookings || 0}</div>
             <div className="flex items-center text-xs text-muted-foreground">
               {getGrowthIcon(8.2)}
-              <span className="ml-1">+8.2% so với hôm qua</span>
+              <span className="ml-1">比昨天增加8.2%</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Doanh thu hôm nay</CardTitle>
+            <CardTitle className="text-sm font-medium">今日營收</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(stats?.todayRevenue || 0)}</div>
             <div className="flex items-center text-xs text-muted-foreground">
               {getGrowthIcon(12.5)}
-              <span className="ml-1">+12.5% so với hôm qua</span>
+              <span className="ml-1">比昨天增加12.5%</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Chỗ trống còn lại</CardTitle>
+            <CardTitle className="text-sm font-medium">剩餘空位</CardTitle>
             <Car className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.availableSpaces || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Tổng {stats?.totalSpaces || 0} chỗ đậu xe
+              總共 {stats?.totalSpaces || 0} 個停車位
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Xe đang đỗ</CardTitle>
+            <CardTitle className="text-sm font-medium">正在停車</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.parkedVehicles || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {stats?.leavingToday || 0} xe sắp rời bãi hôm nay
+              {stats?.leavingToday || 0} 輛車今天即將離開
             </p>
           </CardContent>
         </Card>
@@ -538,7 +540,7 @@ const Dashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Đặt chỗ đã xác nhận</CardTitle>
+                <CardTitle className="text-lg">Đặt chỗ thành công</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-green-600">2,679</div>

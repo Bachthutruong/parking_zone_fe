@@ -18,6 +18,10 @@ import AdminParkingTypes from './pages/admin/ParkingTypes'
 import AdminDiscounts from './pages/admin/Discounts'
 import AdminServices from './pages/admin/Services'
 import AdminNotifications from './pages/admin/Notifications'
+import AdminMaintenance from './pages/admin/Maintenance'
+import AdminSpecialPricing from './pages/admin/SpecialPricing'
+import AdminManualBooking from './pages/admin/ManualBooking'
+import AdminTodayOverview from './pages/admin/TodayOverview'
 import StaffDashboard from './pages/staff/Dashboard'
 import StaffBookings from './pages/staff/Bookings'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -49,6 +53,10 @@ function App() {
               <Route path="discounts" element={<AdminDiscounts />} />
               <Route path="notifications" element={<AdminNotifications />} />
               <Route path="settings" element={<AdminSettings />} />
+              <Route path="maintenance" element={<AdminMaintenance />} />
+              <Route path="special-pricing" element={<AdminSpecialPricing />} />
+              <Route path="manual-booking" element={<AdminManualBooking />} />
+              <Route path="today-overview" element={<AdminTodayOverview />} />
             </Route>
           </Route>
 

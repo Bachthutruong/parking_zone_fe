@@ -23,7 +23,7 @@ const ConflictNotification: React.FC<ConflictNotificationProps> = ({
   }
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('vi-VN', {
+    return new Date(dateStr).toLocaleDateString('zh-TW', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -46,13 +46,13 @@ const ConflictNotification: React.FC<ConflictNotificationProps> = ({
   const getConflictMessage = () => {
     switch (conflictType) {
       case 'full':
-        return 'Tất cả các ngày trong khoảng thời gian đã chọn đều đã có người đặt. Vui lòng chọn khoảng thời gian khác.';
+        return '所選時間範圍內的所有日期都已被預訂。請選擇其他時間範圍。';
       case 'major':
-        return 'Phần lớn các ngày trong khoảng thời gian đã chọn đã có người đặt. Chỉ còn một số ngày trống.';
+        return '所選時間範圍內的大部分日期已被預訂。只剩下少數空閒日期。';
       case 'minor':
-        return 'Một số ngày trong khoảng thời gian đã chọn đã có người đặt.';
+        return '所選時間範圍內的部分日期已被預訂。';
       default:
-        return 'Có xung đột lịch đặt chỗ.';
+        return '預訂時間有衝突。';
     }
   };
 
@@ -74,7 +74,7 @@ const ConflictNotification: React.FC<ConflictNotificationProps> = ({
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center space-x-2 text-lg">
           <AlertTriangle className="h-5 w-5" />
-          <span>Thông báo xung đột lịch</span>
+          <span>時間衝突通知</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -82,14 +82,14 @@ const ConflictNotification: React.FC<ConflictNotificationProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Calendar className="h-4 w-4" />
-            <span className="font-medium">Tóm tắt:</span>
+            <span className="font-medium">摘要:</span>
           </div>
           <div className="flex items-center space-x-2">
             <Badge variant="outline" className="bg-green-100 text-green-800">
-              {availableDays} ngày trống
+              {availableDays} 天空閒
             </Badge>
             <Badge variant="outline" className="bg-red-100 text-red-800">
-              {conflictingDays.length} ngày đã đặt
+              {conflictingDays.length} 天已預訂
             </Badge>
           </div>
         </div>
@@ -104,13 +104,13 @@ const ConflictNotification: React.FC<ConflictNotificationProps> = ({
         <div className="flex items-center space-x-2 text-sm">
           <Clock className="h-4 w-4" />
           <span>
-            Khoảng thời gian: {formatDate(checkInTime)} - {formatDate(checkOutTime)}
+            時間範圍: {formatDate(checkInTime)} - {formatDate(checkOutTime)}
           </span>
         </div>
 
         {/* Conflicting Days */}
         <div>
-          <h4 className="font-medium mb-2">Các ngày đã có người đặt:</h4>
+          <h4 className="font-medium mb-2">已被預訂的日期:</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {conflictingDays.map((day, index) => (
               <div key={index} className="flex items-center space-x-2 text-sm">
@@ -123,24 +123,24 @@ const ConflictNotification: React.FC<ConflictNotificationProps> = ({
 
         {/* Recommendations */}
         <div className="bg-white/50 p-3 rounded-lg">
-          <h4 className="font-medium mb-2">Gợi ý:</h4>
+          <h4 className="font-medium mb-2">建議:</h4>
           <ul className="text-sm space-y-1">
             {conflictType === 'full' && (
-              <li>• Chọn khoảng thời gian khác hoàn toàn</li>
+              <li>• 選擇完全不同的時間範圍</li>
             )}
             {conflictType === 'major' && (
               <>
-                <li>• Chọn khoảng thời gian ngắn hơn</li>
-                <li>• Chọn khoảng thời gian khác</li>
+                <li>• 選擇較短的時間範圍</li>
+                <li>• 選擇其他時間範圍</li>
               </>
             )}
             {conflictType === 'minor' && (
               <>
-                <li>• Có thể đặt chỗ cho các ngày còn trống</li>
-                <li>• Hoặc chọn khoảng thời gian khác</li>
+                <li>• 可以預訂剩餘的空閒日期</li>
+                <li>• 或選擇其他時間範圍</li>
               </>
             )}
-            <li>• Liên hệ chúng tôi để được hỗ trợ</li>
+            <li>• 聯繫我們以獲得支援</li>
           </ul>
         </div>
       </CardContent>

@@ -47,7 +47,7 @@ const LookupPage: React.FC = () => {
 
   const handleSearch = async () => {
     if (!searchValue.trim()) {
-      toast.error('Vui lòng nhập thông tin tìm kiếm');
+      toast.error('請輸入搜尋資訊');
       return;
     }
 
@@ -61,10 +61,15 @@ const LookupPage: React.FC = () => {
       setFilteredBookings(result || []);
       
       if (result?.length === 0) {
-        toast('Không tìm thấy đặt chỗ nào', { icon: 'ℹ️' });
+        toast('找不到任何預訂', { icon: 'ℹ️' });
       }
     } catch (error: any) {
-      toast.error(error.message || 'Có lỗi xảy ra khi tìm kiếm');
+      // Handle authentication errors gracefully for public lookup
+      if (error.response?.status === 401) {
+        toast.error('請登入以查詢預訂');
+      } else {
+        toast.error(error.message || '搜尋時發生錯誤');
+      }
     } finally {
       setLoading(false);
     }
@@ -76,17 +81,22 @@ const LookupPage: React.FC = () => {
       setSelectedBooking(result);
       setShowDetailsDialog(true);
     } catch (error: any) {
-      toast.error(error.message || 'Không thể tải chi tiết đặt chỗ');
+      // Handle authentication errors gracefully for public lookup
+      if (error.response?.status === 401) {
+        toast.error('請登入以查看預訂詳情');
+      } else {
+        toast.error(error.message || '無法載入預訂詳情');
+      }
     }
   };
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { label: 'Chờ xác nhận', variant: 'secondary' as const, color: 'bg-yellow-100 text-yellow-800' },
-      confirmed: { label: 'Đã xác nhận', variant: 'default' as const, color: 'bg-blue-100 text-blue-800' },
-      'checked-in': { label: 'Đã vào bãi', variant: 'default' as const, color: 'bg-green-100 text-green-800' },
-      'checked-out': { label: 'Đã rời bãi', variant: 'secondary' as const, color: 'bg-gray-100 text-gray-800' },
-      cancelled: { label: 'Đã hủy', variant: 'destructive' as const, color: 'bg-red-100 text-red-800' }
+      pending: { label: '等待確認', variant: 'secondary' as const, color: 'bg-yellow-100 text-yellow-800' },
+      confirmed: { label: '預訂成功', variant: 'default' as const, color: 'bg-blue-100 text-blue-800' },
+      'checked-in': { label: '已進入停車場', variant: 'default' as const, color: 'bg-green-100 text-green-800' },
+      'checked-out': { label: '已離開停車場', variant: 'secondary' as const, color: 'bg-gray-100 text-gray-800' },
+      cancelled: { label: '已取消', variant: 'destructive' as const, color: 'bg-red-100 text-red-800' }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
@@ -94,7 +104,7 @@ const LookupPage: React.FC = () => {
   };
 
   const formatDateTime = (dateTime: string) => {
-    return new Date(dateTime).toLocaleString('vi-VN', {
+    return new Date(dateTime).toLocaleString('zh-TW', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -104,9 +114,11 @@ const LookupPage: React.FC = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return amount.toLocaleString('vi-VN', {
+    return amount.toLocaleString('zh-TW', {
       style: 'currency',
-      currency: 'TWD'
+      currency: 'TWD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     });
   };
 
@@ -170,8 +182,8 @@ const LookupPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Tra cứu đặt chỗ</h1>
-        <p className="text-gray-600">Nhập số điện thoại hoặc biển số xe để tra cứu đặt chỗ</p>
+        <h1 className="text-3xl font-bold">查詢預訂</h1>
+        <p className="text-gray-600">請輸入電話號碼或車牌號碼以查詢預訂</p>
       </div>
 
       {/* Search Form */}
@@ -179,10 +191,10 @@ const LookupPage: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Search className="h-5 w-5" />
-            <span>Tìm kiếm đặt chỗ</span>
+            <span>查詢預訂</span>
           </CardTitle>
           <CardDescription>
-            Chọn phương thức tìm kiếm và nhập thông tin
+            選擇搜索方法並輸入信息
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -201,7 +213,7 @@ const LookupPage: React.FC = () => {
                 />
                 <Label htmlFor="phone" className="flex items-center space-x-2 cursor-pointer">
                   <Phone className="h-4 w-4" />
-                  <span>Số điện thoại</span>
+                  <span>電話號碼</span>
                 </Label>
               </div>
               
@@ -217,7 +229,7 @@ const LookupPage: React.FC = () => {
                 />
                 <Label htmlFor="licensePlate" className="flex items-center space-x-2 cursor-pointer">
                   <Car className="h-4 w-4" />
-                  <span>Biển số xe</span>
+                  <span>車牌號碼</span>
                 </Label>
               </div>
             </div>
@@ -226,11 +238,11 @@ const LookupPage: React.FC = () => {
             <div className="flex space-x-2">
               <div className="flex-1">
                 <Label htmlFor="searchValue">
-                  {searchType === 'phone' ? 'Số điện thoại' : 'Biển số xe'}
+                  {searchType === 'phone' ? '電話號碼' : '車牌號碼'}
                 </Label>
                 <Input
                   id="searchValue"
-                  placeholder={searchType === 'phone' ? 'Nhập số điện thoại' : 'Nhập biển số xe'}
+                  placeholder={searchType === 'phone' ? '請輸入電話號碼' : '請輸入車牌號碼'}
                   value={searchValue}
                   onChange={(e) => setSearchValue(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -243,7 +255,7 @@ const LookupPage: React.FC = () => {
                   className="px-4"
                 >
                   <Filter className="h-4 w-4 mr-2" />
-                  Bộ lọc
+                  過濾器
                 </Button>
                 <Button 
                   onClick={handleSearch} 
@@ -255,7 +267,7 @@ const LookupPage: React.FC = () => {
                   ) : (
                     <>
                       <Search className="h-4 w-4 mr-2" />
-                      Tìm kiếm
+                      搜索
                     </>
                   )}
                 </Button>
@@ -266,33 +278,33 @@ const LookupPage: React.FC = () => {
             {showAdvancedSearch && (
               <div className="mt-4 p-4 bg-gray-50 rounded-lg space-y-4">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-gray-700">Bộ lọc nâng cao</h4>
+                  <h4 className="font-medium text-gray-700">高級過濾器</h4>
                   <Button variant="outline" size="sm" onClick={resetFilters}>
                     <X className="h-4 w-4 mr-1" />
-                    Xóa bộ lọc
+                    清除過濾器
                   </Button>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
-                    <Label htmlFor="status">Trạng thái</Label>
+                    <Label htmlFor="status">狀態</Label>  
                     <select
                       id="status"
                       value={advancedFilters.status}
                       onChange={(e) => setAdvancedFilters(prev => ({ ...prev, status: e.target.value }))}
                       className="w-full p-2 border border-gray-300 rounded-md"
                     >
-                      <option value="">Tất cả trạng thái</option>
-                      <option value="pending">Chờ xác nhận</option>
-                      <option value="confirmed">Đã xác nhận</option>
-                      <option value="checked-in">Đã vào bãi</option>
-                      <option value="checked-out">Đã rời bãi</option>
-                      <option value="cancelled">Đã hủy</option>
+                      <option value="">所有狀態</option>
+                      <option value="pending">等待確認</option>
+                      <option value="confirmed">預訂成功</option>
+                      <option value="checked-in">已進入停車場</option>
+                      <option value="checked-out">已離開停車場</option>
+                      <option value="cancelled">已取消</option> 
                     </select>
                   </div>
                   
                   <div>
-                    <Label htmlFor="dateFrom">Từ ngày</Label>
+                    <Label htmlFor="dateFrom">從日期</Label>
                     <Input
                       id="dateFrom"
                       type="date"
@@ -302,7 +314,7 @@ const LookupPage: React.FC = () => {
                   </div>
                   
                   <div>
-                    <Label htmlFor="dateTo">Đến ngày</Label>
+                    <Label htmlFor="dateTo">到日期</Label>
                     <Input
                       id="dateTo"
                       type="date"
@@ -312,7 +324,7 @@ const LookupPage: React.FC = () => {
                   </div>
                   
                   <div>
-                    <Label htmlFor="minAmount">Số tiền tối thiểu</Label>
+                    <Label htmlFor="minAmount">最小金額</Label>
                     <Input
                       id="minAmount"
                       type="number"
@@ -323,7 +335,7 @@ const LookupPage: React.FC = () => {
                   </div>
                   
                   <div>
-                    <Label htmlFor="maxAmount">Số tiền tối đa</Label>
+                    <Label htmlFor="maxAmount">最大金額</Label>
                     <Input
                       id="maxAmount"
                       type="number"
@@ -343,9 +355,9 @@ const LookupPage: React.FC = () => {
       {bookings.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Kết quả tìm kiếm</CardTitle>
+            <CardTitle>搜索結果</CardTitle>
             <CardDescription>
-              Tìm thấy {filteredBookings.length} đặt chỗ {filteredBookings.length !== bookings.length && `(trong tổng số ${bookings.length})`}
+              找到 {filteredBookings.length} 預訂 {filteredBookings.length !== bookings.length && `(總共 ${bookings.length})`}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -380,23 +392,23 @@ const LookupPage: React.FC = () => {
                           <div className="space-y-1">
                             <div className="flex items-center space-x-2">
                               <Calendar className="h-4 w-4" />
-                              <span>Vào: {formatDateTime(booking.checkInTime)}</span>
+                              <span>進入停車場: {formatDateTime(booking.checkInTime)}</span>
                             </div>
                             <div className="flex items-center space-x-2">
                               <Clock className="h-4 w-4" />
-                              <span>Ra: {formatDateTime(booking.checkOutTime)}</span>
+                              <span>離開停車場: {formatDateTime(booking.checkOutTime)}</span>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <span className="font-medium">Tổng tiền: {formatCurrency(booking.finalAmount)}</span>
+                              <span className="font-medium">總金額: {formatCurrency(booking.finalAmount)}</span>
                             </div>
                             {booking.discountAmount > 0 && (
                               <div className="flex items-center space-x-2 text-green-600">
-                                <span className="text-xs">🎫 Voucher: -{formatCurrency(booking.discountAmount)}</span>
+                                <span className="text-xs">🎫 折扣: -{formatCurrency(booking.discountAmount)}</span>
                               </div>
                             )}
                             {booking.vipDiscount && booking.vipDiscount > 0 && (
                               <div className="flex items-center space-x-2 text-blue-600">
-                                <span className="text-xs">👑 VIP: -{formatCurrency(booking.vipDiscount)}</span>
+                                <span className="text-xs">👑 VIP: -{formatCurrency(booking.vipDiscount)}</span> 
                               </div>
                             )}
                           </div>
@@ -404,7 +416,7 @@ const LookupPage: React.FC = () => {
 
                         {booking.addonServices && booking.addonServices.length > 0 && (
                           <div className="mt-3">
-                            <div className="text-sm font-medium text-gray-700 mb-1">Dịch vụ bổ sung:</div>
+                            <div className="text-sm font-medium text-gray-700 mb-1">附加服務:</div>
                             <div className="flex flex-wrap gap-1">
                               {booking.addonServices.map((addon, index) => (
                                 <Badge key={index} variant="outline" className="text-xs">
@@ -422,7 +434,7 @@ const LookupPage: React.FC = () => {
                         onClick={() => handleViewDetails(booking._id)}
                       >
                         <Info className="h-4 w-4 mr-1" />
-                        Chi tiết
+                        詳細信息
                       </Button>
                     </div>
                   </CardContent>
@@ -438,9 +450,9 @@ const LookupPage: React.FC = () => {
         <Card>
           <CardContent className="p-8 text-center">
             <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-600 mb-2">Không tìm thấy đặt chỗ</h3>
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">找不到預訂</h3>
             <p className="text-gray-500">
-              Không có đặt chỗ nào với {searchType === 'phone' ? 'số điện thoại' : 'biển số xe'} này.
+              找不到任何預訂與 {searchType === 'phone' ? '電話號碼' : '車牌號碼'} 相關。
             </p>
           </CardContent>
         </Card>
@@ -450,9 +462,9 @@ const LookupPage: React.FC = () => {
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Chi tiết đặt chỗ</DialogTitle>
+            <DialogTitle>預訂詳細信息</DialogTitle>
             <DialogDescription>
-              Thông tin chi tiết về đặt chỗ
+              預訂詳細信息
             </DialogDescription>
           </DialogHeader>
           
@@ -462,19 +474,19 @@ const LookupPage: React.FC = () => {
               <div>
                 <h4 className="font-semibold mb-3 flex items-center">
                   <User className="h-4 w-4 mr-2" />
-                  Thông tin khách hàng
+                  客戶信息
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div className="space-y-2">
-                    <div><strong>Tên:</strong> {selectedBooking.driverName}</div>
-                    <div><strong>Điện thoại:</strong> {selectedBooking.phone}</div>
-                    <div><strong>Email:</strong> {selectedBooking.email}</div>
-                    <div><strong>VIP Status:</strong> {selectedBooking.isVIP ? '👑 VIP Member' : 'Khách hàng thường'}</div>
+                    <div><strong>姓名:</strong> {selectedBooking.driverName}</div>
+                    <div><strong>電話號碼:</strong> {selectedBooking.phone}</div>
+                    <div><strong>電子郵件:</strong> {selectedBooking.email}</div>
+                    <div><strong>VIP 狀態:</strong> {selectedBooking.isVIP ? '👑 VIP 會員' : '普通客戶'}</div>
                   </div>
                   <div className="space-y-2">
-                    <div><strong>Biển số:</strong> {selectedBooking.licensePlate}</div>
-                    <div><strong>Hành khách:</strong> {selectedBooking.passengerCount} người</div>
-                    <div><strong>Hành lý:</strong> {selectedBooking.luggageCount} kiện</div>
+                    <div><strong>車牌號碼:</strong> {selectedBooking.licensePlate}</div>
+                    <div><strong>乘客:</strong> {selectedBooking.passengerCount} 人</div>
+                    <div><strong>行李:</strong> {selectedBooking.luggageCount} 件</div>
                   </div>
                 </div>
               </div>
@@ -483,18 +495,18 @@ const LookupPage: React.FC = () => {
               <div>
                 <h4 className="font-semibold mb-3 flex items-center">
                   <Calendar className="h-4 w-4 mr-2" />
-                  Thông tin đặt chỗ
+                  預訂信息
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div className="space-y-2">
-                    <div><strong>Bãi đậu:</strong> {selectedBooking.parkingType.name}</div>
-                                            <div><strong>Loại:</strong> {getParkingTypeIcon(selectedBooking.parkingType.type || 'indoor')} {selectedBooking.parkingType.type || 'indoor'}</div>
-                    <div><strong>Trạng thái:</strong> {getStatusBadge(selectedBooking.status)}</div>
+                    <div><strong>停車場:</strong> {selectedBooking.parkingType.name}</div>
+                    <div><strong>類型:</strong> {getParkingTypeIcon(selectedBooking.parkingType.type || 'indoor')} {selectedBooking.parkingType.type || 'indoor'}</div>
+                    <div><strong>狀態:</strong> {getStatusBadge(selectedBooking.status)}</div>
                   </div>
                   <div className="space-y-2">
-                    <div><strong>Vào:</strong> {formatDateTime(selectedBooking.checkInTime)}</div>
-                    <div><strong>Ra:</strong> {formatDateTime(selectedBooking.checkOutTime)}</div>
-                    <div><strong>VIP:</strong> {selectedBooking.isVIP ? 'Có' : 'Không'}</div>
+                    <div><strong>進入停車場:</strong> {formatDateTime(selectedBooking.checkInTime)}</div>
+                    <div><strong>離開停車場:</strong> {formatDateTime(selectedBooking.checkOutTime)}</div>
+                    <div><strong>VIP:</strong> {selectedBooking.isVIP ? '是' : '否'}</div>
                   </div>
                 </div>
               </div>
@@ -504,17 +516,17 @@ const LookupPage: React.FC = () => {
                 <div>
                   <h4 className="font-semibold mb-3 flex items-center">
                     <Info className="h-4 w-4 mr-2" />
-                    Thông tin bổ sung
+                    附加信息
                   </h4>
                   <div className="space-y-2 text-sm">
                     {selectedBooking.estimatedArrivalTime && (
-                      <div><strong>Thời gian dự kiến đến:</strong> {formatDateTime(selectedBooking.estimatedArrivalTime)}</div>
+                      <div><strong>預計到達時間:</strong> {formatDateTime(selectedBooking.estimatedArrivalTime)}</div>
                     )}
                     {selectedBooking.flightNumber && (
-                      <div><strong>Số chuyến bay:</strong> {selectedBooking.flightNumber}</div>
+                      <div><strong>航班號:</strong> {selectedBooking.flightNumber}</div>
                     )}
                     {selectedBooking.notes && (
-                      <div><strong>Ghi chú:</strong> {selectedBooking.notes}</div>
+                      <div><strong>備註:</strong> {selectedBooking.notes}</div>
                     )}
                   </div>
                 </div>
@@ -525,7 +537,7 @@ const LookupPage: React.FC = () => {
                 <div>
                   <h4 className="font-semibold mb-3 flex items-center">
                     <Package className="h-4 w-4 mr-2" />
-                    Dịch vụ bổ sung
+                    附加服務
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {selectedBooking.addonServices.map((addon, index) => (
@@ -541,32 +553,32 @@ const LookupPage: React.FC = () => {
               <div>
                 <h4 className="font-semibold mb-3 flex items-center">
                   <span className="text-lg mr-2">💰</span>
-                  Thông tin thanh toán
+                  付款信息
                 </h4>
                 <div className="space-y-2 text-sm">
-                  <div><strong>Tổng tiền gốc:</strong> {formatCurrency(selectedBooking.totalAmount)}</div>
+                  <div><strong>總金額:</strong> {formatCurrency(selectedBooking.totalAmount)}</div>
                   
                   {/* Voucher Discount */}
                   {selectedBooking.discountAmount > 0 && (
                     <div className="bg-green-50 p-2 rounded">
-                      <div><strong>🎫 Voucher Discount:</strong> -{formatCurrency(selectedBooking.discountAmount)}</div>
+                      <div><strong>🎫 折扣:</strong> -{formatCurrency(selectedBooking.discountAmount)}</div>
                     </div>
                   )}
                   
                   {/* VIP Discount */}
                   {selectedBooking.vipDiscount && selectedBooking.vipDiscount > 0 && (
                     <div className="bg-blue-50 p-2 rounded">
-                      <div><strong>👑 VIP Discount:</strong> -{formatCurrency(selectedBooking.vipDiscount)}</div>
+                      <div><strong>👑 VIP 折扣:</strong> -{formatCurrency(selectedBooking.vipDiscount)}</div>
                     </div>
                   )}
                   
                   <div className="border-t pt-2">
-                    <div><strong>Tổng giảm giá:</strong> -{formatCurrency((selectedBooking.discountAmount || 0) + (selectedBooking.vipDiscount || 0))}</div>
-                    <div><strong>Thanh toán:</strong> {formatCurrency(selectedBooking.finalAmount)}</div>
+                    <div><strong>總折扣:</strong> -{formatCurrency((selectedBooking.discountAmount || 0) + (selectedBooking.vipDiscount || 0))}</div>
+                    <div><strong>付款:</strong> {formatCurrency(selectedBooking.finalAmount)}</div>
                   </div>
                   
-                  <div><strong>Phương thức:</strong> {selectedBooking.paymentMethod}</div>
-                  <div><strong>Trạng thái thanh toán:</strong> {selectedBooking.paymentStatus}</div>
+                  <div><strong>付款方式:</strong> {selectedBooking.paymentMethod}</div>
+                  <div><strong>付款狀態:</strong> {selectedBooking.paymentStatus}</div>
                 </div>
               </div>
             </div>
@@ -574,7 +586,7 @@ const LookupPage: React.FC = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDetailsDialog(false)}>
-              Đóng
+              關閉
             </Button>
           </DialogFooter>
         </DialogContent>

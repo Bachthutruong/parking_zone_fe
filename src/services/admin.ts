@@ -296,4 +296,57 @@ export const sendBulkNotification = async (data: {
 export const getNotificationStats = async () => {
   const response = await api.get('/admin/notifications/stats');
   return response.data;
+};
+
+// Special pricing management
+export const addSpecialPrice = async (parkingTypeId: string, data: {
+  startDate: string;
+  endDate: string;
+  price: number;
+  reason?: string;
+  isActive?: boolean;
+}) => {
+  const response = await api.post(`/admin/parking-types/${parkingTypeId}/special-prices`, data);
+  return response.data;
+};
+
+export const addBulkSpecialPrices = async (parkingTypeId: string, specialPrices: Array<{
+  startDate: string;
+  endDate: string;
+  price: number;
+  reason?: string;
+  isActive?: boolean;
+}>, forceOverride?: boolean) => {
+  const response = await api.post(`/admin/parking-types/${parkingTypeId}/special-prices/bulk`, {
+    specialPrices,
+    forceOverride
+  });
+  return response.data;
+};
+
+export const updateSpecialPrice = async (parkingTypeId: string, specialPriceId: string, data: {
+  startDate?: string;
+  endDate?: string;
+  price?: number;
+  reason?: string;
+  isActive?: boolean;
+}) => {
+  const response = await api.put(`/admin/parking-types/${parkingTypeId}/special-prices/${specialPriceId}`, data);
+  return response.data;
+};
+
+export const deleteSpecialPrice = async (parkingTypeId: string, specialPriceId: string) => {
+  const response = await api.delete(`/admin/parking-types/${parkingTypeId}/special-prices/${specialPriceId}`);
+  return response.data;
+};
+
+export const getSpecialPrices = async (parkingTypeId: string) => {
+  const response = await api.get(`/admin/parking-types/${parkingTypeId}/special-prices`);
+  return response.data;
+};
+
+// Today's bookings
+export const getTodayBookings = async () => {
+  const response = await api.get('/bookings/today/summary');
+  return response.data;
 }; 

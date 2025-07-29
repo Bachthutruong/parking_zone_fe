@@ -3,8 +3,8 @@ import type { SystemSettings } from '@/types';
 
 // Get system settings
 export const getSystemSettings = async (): Promise<SystemSettings> => {
-  const response = await api.get('/admin/settings');
-  return response.data;
+  const response = await api.get('/system-settings');
+  return response.data.settings;
 };
 
 // Update system settings (admin only)
@@ -15,7 +15,7 @@ export const updateSystemSettings = async (settings: Partial<SystemSettings>) =>
 
 // Get booking terms and rules
 export const getBookingTerms = async () => {
-  const response = await api.get('/admin/settings');
+  const response = await api.get('/system-settings/booking-terms');
   return response.data;
 };
 

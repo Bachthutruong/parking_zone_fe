@@ -11,8 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Eye, EyeOff } from 'lucide-react';
 
 const loginSchema = z.object({
-  email: z.string().email('Email không hợp lệ'),
-  password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
+  email: z.string().email('電子郵件格式無效'),
+  password: z.string().min(6, '密碼至少需要6個字符'),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -47,19 +47,19 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-muted/30 py-12">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Đăng nhập</CardTitle>
+          <CardTitle className="text-2xl">登入</CardTitle>
           <CardDescription>
-            Đăng nhập vào tài khoản của bạn để tiếp tục
+            登入您的帳戶以繼續
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">電子郵件</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="Nhập email của bạn"
+                placeholder="請輸入您的電子郵件"
                 {...register('email')}
                 className={errors.email ? 'border-red-500' : ''}
               />
@@ -69,12 +69,12 @@ const LoginPage: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Mật khẩu</Label>
+              <Label htmlFor="password">密碼</Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Nhập mật khẩu"
+                  placeholder="請輸入密碼"
                   {...register('password')}
                   className={errors.password ? 'border-red-500' : ''}
                 />
@@ -92,15 +92,15 @@ const LoginPage: React.FC = () => {
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+              {isLoading ? '登入中...' : '登入'}
             </Button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
-              Chưa có tài khoản?{' '}
+              還沒有帳戶？{' '}
               <Link to="/register" className="text-primary hover:underline">
-                Đăng ký ngay
+                立即註冊
               </Link>
             </p>
           </div>

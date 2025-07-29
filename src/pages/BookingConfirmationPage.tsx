@@ -86,9 +86,11 @@ const BookingConfirmationPage: React.FC = () => {
     if (amount === undefined || amount === null) {
       return '0 TWD';
     }
-    return amount.toLocaleString('vi-VN', {
+    return amount.toLocaleString('zh-TW', {
       style: 'currency',
-      currency: 'TWD'
+      currency: 'TWD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     });
   };
 
@@ -126,11 +128,11 @@ const BookingConfirmationPage: React.FC = () => {
   const getParkingTypeLabel = (type: string) => {
     switch (type) {
       case 'indoor':
-        return 'Trong nhà';
+        return '室內';
       case 'outdoor':
-        return 'Ngoài trời';
+        return '戶外';
       case 'disabled':
-        return 'Khuyết tật';
+        return '殘障人士';
       default:
         return type;
     }
@@ -138,11 +140,11 @@ const BookingConfirmationPage: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { label: 'Chờ xác nhận', variant: 'secondary' as const, color: 'bg-yellow-100 text-yellow-800' },
-      confirmed: { label: 'Đã xác nhận', variant: 'default' as const, color: 'bg-green-100 text-green-800' },
-      'checked-in': { label: 'Đã vào bãi', variant: 'default' as const, color: 'bg-blue-100 text-blue-800' },
-      'checked-out': { label: 'Đã rời bãi', variant: 'outline' as const, color: 'bg-gray-100 text-gray-800' },
-      cancelled: { label: 'Đã hủy', variant: 'destructive' as const, color: 'bg-red-100 text-red-800' }
+      pending: { label: '等待確認', variant: 'secondary' as const, color: 'bg-yellow-100 text-yellow-800' },
+      confirmed: { label: '預訂成功', variant: 'default' as const, color: 'bg-green-100 text-green-800' },
+      'checked-in': { label: '已進入停車場', variant: 'default' as const, color: 'bg-blue-100 text-blue-800' },
+      'checked-out': { label: '已離開停車場', variant: 'outline' as const, color: 'bg-gray-100 text-gray-800' },
+      cancelled: { label: '已取消', variant: 'destructive' as const, color: 'bg-red-100 text-red-800' }
     };
     
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
@@ -151,19 +153,19 @@ const BookingConfirmationPage: React.FC = () => {
 
   const handleDownloadReceipt = () => {
     // TODO: Implement receipt download
-    toast.success('Tính năng tải hóa đơn sẽ sớm có mặt!');
+    toast.success('下載收據功能將很快推出！');
   };
 
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: 'Xác nhận đặt chỗ đậu xe',
-        text: `Đặt chỗ thành công! Mã đặt chỗ: ${bookingData?.bookingNumber}`,
+        title: '預訂停車位成功',
+        text: `預訂成功！預訂編號：${bookingData?.bookingNumber}`,
         url: window.location.href
       });
     } else {
       navigator.clipboard.writeText(window.location.href);
-      toast.success('Đã sao chép link vào clipboard!');
+      toast.success('已複製鏈接到剪貼板！');
     }
   };
 
@@ -180,7 +182,7 @@ const BookingConfirmationPage: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Đang tải thông tin...</p>
+          <p className="mt-4 text-gray-600">正在加載信息...</p>
         </div>
       </div>
     );
@@ -191,11 +193,11 @@ const BookingConfirmationPage: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Không tìm thấy thông tin đặt chỗ</h1>
-          <p className="text-gray-600 mb-6">Vui lòng quay lại trang đặt chỗ</p>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">找不到預訂信息</h1>
+          <p className="text-gray-600 mb-6">請返回預訂頁面</p>
           <Button onClick={handleBackToHome} className="bg-blue-600 hover:bg-blue-700">
             <Home className="h-4 w-4 mr-2" />
-            Về trang chủ
+            返回主頁
           </Button>
         </div>
       </div>
@@ -210,8 +212,8 @@ const BookingConfirmationPage: React.FC = () => {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
             <CheckCircle className="h-10 w-10 text-green-600" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Đặt chỗ thành công!</h1>
-          <p className="text-gray-600">Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi</p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">預訂成功！</h1>
+          <p className="text-gray-600">感謝您使用我們的服務</p>
         </div>
 
         {/* Main Content */}
@@ -223,9 +225,9 @@ const BookingConfirmationPage: React.FC = () => {
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-xl text-gray-800">Thông tin đặt chỗ</CardTitle>
+                    <CardTitle className="text-xl text-gray-800">預訂信息</CardTitle>
                     <CardDescription className="text-gray-600">
-                      Mã đặt chỗ: <span className="font-mono font-bold text-blue-600">{bookingData.bookingNumber}</span>
+                      預訂編號: <span className="font-mono font-bold text-blue-600">{bookingData.bookingNumber}</span>
                     </CardDescription>
                   </div>
                   {getStatusBadge(bookingData.status)}
@@ -236,14 +238,14 @@ const BookingConfirmationPage: React.FC = () => {
                   <div className="flex items-center space-x-3">
                     <Calendar className="h-5 w-5 text-blue-600" />
                     <div>
-                      <p className="text-sm text-gray-600">Ngày vào bãi</p>
+                      <p className="text-sm text-gray-600">進入停車場日期</p>
                       <p className="font-semibold">{formatDate(bookingData.checkInTime)}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <Clock className="h-5 w-5 text-blue-600" />
                     <div>
-                      <p className="text-sm text-gray-600">Ngày rời bãi</p>
+                      <p className="text-sm text-gray-600">離開停車場日期</p>
                       <p className="font-semibold">{formatDate(bookingData.checkOutTime)}</p>
                     </div>
                   </div>
@@ -251,7 +253,7 @@ const BookingConfirmationPage: React.FC = () => {
                 <div className="flex items-center space-x-3">
                   <MapPin className="h-5 w-5 text-blue-600" />
                   <div>
-                    <p className="text-sm text-gray-600">Bãi đậu xe</p>
+                    <p className="text-sm text-gray-600">停車場類型</p>
                     <div className="flex items-center space-x-2">
                       {getParkingTypeIcon(bookingData.parkingType.type || 'indoor')}
                       <p className="font-semibold">{bookingData.parkingType.name}</p>
@@ -269,10 +271,10 @@ const BookingConfirmationPage: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <User className="h-5 w-5 text-blue-600" />
-                  <span>Thông tin khách hàng</span>
+                  <span>客戶信息</span>
                   {bookingData.isVIP && (
                     <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0">
-                      👑 VIP Member
+                      👑 VIP 會員
                     </Badge>
                   )}
                 </CardTitle>
@@ -282,28 +284,28 @@ const BookingConfirmationPage: React.FC = () => {
                   <div className="flex items-center space-x-3">
                     <User className="h-5 w-5 text-gray-500" />
                     <div>
-                      <p className="text-sm text-gray-600">Tên tài xế</p>
+                      <p className="text-sm text-gray-600">司機姓名</p>
                       <p className="font-semibold">{bookingData.driverName}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <Car className="h-5 w-5 text-gray-500" />
                     <div>
-                      <p className="text-sm text-gray-600">Biển số xe</p>
+                      <p className="text-sm text-gray-600">車牌號碼</p>
                       <p className="font-semibold font-mono">{bookingData.licensePlate}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <Phone className="h-5 w-5 text-gray-500" />
                     <div>
-                      <p className="text-sm text-gray-600">Số điện thoại</p>
+                      <p className="text-sm text-gray-600">電話號碼</p>
                       <p className="font-semibold">{bookingData.phone}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <Mail className="h-5 w-5 text-gray-500" />
                     <div>
-                      <p className="text-sm text-gray-600">Email</p>
+                      <p className="text-sm text-gray-600">電子郵件</p>
                       <p className="font-semibold">{bookingData.email}</p>
                     </div>
                   </div>
@@ -316,13 +318,13 @@ const BookingConfirmationPage: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Receipt className="h-5 w-5 text-blue-600" />
-                  <span>Chi tiết thanh toán</span>
+                  <span>付款詳情</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Phí cơ bản ({bookingData.durationDays} ngày)</span>
+                    <span className="text-gray-600">基本費用 ({bookingData.durationDays} 天)</span>
                     <span className="font-semibold">{formatCurrency(bookingData.totalAmount)}</span>
                   </div>
                   
@@ -330,7 +332,7 @@ const BookingConfirmationPage: React.FC = () => {
                     <>
                       <Separator />
                       <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-700">Dịch vụ bổ sung:</p>
+                        <p className="text-sm font-medium text-gray-700">附加服務:</p>
                         {bookingData.addonServices.map((service, index) => (
                           <div key={index} className="flex justify-between items-center text-sm">
                             <span className="text-gray-600">{service.name}</span>
@@ -347,7 +349,7 @@ const BookingConfirmationPage: React.FC = () => {
                       <Separator />
                       <div className="flex justify-between items-center py-2 bg-green-50 rounded-lg px-3">
                         <div className="flex items-center space-x-2">
-                          <span className="text-green-600">🎫 Voucher Discount:</span>
+                          <span className="text-green-600">🎫 折扣:</span>
                         </div>
                         <span className="font-semibold text-green-600">-{formatCurrency(bookingData.discountAmount)}</span>
                       </div>
@@ -360,7 +362,7 @@ const BookingConfirmationPage: React.FC = () => {
                       <Separator />
                       <div className="flex justify-between items-center py-2 bg-blue-50 rounded-lg px-3">
                         <div className="flex items-center space-x-2">
-                          <span className="text-blue-600">👑 VIP Discount:</span>
+                          <span className="text-blue-600">👑 VIP 折扣:</span>
                         </div>
                         <span className="font-semibold text-blue-600">-{formatCurrency(bookingData.vipDiscount)}</span>
                       </div>
@@ -371,13 +373,13 @@ const BookingConfirmationPage: React.FC = () => {
                   <div className="bg-gradient-to-r from-emerald-100 to-teal-100 p-3 rounded-lg border-2 border-emerald-300">
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
-                        <span className="font-semibold">Tổng tiền gốc:</span>
+                        <span className="font-semibold">總費用:</span>
                         <span className="font-semibold">{formatCurrency(bookingData.totalAmount)}</span>
                       </div>
                       
                       {(bookingData.discountAmount > 0 || (bookingData.vipDiscount && bookingData.vipDiscount > 0)) && (
                         <div className="flex justify-between items-center">
-                          <span className="font-semibold text-green-700">Tổng giảm giá:</span>
+                          <span className="font-semibold text-green-700">總折扣:</span>
                           <span className="font-bold text-green-700 text-lg">
                             -{formatCurrency((bookingData.discountAmount || 0) + (bookingData.vipDiscount || 0))}
                           </span>
@@ -386,7 +388,7 @@ const BookingConfirmationPage: React.FC = () => {
                       
                       <div className="border-t pt-2">
                         <div className="flex justify-between items-center">
-                          <span className="font-bold text-lg">Tổng thanh toán:</span>
+                          <span className="font-bold text-lg">總付款:</span>
                           <span className="font-bold text-emerald-800 text-xl">
                             {formatCurrency(bookingData.finalAmount)}
                           </span>
@@ -397,7 +399,7 @@ const BookingConfirmationPage: React.FC = () => {
                   
                   <div className="flex items-center space-x-2 text-sm text-gray-600">
                     <CreditCard className="h-4 w-4" />
-                    <span>Phương thức thanh toán: {bookingData.paymentMethod}</span>
+                    <span>付款方式: {bookingData.paymentMethod}</span>
                   </div>
                 </div>
               </CardContent>
@@ -409,7 +411,7 @@ const BookingConfirmationPage: React.FC = () => {
             {/* Quick Actions */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Thao tác nhanh</CardTitle>
+                <CardTitle className="text-lg">快速操作</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button 
@@ -418,7 +420,7 @@ const BookingConfirmationPage: React.FC = () => {
                   className="w-full justify-start"
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Tải hóa đơn
+                  下載收據
                 </Button>
                 <Button 
                   onClick={handleShare} 
@@ -426,14 +428,14 @@ const BookingConfirmationPage: React.FC = () => {
                   className="w-full justify-start"
                 >
                   <Share2 className="h-4 w-4 mr-2" />
-                  Chia sẻ
+                  分享
                 </Button>
                 <Button 
                   onClick={handleNewBooking} 
                   className="w-full justify-start bg-blue-600 hover:bg-blue-700"
                 >
                   <Car className="h-4 w-4 mr-2" />
-                  Đặt chỗ mới
+                  預訂新車位
                 </Button>
                 <Button 
                   onClick={handleBackToHome} 
@@ -441,7 +443,7 @@ const BookingConfirmationPage: React.FC = () => {
                   className="w-full justify-start"
                 >
                   <Home className="h-4 w-4 mr-2" />
-                  Về trang chủ
+                  返回主頁
                 </Button>
               </CardContent>
             </Card>
@@ -452,7 +454,7 @@ const BookingConfirmationPage: React.FC = () => {
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center space-x-2">
                     <FileText className="h-5 w-5 text-blue-600" />
-                    <span>Thông tin liên hệ</span>
+                    <span>聯繫信息</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
@@ -488,13 +490,13 @@ const BookingConfirmationPage: React.FC = () => {
             {/* Important Notes */}
             <Card className="border-amber-200 bg-amber-50/50">
               <CardHeader>
-                <CardTitle className="text-lg text-amber-800">Lưu ý quan trọng</CardTitle>
+                <CardTitle className="text-lg text-amber-800">重要提示</CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-amber-700 space-y-2">
-                <p>• Vui lòng đến đúng giờ đã đặt</p>
-                <p>• Mang theo giấy tờ xe và bằng lái</p>
-                <p>• Liên hệ ngay nếu có thay đổi</p>
-                <p>• Giữ mã đặt chỗ để tra cứu</p>
+                <p>• 請按預訂時間到達</p>
+                <p>• 請攜帶車輛證明文件和駕駛執照</p>
+                <p>• 如有變更，請立即聯繫</p>
+                <p>• 保留預訂編號以供查詢</p>
               </CardContent>
             </Card>
           </div>
