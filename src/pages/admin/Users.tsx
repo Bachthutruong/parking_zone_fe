@@ -98,6 +98,7 @@ const AdminUsers: React.FC = () => {
   const [totalUsers, setTotalUsers] = useState(0);
   const [allUsers, setAllUsers] = useState<UserWithStats[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | 'vip' | 'non-vip'>('all');
+  console.log(activeTab,'activeTab');
   const [stats, setStats] = useState({
     totalUsers: 0,
     vipUsers: 0,
