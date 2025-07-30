@@ -49,6 +49,7 @@ interface SettingsFormData {
   defaultVIPDiscount: number;
   bookingAdvanceHours: number;
   maxBookingDays: number;
+  minBookingDays: number;
   timeSlotInterval: number;
   autoCancelMinutes: number;
   
@@ -261,6 +262,7 @@ const AdminSettings: React.FC = () => {
     defaultVIPDiscount: 10,
     bookingAdvanceHours: 24,
     maxBookingDays: 30,
+    minBookingDays: 3,
     timeSlotInterval: 15,
     autoCancelMinutes: 15,
     notificationSettings: {
@@ -334,7 +336,7 @@ const AdminSettings: React.FC = () => {
       }));
     } catch (error: any) {
       console.error('Error loading settings:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Không thể tải cài đặt hệ thống';
+      const errorMessage = error.response?.data?.message || error.message || '無法載入系統設定';
       toast.error(errorMessage);
       
       // If it's an auth error, don't show the error toast as the user will be redirected
@@ -368,10 +370,10 @@ const AdminSettings: React.FC = () => {
       setSaving(true);
       console.log('🔍 Saving settings:', formData);
       await updateSystemSettings(formData);
-      toast.success('Lưu cài đặt thành công!');
+      toast.success('設定儲存成功！');
     } catch (error: any) {
       console.error('Error saving settings:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Không thể lưu cài đặt';
+      const errorMessage = error.response?.data?.message || error.message || '無法儲存設定';
       toast.error(errorMessage);
     } finally {
       setSaving(false);
@@ -389,10 +391,10 @@ const AdminSettings: React.FC = () => {
         bookingTerms: formData.bookingTerms,
         bookingRules: formData.bookingRules
       });
-      toast.success('Lưu điều khoản đặt chỗ thành công!');
+      toast.success('預訂條款儲存成功！');
     } catch (error: any) {
       console.error('Error saving booking terms:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Không thể lưu điều khoản đặt chỗ';
+      const errorMessage = error.response?.data?.message || error.message || '無法儲存預訂條款';
       toast.error(errorMessage);
     } finally {
       setSaving(false);
@@ -406,10 +408,10 @@ const AdminSettings: React.FC = () => {
       setSaving(true);
       console.log('🔍 Saving all terms:', termsData);
       await saveAllTerms(termsData);
-      toast.success('Lưu tất cả điều khoản thành công!');
+      toast.success('儲存所有條款成功！');
     } catch (error: any) {
       console.error('Error saving terms:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Không thể lưu điều khoản';
+      const errorMessage = error.response?.data?.message || error.message || '無法儲存條款';
       toast.error(errorMessage);
     } finally {
       setSaving(false);
@@ -447,10 +449,10 @@ const AdminSettings: React.FC = () => {
       setTermsData(updatedTerms);
       setEditingSection(null);
       setEditContent('');
-      toast.success('Cập nhật điều khoản thành công!');
+      toast.success('更新條款成功！');
     } catch (error: any) {
       console.error('Error updating section:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Không thể cập nhật điều khoản';
+      const errorMessage = error.response?.data?.message || error.message || '無法更新條款';
       toast.error(errorMessage);
     } finally {
       setSaving(false);
@@ -478,23 +480,23 @@ const AdminSettings: React.FC = () => {
       };
 
       setTermsData(updatedTerms);
-      toast.success(`${termsData[section].isActive ? 'Tắt' : 'Bật'} điều khoản thành công!`);
+      toast.success(`${termsData[section].isActive ? '停用' : '啟用'}條款成功！`);
     } catch (error: any) {
       console.error('Error toggling section:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Không thể thay đổi trạng thái điều khoản';
+      const errorMessage = error.response?.data?.message || error.message || '無法變更條款狀態';
       toast.error(errorMessage);
     }
   };
 
   const getSectionName = (section: keyof TermsData) => {
     const names = {
-      bookingTerms: 'Điều khoản đặt chỗ',
-      bookingRules: 'Quy định đặt chỗ',
-      privacyPolicy: 'Chính sách bảo mật',
-      contactInfo: 'Thông tin liên hệ',
-      timeSlotInterval: 'Khoảng thời gian',
-      cancellationPolicy: 'Chính sách hủy',
-      refundPolicy: 'Chính sách hoàn tiền'
+      bookingTerms: '預訂條款',
+      bookingRules: '預訂規定',
+      privacyPolicy: '隱私政策',
+      contactInfo: '聯絡資訊',
+      timeSlotInterval: '時段間隔',
+      cancellationPolicy: '取消政策',
+      refundPolicy: '退款政策'
     };
     return names[section];
   };
@@ -526,28 +528,28 @@ const AdminSettings: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Cài đặt hệ thống</h1>
-          <p className="text-gray-600">Cấu hình hệ thống và thông tin chung</p>
+          <h1 className="text-2xl font-bold">系統設定</h1>
+          <p className="text-gray-600">系統配置和一般資訊</p>
         </div>
         <div className="flex space-x-2">
           <Button variant="outline" onClick={loadSettings}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Làm mới
+            重新整理
           </Button>
           <Button onClick={handleSave} disabled={saving}>
             <Save className="h-4 w-4 mr-2" />
-            {saving ? 'Đang lưu...' : 'Lưu tất cả'}
+            {saving ? '儲存中...' : '儲存全部'}
           </Button>
         </div>
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="general">Chung</TabsTrigger>
-          <TabsTrigger value="booking">Đặt chỗ</TabsTrigger>
-          <TabsTrigger value="notifications">Thông báo</TabsTrigger>
-          <TabsTrigger value="payment">Thanh toán</TabsTrigger>
-          <TabsTrigger value="luggage">Hành lý</TabsTrigger>
+          <TabsTrigger value="general">一般</TabsTrigger>
+          <TabsTrigger value="booking">預訂</TabsTrigger>
+          <TabsTrigger value="notifications">通知</TabsTrigger>
+          <TabsTrigger value="payment">付款</TabsTrigger>
+          <TabsTrigger value="luggage">行李</TabsTrigger>
           {/* <TabsTrigger value="terms">Điều khoản</TabsTrigger> */}
         </TabsList>
 
@@ -557,7 +559,7 @@ const AdminSettings: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <SettingsIcon className="h-5 w-5 text-blue-600" />
-                <span>Cài đặt chung</span>
+                <span>一般設定</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -572,7 +574,7 @@ const AdminSettings: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="contactEmail">Email liên hệ</Label>
+                  <Label htmlFor="contactEmail">聯絡電子郵件</Label>
                   <Input
                     id="contactEmail"
                     type="email"
@@ -582,7 +584,7 @@ const AdminSettings: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="contactPhone">Số điện thoại</Label>
+                  <Label htmlFor="contactPhone">電話號碼</Label>
                   <Input
                     id="contactPhone"
                     value={formData.contactInfo.phone}
@@ -591,7 +593,7 @@ const AdminSettings: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="address">Địa chỉ</Label>
+                  <Label htmlFor="address">地址</Label>
                   <Input
                     id="address"
                     value={formData.contactInfo.address}
@@ -603,7 +605,7 @@ const AdminSettings: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label>Giờ mở cửa</Label>
+                  <Label>營業時間</Label>
                   <Input
                     type="time"
                     value={formData.businessHours.open}
@@ -615,7 +617,7 @@ const AdminSettings: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label>Giờ đóng cửa</Label>
+                  <Label>關門時間</Label>
                   <Input
                     type="time"
                     value={formData.businessHours.close}
@@ -634,12 +636,12 @@ const AdminSettings: React.FC = () => {
                   checked={formData.maintenanceMode.enabled}
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, maintenanceMode: { ...prev.maintenanceMode, enabled: checked } }))}
                 />
-                <Label htmlFor="maintenanceMode">Chế độ bảo trì</Label>
+                <Label htmlFor="maintenanceMode">維護模式</Label>
               </div>
 
               {formData.maintenanceMode.enabled && (
                 <div>
-                  <Label htmlFor="maintenanceMessage">Thông báo bảo trì</Label>
+                  <Label htmlFor="maintenanceMessage">維護通知</Label>
                   <Textarea
                     id="maintenanceMessage"
                     value={formData.maintenanceMode.message}
@@ -647,18 +649,18 @@ const AdminSettings: React.FC = () => {
                       ...prev, 
                       maintenanceMode: { ...prev.maintenanceMode, message: e.target.value }
                     }))}
-                    placeholder="Hệ thống đang bảo trì. Vui lòng thử lại sau."
+                    placeholder="系統正在維護中，請稍後再試。"
                     rows={3}
                   />
                 </div>
               )}
 
               <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="font-semibold text-blue-800 mb-2">💡 Lưu ý</h4>
+                <h4 className="font-semibold text-blue-800 mb-2">💡 注意事項</h4>
                 <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• Thông tin liên hệ sẽ hiển thị trên trang chủ</li>
-                  <li>• Giờ làm việc ảnh hưởng đến việc đặt chỗ</li>
-                  <li>• Chế độ bảo trì sẽ tạm dừng toàn bộ hệ thống</li>
+                  <li>• 聯絡資訊將顯示在首頁</li>
+                  <li>• 營業時間會影響預訂功能</li>
+                  <li>• 維護模式將暫停整個系統</li>
                 </ul>
               </div>
             </CardContent>
@@ -677,7 +679,7 @@ const AdminSettings: React.FC = () => {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="defaultVIPDiscount">Giảm giá VIP mặc định (%)</Label>
+                  <Label htmlFor="defaultVIPDiscount">預設VIP折扣 (%)</Label>
                   <Input
                     id="defaultVIPDiscount"
                     type="number"
@@ -688,7 +690,7 @@ const AdminSettings: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="bookingAdvanceHours">Đặt trước (giờ)</Label>
+                  <Label htmlFor="bookingAdvanceHours">提前預訂 (小時)</Label>
                   <Input
                     id="bookingAdvanceHours"
                     type="number"
@@ -698,7 +700,7 @@ const AdminSettings: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="maxBookingDays">Tối đa (ngày)</Label>
+                  <Label htmlFor="maxBookingDays">最大 (天)</Label>
                   <Input
                     id="maxBookingDays"
                     type="number"
@@ -707,16 +709,27 @@ const AdminSettings: React.FC = () => {
                     onChange={(e) => setFormData(prev => ({ ...prev, maxBookingDays: parseInt(e.target.value) }))}
                   />
                 </div>
+                <div>
+                  <Label htmlFor="minBookingDays">最少 (天)</Label>
+                  <Input
+                    id="minBookingDays"
+                    type="number"
+                    min="1"
+                    value={formData.minBookingDays}
+                    onChange={(e) => setFormData(prev => ({ ...prev, minBookingDays: parseInt(e.target.value) }))}
+                  />
+                </div>
               </div>
 
               <div className="bg-yellow-50 p-4 rounded-lg">
-                <h4 className="font-semibold text-yellow-800 mb-2">⚙️ Cài đặt đặt chỗ</h4>
+                <h4 className="font-semibold text-yellow-800 mb-2">⚙️ 預訂設定</h4>
                 <ul className="text-sm text-yellow-700 space-y-1">
-                  <li>• Giảm giá VIP: Áp dụng cho khách hàng VIP</li>
-                  <li>• Đặt trước: Thời gian tối thiểu để đặt chỗ</li>
-                  <li>• Tối đa: Số ngày tối đa có thể đặt trước</li>
-                  <li>• Khoảng thời gian: Độ chính xác của slot đặt chỗ</li>
-                  <li>• Tự động hủy: Thời gian chờ xác nhận</li>
+                  <li>• VIP折扣：適用於VIP客戶</li>
+                  <li>• 提前預訂：預訂的最短時間</li>
+                  <li>• 最少：客戶必須預訂的最少天數</li>
+                  <li>• 最大：可提前預訂的最大天數</li>
+                  <li>• 時段間隔：預訂時段的精確度</li>
+                  <li>• 自動取消：等待確認的時間</li>
                 </ul>
               </div>
 
@@ -729,26 +742,26 @@ const AdminSettings: React.FC = () => {
                     businessHours: { ...prev.businessHours, is24Hours: checked }
                   }))}
                 />
-                <Label htmlFor="is24Hours">Hoạt động 24/7</Label>
+                <Label htmlFor="is24Hours">24/7營業</Label>
               </div>
 
               <div>
-                <Label htmlFor="timeSlotInterval">Khoảng thời gian đặt chỗ (phút)</Label>
+                <Label htmlFor="timeSlotInterval">預訂時段間隔 (分鐘)</Label>
                 <select
                   id="timeSlotInterval"
                   value={formData.timeSlotInterval}
                   onChange={(e) => setFormData(prev => ({ ...prev, timeSlotInterval: parseInt(e.target.value) }))}
                   className="w-full p-2 border border-gray-300 rounded-md"
                 >
-                  <option value={15}>15 phút</option>
-                  <option value={30}>30 phút</option>
-                  <option value={45}>45 phút</option>
-                  <option value={60}>60 phút</option>
+                  <option value={15}>15 分鐘</option>
+                  <option value={30}>30 分鐘</option>
+                  <option value={45}>45 分鐘</option>
+                  <option value={60}>60 分鐘</option>
                 </select>
               </div>
 
               <div>
-                <Label htmlFor="autoCancelMinutes">Tự động hủy sau (phút)</Label>
+                <Label htmlFor="autoCancelMinutes">自動取消時間 (分鐘)</Label>
                 <Input
                   id="autoCancelMinutes"
                   type="number"
@@ -770,34 +783,34 @@ const AdminSettings: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-gray-600">
-                Vui lòng đọc kỹ các quy định và điều khoản trước khi đặt chỗ đậu xe.
+                請在預訂停車位前仔細閱讀相關規定和條款。
               </p>
               
               <div>
-                <Label htmlFor="bookingTerms">Điều khoản đặt chỗ</Label>
+                <Label htmlFor="bookingTerms">預訂條款</Label>
                 <Textarea
                   id="bookingTerms"
                   value={formData.bookingTerms}
                   onChange={(e) => setFormData(prev => ({ ...prev, bookingTerms: e.target.value }))}
                   rows={10}
-                  placeholder="Nhập điều khoản đặt chỗ..."
+                  placeholder="輸入預訂條款..."
                 />
               </div>
 
               <div>
-                <Label htmlFor="bookingRules">Quy định đặt chỗ</Label>
+                <Label htmlFor="bookingRules">預訂規定</Label>
                 <Textarea
                   id="bookingRules"
                   value={formData.bookingRules}
                   onChange={(e) => setFormData(prev => ({ ...prev, bookingRules: e.target.value }))}
                   rows={10}
-                  placeholder="Nhập quy định đặt chỗ..."
+                  placeholder="輸入預訂規定..."
                 />
               </div>
 
               <Button onClick={handleSaveBookingTerms} disabled={saving}>
                 <Save className="h-4 w-4 mr-2" />
-                Lưu điều khoản
+                儲存條款
               </Button>
             </CardContent>
           </Card>
@@ -822,7 +835,7 @@ const AdminSettings: React.FC = () => {
                   checked={formData.notificationSettings.emailNotifications}
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, notificationSettings: { ...prev.notificationSettings, emailNotifications: checked } }))}
                 />
-                <Label htmlFor="emailNotifications">Thông báo qua email</Label>
+                <Label htmlFor="emailNotifications">電子郵件通知</Label>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -831,7 +844,7 @@ const AdminSettings: React.FC = () => {
                   checked={formData.notificationSettings.smsNotifications}
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, notificationSettings: { ...prev.notificationSettings, smsNotifications: checked } }))}
                 />
-                <Label htmlFor="smsNotifications">Thông báo qua SMS</Label>
+                <Label htmlFor="smsNotifications">簡訊通知</Label>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -840,7 +853,7 @@ const AdminSettings: React.FC = () => {
                   checked={formData.notificationSettings.confirmationEmail}
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, notificationSettings: { ...prev.notificationSettings, confirmationEmail: checked } }))}
                 />
-                <Label htmlFor="confirmationEmail">Email xác nhận đặt chỗ</Label>
+                <Label htmlFor="confirmationEmail">預訂確認電子郵件</Label>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -849,11 +862,11 @@ const AdminSettings: React.FC = () => {
                   checked={formData.notificationSettings.reminderEmail}
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, notificationSettings: { ...prev.notificationSettings, reminderEmail: checked } }))}
                 />
-                <Label htmlFor="reminderEmail">Email nhắc nhở</Label>
+                <Label htmlFor="reminderEmail">提醒電子郵件</Label>
               </div>
 
               <div>
-                <Label htmlFor="reminderHours">Thời gian nhắc nhở trước (giờ)</Label>
+                <Label htmlFor="reminderHours">提前提醒時間 (小時)</Label>
                 <Input
                   id="reminderHours"
                   type="number"
@@ -882,7 +895,7 @@ const AdminSettings: React.FC = () => {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="currency">Đơn vị tiền tệ</Label>
+                  <Label htmlFor="currency">貨幣單位</Label>
                   <Input
                     id="currency"
                     value={formData.paymentSettings.currency}
@@ -890,7 +903,7 @@ const AdminSettings: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="taxRate">Thuế suất (%)</Label>
+                  <Label htmlFor="taxRate">稅率 (%)</Label>
                   <Input
                     id="taxRate"
                     type="number"
@@ -909,7 +922,7 @@ const AdminSettings: React.FC = () => {
                     checked={formData.paymentSettings.acceptCash}
                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, paymentSettings: { ...prev.paymentSettings, acceptCash: checked } }))}
                   />
-                  <Label htmlFor="acceptCash">Chấp nhận tiền mặt</Label>
+                  <Label htmlFor="acceptCash">接受現金</Label>
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -918,7 +931,7 @@ const AdminSettings: React.FC = () => {
                     checked={formData.paymentSettings.acceptCreditCard}
                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, paymentSettings: { ...prev.paymentSettings, acceptCreditCard: checked } }))}
                   />
-                  <Label htmlFor="acceptCreditCard">Chấp nhận thẻ tín dụng</Label>
+                  <Label htmlFor="acceptCreditCard">接受信用卡</Label>
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -927,7 +940,7 @@ const AdminSettings: React.FC = () => {
                     checked={formData.paymentSettings.acceptOnlinePayment}
                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, paymentSettings: { ...prev.paymentSettings, acceptOnlinePayment: checked } }))}
                   />
-                  <Label htmlFor="acceptOnlinePayment">Chấp nhận thanh toán online</Label>
+                  <Label htmlFor="acceptOnlinePayment">接受線上付款</Label>
                 </div>
               </div>
             </CardContent>
@@ -943,13 +956,13 @@ const AdminSettings: React.FC = () => {
                 <span>Cài đặt hành lý</span>
               </CardTitle>
               <CardDescription>
-                Cấu hình phí hành lý và số lượng hành lý miễn phí
+                配置行李費用和免費行李數量
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="freeLuggageCount">Số lượng hành lý miễn phí</Label>
+                  <Label htmlFor="freeLuggageCount">免費行李數量</Label>
                   <Input
                     id="freeLuggageCount"
                     type="number"
@@ -965,11 +978,11 @@ const AdminSettings: React.FC = () => {
                     placeholder="1"
                   />
                   <p className="text-sm text-gray-500 mt-1">
-                    Số lượng hành lý được miễn phí cho mỗi đặt chỗ
+                    每個預訂的免費行李數量
                   </p>
                 </div>
                 <div>
-                  <Label htmlFor="luggagePricePerItem">Giá mỗi hành lý thêm (NT$)</Label>
+                  <Label htmlFor="luggagePricePerItem">每件額外行李價格 (NT$)</Label>
                   <Input
                     id="luggagePricePerItem"
                     type="number"
@@ -985,17 +998,17 @@ const AdminSettings: React.FC = () => {
                     placeholder="100"
                   />
                   <p className="text-sm text-gray-500 mt-1">
-                    Giá phải trả cho mỗi hành lý vượt quá số lượng miễn phí
+                    超過免費數量後每件行李的費用
                   </p>
                 </div>
               </div>
               
               <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="font-semibold text-blue-900 mb-2">Ví dụ tính phí:</h4>
+                <h4 className="font-semibold text-blue-900 mb-2">費用計算範例：</h4>
                 <div className="text-sm text-blue-800 space-y-1">
-                  <p>• Nếu khách chọn 1 hành lý: Miễn phí (≤ {formData.luggageSettings.freeLuggageCount})</p>
-                  <p>• Nếu khách chọn 2 hành lý: Phí thêm {formData.luggageSettings.luggagePricePerItem} NT$</p>
-                  <p>• Nếu khách chọn 3 hành lý: Phí thêm {formData.luggageSettings.luggagePricePerItem * 2} NT$</p>
+                  <p>• 如果客戶選擇1件行李：免費 (≤ {formData.luggageSettings.freeLuggageCount})</p>
+                  <p>• 如果客戶選擇2件行李：額外費用 {formData.luggageSettings.luggagePricePerItem} NT$</p>
+                  <p>• 如果客戶選擇3件行李：額外費用 {formData.luggageSettings.luggagePricePerItem * 2} NT$</p>
                 </div>
               </div>
             </CardContent>
@@ -1008,10 +1021,10 @@ const AdminSettings: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <FileText className="h-5 w-5 text-blue-600" />
-                <span>Quản lý điều khoản</span>
+                <span>條款管理</span>
               </CardTitle>
               <CardDescription>
-                Quản lý tất cả các điều khoản và quy định của hệ thống
+                管理系統的所有條款和規定
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1026,7 +1039,7 @@ const AdminSettings: React.FC = () => {
                         </div>
                         <div className="flex items-center space-x-2">
                           <Badge variant={termsData[section].isActive ? "default" : "secondary"}>
-                            {termsData[section].isActive ? "Hoạt động" : "Tắt"}
+                            {termsData[section].isActive ? "啟用" : "停用"}
                           </Badge>
                           <Button
                             variant="outline"
@@ -1048,7 +1061,7 @@ const AdminSettings: React.FC = () => {
                           size="sm"
                           onClick={() => handleToggleSection(section)}
                         >
-                          {termsData[section].isActive ? "Tắt" : "Bật"}
+                          {termsData[section].isActive ? "停用" : "啟用"}
                         </Button>
                       </div>
                     </CardContent>
@@ -1058,7 +1071,7 @@ const AdminSettings: React.FC = () => {
 
               <Button onClick={handleSaveTerms} disabled={saving} className="w-full">
                 <Save className="h-4 w-4 mr-2" />
-                Lưu tất cả điều khoản
+                儲存所有條款
               </Button>
             </CardContent>
           </Card>
@@ -1070,10 +1083,10 @@ const AdminSettings: React.FC = () => {
         <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>
-              Chỉnh sửa {editingSection ? getSectionName(editingSection) : ''}
+              編輯 {editingSection ? getSectionName(editingSection) : ''}
             </DialogTitle>
             <DialogDescription>
-              Cập nhật nội dung điều khoản này
+              更新此條款內容
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1081,16 +1094,16 @@ const AdminSettings: React.FC = () => {
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
               rows={15}
-              placeholder="Nhập nội dung điều khoản..."
+              placeholder="輸入條款內容..."
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingSection(null)}>
-              Hủy
+              取消
             </Button>
             <Button onClick={handleUpdateSection} disabled={saving}>
-              <Save className="h-4 w-4 mr-2" />
-              Lưu thay đổi
+                              <Save className="h-4 w-4 mr-2" />
+                儲存變更
             </Button>
           </DialogFooter>
         </DialogContent>

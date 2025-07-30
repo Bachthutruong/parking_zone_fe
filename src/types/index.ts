@@ -152,6 +152,7 @@ export interface SystemSettings {
   defaultVIPDiscount: number;
   bookingAdvanceHours: number;
   maxBookingDays: number;
+  minBookingDays: number;
   autoCancelMinutes: number;
   timeSlotInterval: number;
   notificationSettings: {

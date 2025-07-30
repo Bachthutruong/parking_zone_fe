@@ -195,7 +195,7 @@ const BookingConfirmationPage: React.FC = () => {
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
           <h1 className="text-2xl font-bold text-gray-800 mb-2">找不到預訂信息</h1>
           <p className="text-gray-600 mb-6">請返回預訂頁面</p>
-          <Button onClick={handleBackToHome} className="bg-blue-600 hover:bg-blue-700">
+          <Button onClick={handleBackToHome} className="bg-[#39653f] hover:bg-[#2d4f33]">
             <Home className="h-4 w-4 mr-2" />
             返回主頁
           </Button>
@@ -432,7 +432,7 @@ const BookingConfirmationPage: React.FC = () => {
                 </Button>
                 <Button 
                   onClick={handleNewBooking} 
-                  className="w-full justify-start bg-blue-600 hover:bg-blue-700"
+                  className="w-full justify-start bg-[#39653f] hover:bg-[#2d4f33]"
                 >
                   <Car className="h-4 w-4 mr-2" />
                   預訂新車位

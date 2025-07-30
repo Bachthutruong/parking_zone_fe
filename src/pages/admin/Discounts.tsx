@@ -77,7 +77,7 @@ const AdminDiscounts: React.FC = () => {
       const data = await getAllDiscountCodes();
       setDiscountCodes(data.discountCodes);
     } catch (error: any) {
-      toast.error('Không thể tải danh sách mã giảm giá');
+      toast.error('無法載入折扣碼清單');
     } finally {
       setLoading(false);
     }
@@ -86,12 +86,12 @@ const AdminDiscounts: React.FC = () => {
   const handleCreate = async () => {
     try {
       await createDiscountCode(formData);
-      toast.success('Tạo mã giảm giá thành công');
+      toast.success('創建折扣碼成功');
       setShowCreateDialog(false);
       resetForm();
       loadDiscountCodes();
     } catch (error: any) {
-      toast.error('Không thể tạo mã giảm giá');
+      toast.error('無法創建折扣碼');
     }
   };
 
@@ -100,12 +100,12 @@ const AdminDiscounts: React.FC = () => {
     
     try {
       await updateDiscountCode(selectedCode._id, formData);
-      toast.success('Cập nhật mã giảm giá thành công');
+      toast.success('更新折扣碼成功');
       setShowEditDialog(false);
       resetForm();
       loadDiscountCodes();
     } catch (error: any) {
-      toast.error('Không thể cập nhật mã giảm giá');
+      toast.error('無法更新折扣碼');
     }
   };
 
@@ -114,12 +114,12 @@ const AdminDiscounts: React.FC = () => {
     
     try {
       await deleteDiscountCode(selectedCode._id);
-      toast.success('Xóa mã giảm giá thành công');
+      toast.success('刪除折扣碼成功');
       setShowDeleteDialog(false);
       setSelectedCode(null);
       loadDiscountCodes();
     } catch (error: any) {
-      toast.error('Không thể xóa mã giảm giá');
+      toast.error('無法刪除折扣碼');
     }
   };
 
@@ -176,7 +176,7 @@ const AdminDiscounts: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN');
+    return new Date(dateString).toLocaleDateString('zh-TW');
   };
 
   const getUsagePercentage = (used: number, limit: number) => {
@@ -189,22 +189,22 @@ const AdminDiscounts: React.FC = () => {
     const endDate = new Date(code.validTo);
     
     if (!code.isActive) {
-      return <Badge variant="secondary" className="bg-red-100 text-red-800">Tạm khóa</Badge>;
+      return <Badge variant="secondary" className="bg-red-100 text-red-800">暫停</Badge>; 
     }
     
     if (now < startDate) {
-      return <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Chưa bắt đầu</Badge>;
+      return <Badge variant="outline" className="bg-yellow-100 text-yellow-800">未開始</Badge>; 
     }
     
     if (now > endDate) {
-      return <Badge variant="secondary" className="bg-gray-100 text-gray-800">Hết hạn</Badge>;
+      return <Badge variant="secondary" className="bg-gray-100 text-gray-800">過期</Badge>; 
     }
     
     if (code.currentUsage >= code.maxUsage) {
-      return <Badge variant="secondary" className="bg-orange-100 text-orange-800">Hết lượt</Badge>;
+      return <Badge variant="secondary" className="bg-orange-100 text-orange-800">已用完</Badge>; 
     }
     
-    return <Badge className="bg-green-100 text-green-800">Hoạt động</Badge>;
+    return <Badge className="bg-green-100 text-green-800">啟用</Badge>; 
   };
 
   const filteredDiscountCodes = discountCodes.filter(code => {
@@ -232,17 +232,17 @@ const AdminDiscounts: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Mã giảm giá</h1>
-          <p className="text-gray-600">Quản lý các mã giảm giá và khuyến mãi</p>
+          <h1 className="text-3xl font-bold">折扣碼</h1>
+          <p className="text-gray-600">管理折扣碼和優惠</p>
         </div>
         <div className="flex space-x-2">
           <Button variant="outline" onClick={loadDiscountCodes}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Làm mới
+            重新整理
           </Button>
           <Button onClick={openCreateDialog}>
             <Plus className="h-4 w-4 mr-2" />
-            Thêm mã giảm giá
+            新增折扣碼
           </Button>
         </div>
       </div>
@@ -252,18 +252,18 @@ const AdminDiscounts: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Filter className="h-5 w-5 mr-2" />
-            Bộ lọc
+            篩選
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label htmlFor="search">Tìm kiếm</Label>
+              <Label htmlFor="search">搜尋</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
                   id="search"
-                  placeholder="Tên, mã, mô tả..."
+                  placeholder="名稱, 代碼, 描述..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -272,23 +272,23 @@ const AdminDiscounts: React.FC = () => {
             </div>
             
             <div>
-              <Label htmlFor="type">Loại giảm giá</Label>
+              <Label htmlFor="type">折扣類型</Label>
               <select
                 id="type"
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="w-full p-2 border border-gray-300 rounded-md"
               >
-                <option value="all">Tất cả loại</option>
-                <option value="percentage">Phần trăm (%)</option>
-                <option value="fixed">Số tiền cố định</option>
+                <option value="all">所有類型</option>
+                <option value="percentage">百分比 (%)</option>
+                <option value="fixed">固定金額</option>
               </select>
             </div>
             
             <div className="flex items-end">
               <Button variant="outline" className="w-full">
                 <Filter className="h-4 w-4 mr-2" />
-                Lọc
+                篩選
               </Button>
             </div>
           </div>
@@ -298,21 +298,21 @@ const AdminDiscounts: React.FC = () => {
       {/* Discount Codes Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Danh sách mã giảm giá</CardTitle>
+          <CardTitle>折扣碼清單</CardTitle>
           <CardDescription>
-            Tổng cộng {filteredDiscountCodes.length} mã giảm giá
+            總共 {filteredDiscountCodes.length} 個折扣碼
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Thông tin</TableHead>
-                <TableHead>Giá trị</TableHead>
-                <TableHead>Sử dụng</TableHead>
-                <TableHead>Thời hạn</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead>Thao tác</TableHead>
+                <TableHead>資訊</TableHead>
+                <TableHead>價值</TableHead>
+                <TableHead>使用</TableHead>
+                <TableHead>期限</TableHead> 
+                <TableHead>狀態</TableHead> 
+                <TableHead>操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -336,10 +336,10 @@ const AdminDiscounts: React.FC = () => {
                         {code.discountType === 'percentage' ? `${code.discountValue}%` : `${code.discountValue} TWD`}
                       </div>
                                              {code.minOrderAmount && code.minOrderAmount > 0 && (
-                         <div className="text-gray-500">Tối thiểu: {code.minOrderAmount} TWD</div>
+                         <div className="text-gray-500">最低: {code.minOrderAmount} TWD</div>
                        )}
                        {code.maxDiscount && code.maxDiscount > 0 && (
-                         <div className="text-gray-500">Tối đa: {code.maxDiscount} TWD</div>
+                         <div className="text-gray-500">最高: {code.maxDiscount} TWD</div>
                        )}
                     </div>
                   </TableCell>
@@ -347,11 +347,11 @@ const AdminDiscounts: React.FC = () => {
                     <div className="space-y-2">
                       <div className="text-sm">
                         <div>{code.currentUsage}/{code.maxUsage}</div>
-                        <div className="text-gray-500">Đã sử dụng</div>
+                        <div className="text-gray-500">已使用</div>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all"
+                          className="bg-[#39653f] h-2 rounded-full transition-all"
                           style={{ width: `${getUsagePercentage(code.currentUsage, code.maxUsage)}%` }}
                         ></div>
                       </div>
@@ -359,8 +359,8 @@ const AdminDiscounts: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <div className="text-sm text-gray-600">
-                      <div>Từ: {formatDate(code.validFrom)}</div>
-                      <div>Đến: {formatDate(code.validTo)}</div>
+                      <div>從: {formatDate(code.validFrom)}</div>
+                      <div>到: {formatDate(code.validTo)}</div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -400,9 +400,9 @@ const AdminDiscounts: React.FC = () => {
           {filteredDiscountCodes.length === 0 && (
             <div className="p-8 text-center">
               <Tag className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-600 mb-2">Không tìm thấy mã giảm giá</h3>
+              <h3 className="text-lg font-semibold text-gray-600 mb-2">找不到折扣碼</h3>
               <p className="text-gray-500">
-                Không có mã giảm giá nào phù hợp với bộ lọc hiện tại.
+                沒有找到符合目前篩選條件的折扣碼。
               </p>
             </div>
           )}
@@ -419,16 +419,16 @@ const AdminDiscounts: React.FC = () => {
       }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{isEditing ? 'Sửa mã giảm giá' : 'Thêm mã giảm giá mới'}</DialogTitle>
+            <DialogTitle>{isEditing ? '編輯折扣碼' : '新增折扣碼'}</DialogTitle>
             <DialogDescription>
-              {isEditing ? 'Cập nhật thông tin mã giảm giá' : 'Tạo mã giảm giá mới với các thông tin cần thiết'}
+              {isEditing ? '更新折扣碼資訊' : '創建新的折扣碼並提供必要資訊'}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="code">Mã giảm giá *</Label>
+                <Label htmlFor="code">折扣碼 *</Label>
                 <Input
                   id="code"
                   value={formData.code}
@@ -436,43 +436,43 @@ const AdminDiscounts: React.FC = () => {
                   placeholder="Ví dụ: WELCOME10"
                 />
               </div>
-              <div>
-                <Label htmlFor="name">Tên mã giảm giá *</Label>
+              <div> 
+                <Label htmlFor="name">折扣碼名稱 *</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Ví dụ: Giảm giá chào mừng"
+                  placeholder="例如: 歡迎折扣"
                 />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="description">Mô tả</Label>
+              <Label htmlFor="description">描述</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Mô tả chi tiết về mã giảm giá..."
+                placeholder="輸入折扣碼詳細描述..."
                 rows={3}
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="discountType">Loại giảm giá</Label>
+                <Label htmlFor="discountType">折扣類型</Label> 
                 <select
                   id="discountType"
                   value={formData.discountType}
                   onChange={(e) => setFormData(prev => ({ ...prev, discountType: e.target.value as 'percentage' | 'fixed' }))}
                   className="w-full p-2 border border-gray-300 rounded-md"
                 >
-                  <option value="percentage">Phần trăm (%)</option>
-                  <option value="fixed">Số tiền cố định (TWD)</option>
+                  <option value="percentage">百分比 (%)</option>
+                  <option value="fixed">固定金額 (TWD)</option>
                 </select>
               </div>
               <div>
-                <Label htmlFor="discountValue">Giá trị giảm giá *</Label>
+                <Label htmlFor="discountValue">折扣價值 *</Label>
                 <Input
                   id="discountValue"
                   type="number"
@@ -485,7 +485,7 @@ const AdminDiscounts: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="minOrderAmount">Giá trị đơn hàng tối thiểu (TWD)</Label>
+                <Label htmlFor="minOrderAmount">最低訂單金額 (TWD)</Label>
                 <Input
                   id="minOrderAmount"
                   type="number"
@@ -495,20 +495,20 @@ const AdminDiscounts: React.FC = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="maxDiscount">Giảm giá tối đa (TWD)</Label>
+                <Label htmlFor="maxDiscount">最高折扣金額 (TWD)</Label>
                 <Input
                   id="maxDiscount"
                   type="number"
                   value={formData.maxDiscount}
                   onChange={(e) => setFormData(prev => ({ ...prev, maxDiscount: parseInt(e.target.value) }))}
-                  placeholder="0 (không giới hạn)"
+                  placeholder="0 (不限制)"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="maxUsage">Giới hạn sử dụng</Label>
+                <Label htmlFor="maxUsage">使用限制</Label>
                 <Input
                   id="maxUsage"
                   type="number"
@@ -521,7 +521,7 @@ const AdminDiscounts: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="validFrom">Ngày bắt đầu</Label>
+                <Label htmlFor="validFrom">開始日期</Label>
                 <Input
                   id="validFrom"
                   type="date"
@@ -530,7 +530,7 @@ const AdminDiscounts: React.FC = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="validTo">Ngày kết thúc</Label>
+                <Label htmlFor="validTo">結束日期</Label>
                 <Input
                   id="validTo"
                   type="date"
@@ -546,7 +546,7 @@ const AdminDiscounts: React.FC = () => {
                 checked={formData.isActive}
                 onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
               />
-              <Label htmlFor="isActive">Kích hoạt mã giảm giá này</Label>
+              <Label htmlFor="isActive">啟用此折扣碼</Label>
             </div>
           </div>
 
@@ -556,10 +556,10 @@ const AdminDiscounts: React.FC = () => {
               setShowEditDialog(false);
               resetForm();
             }}>
-              Hủy
-            </Button>
+              取消
+            </Button> 
             <Button onClick={isEditing ? handleEdit : handleCreate}>
-              {isEditing ? 'Cập nhật' : 'Tạo mã giảm giá'}
+              {isEditing ? '更新' : '創建'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -569,18 +569,18 @@ const AdminDiscounts: React.FC = () => {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xác nhận xóa</DialogTitle>
+            <DialogTitle>確認刪除</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn xóa mã giảm giá "{selectedCode?.name}" ({selectedCode?.code})? 
-              Hành động này không thể hoàn tác.
+              您確定要刪除折扣碼 "{selectedCode?.name}" ({selectedCode?.code})? 
+              此操作無法撤銷。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Hủy
+              取消
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
-              Xóa
+              刪除
             </Button>
           </DialogFooter>
         </DialogContent>

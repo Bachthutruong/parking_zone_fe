@@ -284,18 +284,18 @@ const AdminParkingTypes: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Filter className="h-5 w-5 mr-2" />
-            Bộ lọc
+            篩選
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="search">Tìm kiếm</Label>
+              <Label htmlFor="search">搜尋</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
                   id="search"
-                  placeholder="Tên, mô tả..."
+                  placeholder="名稱、描述..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -306,7 +306,7 @@ const AdminParkingTypes: React.FC = () => {
             <div className="flex items-end">
               <Button variant="outline" className="w-full">
                 <Filter className="h-4 w-4 mr-2" />
-                Lọc
+                篩選
               </Button>
             </div>
           </div>
@@ -316,21 +316,21 @@ const AdminParkingTypes: React.FC = () => {
       {/* Parking Types Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Danh sách bãi đậu xe</CardTitle>
+          <CardTitle>停車場清單</CardTitle>
           <CardDescription>
-            Tổng cộng {filteredParkingTypes.length} bãi đậu xe
+            總共 {filteredParkingTypes.length} 個停車場
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Thông tin</TableHead>
-                <TableHead>Giá cả</TableHead>
-                <TableHead>Sức chứa</TableHead>
-                <TableHead>Tính năng</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead>Thao tác</TableHead>
+                <TableHead>資訊</TableHead>
+                <TableHead>價格</TableHead>
+                <TableHead>容量</TableHead>
+                <TableHead>功能</TableHead>
+                <TableHead>狀態</TableHead>
+                <TableHead>操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -349,18 +349,18 @@ const AdminParkingTypes: React.FC = () => {
                         <div>
                           <div className="font-medium">{type.name}</div>
                           <div className="text-sm text-gray-600">{type.description}</div>
-                          <div className="text-sm text-gray-500">Mã: {type.code}</div>
+                          <div className="text-sm text-gray-500">代碼: {type.code}</div>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1 text-sm">
-                        <div>Cơ bản: {formatCurrency(type.pricePerDay)}/ngày</div>
+                        <div>基本: {formatCurrency(type.pricePerDay)}/天</div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        <div>Tối đa: {type.totalSpaces || 0} chỗ</div>
+                        <div>最大: {type.totalSpaces || 0} 位</div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -372,7 +372,7 @@ const AdminParkingTypes: React.FC = () => {
                         ))}
                         {(type.features || []).length > 2 && (
                           <Badge variant="outline" className="text-xs">
-                            +{(type.features || []).length - 2} nữa
+                            +{(type.features || []).length - 2} 更多
                           </Badge>
                         )}
                       </div>
@@ -382,12 +382,12 @@ const AdminParkingTypes: React.FC = () => {
                         {type.isActive ? (
                           <>
                             <CheckCircle className="h-3 w-3 mr-1" />
-                            Hoạt động
+                            啟用
                           </>
                         ) : (
                           <>
                             <XCircle className="h-3 w-3 mr-1" />
-                            Tạm khóa
+                            暫停
                           </>
                         )}
                       </Badge>
@@ -420,9 +420,9 @@ const AdminParkingTypes: React.FC = () => {
           {filteredParkingTypes.length === 0 && (
             <div className="p-8 text-center">
               <Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-600 mb-2">Không tìm thấy bãi đậu xe</h3>
+              <h3 className="text-lg font-semibold text-gray-600 mb-2">找不到停車場</h3>
               <p className="text-gray-500">
-                Không có bãi đậu xe nào phù hợp với bộ lọc hiện tại.
+                沒有符合當前篩選條件的停車場。
               </p>
             </div>
           )}
@@ -439,37 +439,37 @@ const AdminParkingTypes: React.FC = () => {
       }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{isEditing ? 'Sửa bãi đậu xe' : 'Thêm bãi đậu xe mới'}</DialogTitle>
+            <DialogTitle>{isEditing ? '編輯停車場' : '新增停車場'}</DialogTitle>
             <DialogDescription>
-              {isEditing ? 'Cập nhật thông tin bãi đậu xe' : 'Tạo bãi đậu xe mới với các thông tin cần thiết'}
+              {isEditing ? '更新停車場資訊' : '創建新的停車場並提供必要資訊'}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="name">Tên bãi đậu xe *</Label>
+                <Label htmlFor="name">停車場名稱 *</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Ví dụ: Bãi A, Bãi B, Khu vực VIP..."
+                  placeholder="例如: 停車場A、停車場B、VIP區域..."
                 />
               </div>
               <div>
-                <Label htmlFor="code">Mã bãi đậu xe *</Label>
+                <Label htmlFor="code">停車場代碼 *</Label>
                 <Input
                   id="code"
                   value={formData.code}
                   onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
-                  placeholder="VD: A001, B002, VIP001"
+                  placeholder="例如: A001、B002、VIP001"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="icon">Biểu tượng</Label>
+                <Label htmlFor="icon">圖示</Label>
                 <Input
                   id="icon"
                   value={formData.icon}
@@ -478,7 +478,7 @@ const AdminParkingTypes: React.FC = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="color">Màu sắc</Label>
+                <Label htmlFor="color">顏色</Label>
                 <Input
                   id="color"
                   type="color"
@@ -489,19 +489,19 @@ const AdminParkingTypes: React.FC = () => {
             </div>
 
             <div>
-              <Label htmlFor="description">Mô tả</Label>
+              <Label htmlFor="description">描述</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Mô tả chi tiết về bãi đậu xe..."
+                                  placeholder="停車場的詳細描述..."
                 rows={3}
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="pricePerDay">Giá cơ bản (TWD/ngày) *</Label>
+                <Label htmlFor="pricePerDay">基本價格 (TWD/天) *</Label>
                 <Input
                   id="pricePerDay"
                   type="number"
@@ -510,7 +510,7 @@ const AdminParkingTypes: React.FC = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="totalSpaces">Số chỗ tối đa *</Label>
+                <Label htmlFor="totalSpaces">最大車位數 *</Label>
                 <Input
                   id="totalSpaces"
                   type="number"
@@ -521,14 +521,14 @@ const AdminParkingTypes: React.FC = () => {
             </div>
 
             <div>
-              <Label>Tính năng</Label>
+              <Label>功能</Label>
               <div className="space-y-2">
                 {formData.features.map((feature, index) => (
                   <div key={index} className="flex space-x-2">
                     <Input
                       value={feature}
                       onChange={(e) => updateFeature(index, e.target.value)}
-                      placeholder="Nhập tính năng..."
+                      placeholder="輸入功能..."
                     />
                     <Button
                       variant="outline"
@@ -541,7 +541,7 @@ const AdminParkingTypes: React.FC = () => {
                 ))}
                 <Button variant="outline" size="sm" onClick={addFeature}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Thêm tính năng
+                  新增功能
                 </Button>
               </div>
             </div>
@@ -552,7 +552,7 @@ const AdminParkingTypes: React.FC = () => {
                 checked={formData.isActive}
                 onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
               />
-              <Label htmlFor="isActive">Kích hoạt bãi đậu xe này</Label>
+              <Label htmlFor="isActive">啟用此停車場</Label>
             </div>
           </div>
 
@@ -562,10 +562,10 @@ const AdminParkingTypes: React.FC = () => {
               setShowEditDialog(false);
               resetForm();
             }}>
-              Hủy
+              取消
             </Button>
             <Button onClick={isEditing ? handleEdit : handleCreate}>
-              {isEditing ? 'Cập nhật' : 'Tạo bãi đậu xe'}
+              {isEditing ? '更新' : '創建停車場'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -575,18 +575,18 @@ const AdminParkingTypes: React.FC = () => {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xác nhận xóa</DialogTitle>
+            <DialogTitle>確認刪除</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn xóa bãi đậu xe "{selectedType?.name}"? 
-              Hành động này không thể hoàn tác.
+              您確定要刪除停車場 "{selectedType?.name}"? 
+              此操作無法撤銷。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Hủy
+              取消
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
-              Xóa
+              刪除
             </Button>
           </DialogFooter>
         </DialogContent>

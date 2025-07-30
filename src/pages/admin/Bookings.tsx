@@ -86,7 +86,7 @@ const BookingsPage: React.FC = () => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Chi tiết đặt chỗ - ${booking.driverName}</title>
+        <title>預訂詳情 - ${booking.driverName}</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 20px; }
           .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
@@ -450,8 +450,8 @@ const BookingsPage: React.FC = () => {
                             <>
                               <Button
                                 size="sm"
-                                variant="default"
-                                className="bg-green-600 hover:bg-green-700 text-white"
+                                                variant="default"
+                className="bg-[#39653f] hover:bg-[#2d4f33] text-white"
                                 onClick={createStatusUpdateHandler(booking._id, 'checked-in')}
                               >
                                 已進入停車場
@@ -469,8 +469,8 @@ const BookingsPage: React.FC = () => {
                           {booking.status === 'checked-in' && (
                             <Button
                               size="sm"
-                              variant="default"
-                              className="bg-blue-600 hover:bg-blue-700 text-white"
+                                              variant="default"
+                className="bg-[#39653f] hover:bg-[#2d4f33] text-white"
                               onClick={createStatusUpdateHandler(booking._id, 'checked-out')}
                             >
                               已離開停車場

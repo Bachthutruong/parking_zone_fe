@@ -17,7 +17,7 @@ import {
   User,
   Receipt,
   ShoppingCart,
-  Tag,
+  // Tag,
   FileText,
   Shield,
   Clock,
@@ -31,8 +31,7 @@ import { getSystemSettings, getAllParkingTypes, getAllAddonServices as getAddonS
 import { checkParkingTypeMaintenance } from '@/services/maintenance';
 import { checkVIPStatus, checkVIPByCode } from '@/services/auth';
 import type { SystemSettings, ParkingType, AddonService, BookingFormData } from '@/types';
-import AvailabilityCalendar from '@/components/AvailabilityCalendar';
-import ConflictNotification from '@/components/ConflictNotification';
+
 
 const BookingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -53,10 +52,10 @@ const BookingPage: React.FC = () => {
   const [vipCode, setVipCode] = useState('');
   const [vipCodeLoading, setVipCodeLoading] = useState(false);
   const [conflictingDays, setConflictingDays] = useState<string[]>([]);
+  console.log(conflictingDays, 'conflictingDays');
   const [bookingTerms, setBookingTerms] = useState<string>('');
   const [bookingRules, setBookingRules] = useState<string>('');
   const [maintenanceDays, setMaintenanceDays] = useState<any[]>([]);
-  
   const [formData, setFormData] = useState<BookingFormData>({
     agreedToTerms: false,
     parkingTypeId: '',
@@ -72,6 +71,10 @@ const BookingPage: React.FC = () => {
     luggageCount: 0,
     termsAccepted: false
   });
+
+  const [showConflictMessage, setShowConflictMessage] = useState(false);
+  const [conflictDetails, setConflictDetails] = useState<any>(null);
+  const [minBookingDays, setMinBookingDays] = useState(3); // Default 3 days minimum
 
   // Load initial data
   useEffect(() => {
@@ -97,6 +100,9 @@ const BookingPage: React.FC = () => {
       setBookingTerms(settings?.bookingTerms || '');
       setBookingRules(settings?.bookingRules || '');
       
+      // Set minimum booking days from system settings
+      setMinBookingDays(settings?.minBookingDays || 3);
+      
       // Load VIP status from localStorage
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       setIsVIP(user.isVIP || false);
@@ -117,12 +123,15 @@ const BookingPage: React.FC = () => {
     if (formData.parkingTypeId && formData.checkInTime && formData.checkOutTime) {
       checkAvailability();
       checkMaintenanceForSelectedDates();
+      checkDateRangeAvailability();
     } else {
       // Clear availability data when no parking type or time is selected
       setAvailableSlots([]);
       setPricing(null);
       setConflictingDays([]);
       setMaintenanceDays([]);
+      setShowConflictMessage(false);
+      setConflictDetails(null);
     }
   }, [formData.parkingTypeId, formData.checkInTime, formData.checkOutTime]);
 
@@ -183,6 +192,83 @@ const BookingPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error checking maintenance:', error);
+    }
+  };
+
+  const checkDateRangeAvailability = async () => {
+    if (!formData.checkInTime || !formData.checkOutTime || !formData.parkingTypeId) {
+      return;
+    }
+
+    try {
+      const startDate = new Date(formData.checkInTime);
+      const endDate = new Date(formData.checkOutTime);
+      const currentDate = new Date(startDate);
+      const conflictingDates: any[] = [];
+      const availableDates: any[] = [];
+
+      while (currentDate <= endDate) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        try {
+          const response = await api.post('/bookings/check-availability', {
+            parkingTypeId: formData.parkingTypeId,
+            checkInTime: `${dateStr}T00:00:00.000Z`,
+            checkOutTime: `${dateStr}T23:59:59.999Z`
+          });
+          
+          const data = response.data;
+          if (!data.success) {
+            conflictingDates.push({
+              date: dateStr,
+              formattedDate: currentDate.toLocaleDateString('zh-TW', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long'
+              })
+            });
+          } else {
+            availableDates.push({
+              date: dateStr,
+              formattedDate: currentDate.toLocaleDateString('zh-TW', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long'
+              })
+            });
+          }
+        } catch (error) {
+          console.error('Error checking day availability:', error);
+          conflictingDates.push({
+            date: dateStr,
+            formattedDate: currentDate.toLocaleDateString('zh-TW', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              weekday: 'long'
+            })
+          });
+        }
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      if (conflictingDates.length > 0) {
+        setShowConflictMessage(true);
+        setConflictDetails({
+          conflictingDates,
+          availableDates,
+          totalDays: Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1,
+          conflictingDays: conflictingDates.length,
+          availableDays: availableDates.length
+        });
+      } else {
+        setShowConflictMessage(false);
+        setConflictDetails(null);
+      }
+    } catch (error) {
+      console.error('Error checking date range availability:', error);
     }
   };
 
@@ -352,6 +438,19 @@ const BookingPage: React.FC = () => {
       return;
     }
 
+    // Check minimum booking days
+    if (formData.checkInTime && formData.checkOutTime) {
+      const checkInDate = new Date(formData.checkInTime);
+      const checkOutDate = new Date(formData.checkOutTime);
+      const diffTime = Math.abs(checkOutDate.getTime() - checkInDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < minBookingDays) {
+        toast.error(`最少需要預訂 ${minBookingDays} 天，您選擇了 ${diffDays} 天`);
+        return;
+      }
+    }
+
     if (!formData.driverName || !formData.phone || !formData.email || !formData.licensePlate) {
       toast.error('請填寫完整的個人資料');
       return;
@@ -475,8 +574,7 @@ const BookingPage: React.FC = () => {
     { id: 1, title: '條款', icon: <FileText className="h-4 w-4" /> },
     { id: 2, title: '選擇停車場', icon: <MapPin className="h-4 w-4" /> },
     { id: 3, title: '服務', icon: <ShoppingCart className="h-4 w-4" /> },
-    { id: 4, title: '優惠', icon: <Tag className="h-4 w-4" /> },
-    { id: 5, title: '個人資料', icon: <User className="h-4 w-4" /> }
+    { id: 4, title: '個人資料', icon: <User className="h-4 w-4" /> }
   ];
 
   const renderStepContent = () => {
@@ -606,6 +704,7 @@ const BookingPage: React.FC = () => {
                           onClick={() => {
                             if (!isUnderMaintenance) {
                               setFormData(prev => ({ ...prev, parkingTypeId: type._id }));
+                              toast.success(`已選擇停車場: ${type.name}`);
                             }
                           }}
                         >
@@ -669,11 +768,32 @@ const BookingPage: React.FC = () => {
                               id="checkInTime"
                               type="datetime-local"
                               value={formData.checkInTime}
-                              onChange={(e) => setFormData(prev => ({ ...prev, checkInTime: e.target.value }))}
+                              onChange={(e) => {
+                                const checkInTime = e.target.value;
+                                setFormData(prev => ({ ...prev, checkInTime }));
+                                
+                                // Auto-calculate minimum checkout time
+                                if (checkInTime && formData.checkOutTime) {
+                                  const checkInDate = new Date(checkInTime);
+                                  const minCheckOutDate = new Date(checkInDate);
+                                  minCheckOutDate.setDate(checkInDate.getDate() + minBookingDays);
+                                  
+                                  const currentCheckOutDate = new Date(formData.checkOutTime);
+                                  if (currentCheckOutDate < minCheckOutDate) {
+                                    setFormData(prev => ({ 
+                                      ...prev, 
+                                      checkOutTime: minCheckOutDate.toISOString().slice(0, 16)
+                                    }));
+                                  }
+                                }
+                              }}
                               min={new Date().toISOString().slice(0, 16)}
                               className="pl-10"
                             />
                           </div>
+                          <p className="text-xs text-gray-500">
+                            最少預訂 {minBookingDays} 天
+                          </p>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="checkOutTime" className="text-sm font-medium text-gray-700">離開時間 *</Label>
@@ -683,33 +803,91 @@ const BookingPage: React.FC = () => {
                               id="checkOutTime"
                               type="datetime-local"
                               value={formData.checkOutTime}
-                              onChange={(e) => setFormData(prev => ({ ...prev, checkOutTime: e.target.value }))}
-                              min={formData.checkInTime || new Date().toISOString().slice(0, 16)}
+                              onChange={(e) => {
+                                const checkOutTime = e.target.value;
+                                if (formData.checkInTime) {
+                                  const checkInDate = new Date(formData.checkInTime);
+                                  const checkOutDate = new Date(checkOutTime);
+                                  const minCheckOutDate = new Date(checkInDate);
+                                  minCheckOutDate.setDate(checkInDate.getDate() + minBookingDays);
+                                  
+                                  if (checkOutDate < minCheckOutDate) {
+                                    toast.error(`最少需要預訂 ${minBookingDays} 天`);
+                                    return;
+                                  }
+                                }
+                                setFormData(prev => ({ ...prev, checkOutTime }));
+                              }}
+                              min={formData.checkInTime ? (() => {
+                                const checkInDate = new Date(formData.checkInTime);
+                                const minCheckOutDate = new Date(checkInDate);
+                                minCheckOutDate.setDate(checkInDate.getDate() + minBookingDays);
+                                return minCheckOutDate.toISOString().slice(0, 16);
+                              })() : new Date().toISOString().slice(0, 16)}
                               className="pl-10"
                             />
                           </div>
+                          <p className="text-xs text-gray-500">
+                            從進入時間起最少 {minBookingDays} 天
+                          </p>
                         </div>
                       </div>
                     </div>
 
-                    {/* Availability Calendar */}
-                    {formData.parkingTypeId && formData.checkInTime && formData.checkOutTime && (
-                      <AvailabilityCalendar
-                        parkingTypeId={formData.parkingTypeId}
-                        checkInTime={formData.checkInTime}
-                        checkOutTime={formData.checkOutTime}
-                      />
-                    )}
 
-                    {/* Conflict Notification */}
-                    {conflictingDays.length > 0 && (
-                      <ConflictNotification 
-                        checkInTime={formData.checkInTime}
-                        checkOutTime={formData.checkOutTime}
-                        conflictingDays={conflictingDays}
-                        totalDays={Math.ceil((new Date(formData.checkOutTime).getTime() - new Date(formData.checkInTime).getTime()) / (1000 * 60 * 60 * 24))}
-                        availableDays={Math.ceil((new Date(formData.checkOutTime).getTime() - new Date(formData.checkInTime).getTime()) / (1000 * 60 * 60 * 24)) - conflictingDays.length}
-                      />
+
+                    {/* Conflict Message */}
+                    {showConflictMessage && conflictDetails && (
+                      <div className="p-6 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-center space-x-2 mb-4">
+                          <AlertCircle className="h-5 w-5 text-red-600" />
+                          <h3 className="text-lg font-semibold text-red-800">您所選的日期，停車位已經被約完，詳細如下：</h3>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="font-medium text-red-700 mb-2">您選的日期：</h4>
+                            <div className="space-y-2">
+                              {conflictDetails.conflictingDates.map((date: any, index: number) => (
+                                <div key={index} className="flex items-center space-x-2 text-red-600">
+                                  <span>•</span>
+                                  <span>{date.formattedDate}</span>
+                                  <span className="text-red-500 font-medium">(x 無空位)</span>
+                                </div>
+                              ))}
+                              {conflictDetails.availableDates.map((date: any, index: number) => (
+                                <div key={index} className="flex items-center space-x-2 text-green-600">
+                                  <span>•</span>
+                                  <span>{date.formattedDate}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <div className="bg-white p-4 rounded-lg border border-red-200">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-red-700">總計：</span>
+                              <div className="flex space-x-4">
+                                <span className="text-sm text-red-600">
+                                  {conflictDetails.conflictingDays} 天已滿
+                                </span>
+                                <span className="text-sm text-green-600">
+                                  {conflictDetails.availableDays} 天空閒
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <h4 className="font-medium text-blue-800 mb-2">建議：</h4>
+                            <div className="space-y-1 text-sm text-blue-700">
+                              <div>• 選擇其他時間範圍</div>
+                              <div>• 選擇較短的時間範圍</div>
+                              <div>• 聯繫我們以獲得支援</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     )}
 
                     {/* Maintenance Notification */}
@@ -747,10 +925,10 @@ const BookingPage: React.FC = () => {
               <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b">
                 <CardTitle className="flex items-center space-x-3 text-purple-900">
                   <ShoppingCart className="h-6 w-6 text-purple-600" />
-                  <span>Dịch vụ bổ sung</span>
+                  <span>服務</span>
                 </CardTitle>
                 <CardDescription className="text-purple-700">
-                  Chọn các dịch vụ bổ sung cho chuyến đi của bạn
+                  選擇您需要的服務
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6">
@@ -809,133 +987,18 @@ const BookingPage: React.FC = () => {
         return (
           <div className="space-y-6">
             <Card className="border-0 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-orange-50 to-yellow-50 border-b">
-                <CardTitle className="flex items-center space-x-3 text-orange-900">
-                  <Tag className="h-6 w-6 text-orange-600" />
-                  <span>Mã giảm giá</span>
-                </CardTitle>
-                <CardDescription className="text-orange-700">
-                  Nhập mã giảm giá nếu bạn có
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                <div className="flex space-x-3">
-                  <Input
-                    placeholder="Nhập mã giảm giá"
-                    value={formData.discountCode}
-                    onChange={(e) => setFormData(prev => ({ ...prev, discountCode: e.target.value }))}
-                    className="flex-1"
-                  />
-                  <Button onClick={handleDiscountCodeApply} className="bg-orange-600 hover:bg-orange-700">
-                    Áp dụng
-                  </Button>
-                </div>
-                
-                {discountInfo && (
-                  <div className="p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center space-x-2 mb-3">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <span className="font-medium text-green-800">Ưu đãi đã được áp dụng!</span>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      {/* Voucher Discount */}
-                      <div className="bg-white p-3 rounded-lg border border-green-200">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <span className="text-lg">🎫</span>
-                          <span className="font-semibold text-green-700">Voucher Discount</span>
-                        </div>
-                        <div className="space-y-1 text-sm">
-                          <div className="flex justify-between">
-                            <span>Mã voucher:</span>
-                            <span className="font-semibold text-green-600">{discountInfo.code}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Loại giảm:</span>
-                            <span className="font-semibold">
-                              {discountInfo.discountType === 'percentage' ? `${discountInfo.discountValue}%` : 'Số tiền cố định'}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Số tiền giảm:</span>
-                            <span className="font-semibold text-green-600">-{formatCurrency(discountInfo.discountAmount)}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* VIP Discount */}
-                      {discountInfo.vipDiscount > 0 && (
-                        <div className="bg-white p-3 rounded-lg border border-blue-200">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <span className="text-lg">👑</span>
-                            <span className="font-semibold text-blue-700">VIP Member Discount</span>
-                          </div>
-                          <div className="space-y-1 text-sm">
-                            <div className="flex justify-between">
-                              <span>Trạng thái:</span>
-                              <span className="font-semibold text-blue-600">VIP Member</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Tỷ lệ giảm:</span>
-                              <span className="font-semibold">
-                                {Math.round((discountInfo.vipDiscount / (discountInfo.originalAmount - discountInfo.discountAmount)) * 100)}%
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Số tiền giảm:</span>
-                              <span className="font-semibold text-blue-600">-{formatCurrency(discountInfo.vipDiscount)}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Total Summary */}
-                      <div className="bg-gradient-to-r from-green-100 to-blue-100 p-3 rounded-lg border-2 border-green-300">
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="font-semibold">Tổng tiền gốc:</span>
-                            <span className="font-semibold">{formatCurrency(discountInfo.originalAmount)}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="font-semibold text-green-700">Tổng giảm giá:</span>
-                            <span className="font-bold text-green-700 text-lg">
-                              -{formatCurrency(discountInfo.totalDiscount || discountInfo.discountAmount)}
-                            </span>
-                          </div>
-                          <div className="border-t pt-2">
-                            <div className="flex justify-between items-center">
-                              <span className="font-bold text-lg">Tổng thanh toán:</span>
-                              <span className="font-bold text-green-800 text-xl">
-                                {formatCurrency(discountInfo.finalAmount)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        );
-
-      case 5:
-        return (
-          <div className="space-y-6">
-            <Card className="border-0 shadow-lg">
               <CardHeader className="bg-gradient-to-r from-indigo-50 to-blue-50 border-b">
                 <CardTitle className="flex items-center space-x-3 text-indigo-900">
                   <User className="h-6 w-6 text-indigo-600" />
-                  <span>Thông tin cá nhân</span>
+                  <span>個人資料</span>
                   {isVIP && (
                     <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0">
-                      👑 VIP Member
+                      👑 VIP Member 
                     </Badge>
                   )}
                 </CardTitle>
                 <CardDescription className="text-indigo-700">
-                  Điền thông tin cá nhân để hoàn tất đặt chỗ
+                  填寫個人資料以完成預訂
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
@@ -944,7 +1007,7 @@ const BookingPage: React.FC = () => {
                   <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-2">
-                        <span className="text-yellow-800 font-medium">👑 Bạn có phải là thành viên VIP?</span>
+                        <span className="text-yellow-800 font-medium">👑 您是VIP會員嗎？</span>
                       </div>
                       <Button
                         type="button"
@@ -953,7 +1016,7 @@ const BookingPage: React.FC = () => {
                         onClick={() => setShowVIPCodeInput(!showVIPCodeInput)}
                         className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
                       >
-                        {showVIPCodeInput ? 'Ẩn' : 'Nhập mã VIP'}
+                        {showVIPCodeInput ? '隱藏' : '輸入VIP碼'}
                       </Button>
                     </div>
                     
@@ -961,7 +1024,7 @@ const BookingPage: React.FC = () => {
                       <div className="space-y-3">
                         <div className="flex space-x-2">
                           <Input
-                            placeholder="Nhập mã VIP của bạn"
+                            placeholder="輸入您的VIP碼"
                             value={vipCode}
                             onChange={(e) => setVipCode(e.target.value)}
                             className="flex-1"
@@ -970,36 +1033,91 @@ const BookingPage: React.FC = () => {
                             type="button"
                             onClick={handleCheckVIPByCode}
                             disabled={vipCodeLoading}
-                            className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                            className="bg-[#39653f] hover:bg-[#2d4f33] text-white"
                           >
-                            {vipCodeLoading ? 'Đang kiểm tra...' : 'Kiểm tra'}
+                            {vipCodeLoading ? '正在檢查...' : '檢查'}
                           </Button>
                         </div>
                         <p className="text-xs text-yellow-700">
-                          💡 Mã VIP có định dạng: Năm + Số điện thoại (VD: 1140908805805)
+                          💡 VIP碼格式: 年份 + 電話號碼 (例如: 1140908805805)
                         </p>
                       </div>
                     )}
                   </div>
                 )}
 
+                {/* Discount Code Section */}
+                <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-green-800 font-medium">🎫 您有折扣碼嗎？</span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex space-x-2">
+                      <Input
+                        placeholder="輸入折扣碼"
+                        value={formData.discountCode}
+                        onChange={(e) => setFormData(prev => ({ ...prev, discountCode: e.target.value }))}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleDiscountCodeApply}
+                        disabled={!formData.discountCode?.trim() || !formData.parkingTypeId || !formData.checkInTime || !formData.checkOutTime}
+                        className="bg-[#39653f] hover:bg-[#2d4f33] text-white"
+                      >
+                        應用
+                      </Button>
+                    </div>
+                    <p className="text-xs text-green-700">
+                      💡 輸入有效的折扣碼以獲得額外優惠
+                    </p>
+                  </div>
+                  
+                  {/* Show discount info if applied */}
+                  {discountInfo && (
+                    <div className="mt-3 p-3 bg-white rounded-lg border border-green-200">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <span className="text-green-600">✅</span>
+                        <span className="font-medium text-green-800">折扣已應用！</span>
+                      </div>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span>折扣碼:</span>
+                          <span className="font-semibold text-green-600">{discountInfo.code}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>折扣金額:</span>
+                          <span className="font-semibold text-green-600">-{formatCurrency(discountInfo.discountAmount)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>最終金額:</span>
+                          <span className="font-semibold text-green-600">{formatCurrency(discountInfo.finalAmount)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="driverName" className="text-sm font-medium text-gray-700">Tên tài xế *</Label>
+                    <Label htmlFor="driverName" className="text-sm font-medium text-gray-700">司機姓名 *</Label>
                     <Input
                       id="driverName"
                       value={formData.driverName}
                       onChange={(e) => setFormData(prev => ({ ...prev, driverName: e.target.value }))}
-                      placeholder="Nhập tên tài xế"
+                      placeholder="輸入司機姓名"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-sm font-medium text-gray-700">Số điện thoại *</Label>
+                    <Label htmlFor="phone" className="text-sm font-medium text-gray-700">電話號碼 *</Label>
                     <Input
                       id="phone"
                       value={formData.phone}
                       onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                      placeholder="Nhập số điện thoại"
+                      placeholder="輸入電話號碼"
                     />
                   </div>
                 </div>
@@ -1013,7 +1131,7 @@ const BookingPage: React.FC = () => {
                         type="email"
                         value={formData.email}
                         onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                        placeholder="Nhập email"
+                        placeholder="輸入電子郵件"
                         className={isVIP ? 'border-yellow-400 bg-yellow-50' : ''}
                       />
                       {isVIP && currentUser && (
@@ -1026,29 +1144,29 @@ const BookingPage: React.FC = () => {
                     </div>
                     {isVIP && currentUser && (
                       <div className="text-xs text-yellow-600 bg-yellow-50 p-2 rounded">
-                        ✨ Chào mừng VIP Member! Bạn được hưởng {currentUser.vipDiscount}% giảm giá tự động.
+                        ✨ 歡迎VIP會員！您自動享有{currentUser.vipDiscount}%折扣。
                       </div>
                     )}
                     {!isVIP && formData.email && !currentUser && (
                       <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                        ℹ️ Khách hàng thường - Không có ưu đãi VIP
+                        ℹ️ 普通客戶 - 無VIP優惠
                       </div>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="licensePlate" className="text-sm font-medium text-gray-700">Biển số xe *</Label>
+                    <Label htmlFor="licensePlate" className="text-sm font-medium text-gray-700">車牌號碼 *</Label>
                     <Input
                       id="licensePlate"
                       value={formData.licensePlate}
                       onChange={(e) => setFormData(prev => ({ ...prev, licensePlate: e.target.value.toUpperCase() }))}
-                      placeholder="Nhập biển số xe"
+                      placeholder="輸入車牌號碼"
                     />
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="passengerCount" className="text-sm font-medium text-gray-700">Số hành khách</Label>
+                    <Label htmlFor="passengerCount" className="text-sm font-medium text-gray-700">乘客人數</Label>
                     <Input
                       id="passengerCount"
                       type="number"
@@ -1058,7 +1176,7 @@ const BookingPage: React.FC = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="luggageCount" className="text-sm font-medium text-gray-700">Số hành lý</Label>
+                    <Label htmlFor="luggageCount" className="text-sm font-medium text-gray-700">行李數量</Label>
                     <Input
                       id="luggageCount"
                       type="number"
@@ -1070,10 +1188,10 @@ const BookingPage: React.FC = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="notes" className="text-sm font-medium text-gray-700">Ghi chú</Label>
+                  <Label htmlFor="notes" className="text-sm font-medium text-gray-700">備註</Label>  
                   <Textarea
                     id="notes"
-                    placeholder="Ghi chú thêm (nếu có)"
+                    placeholder="輸入備註 (如果有的話)"
                     rows={3}
                   />
                 </div>
@@ -1086,7 +1204,7 @@ const BookingPage: React.FC = () => {
                 <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b">
                   <CardTitle className="flex items-center space-x-3 text-emerald-900">
                     <Receipt className="h-6 w-6 text-emerald-600" />
-                    <span>Tóm tắt giá</span>
+                    <span>價格摘要</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -1095,7 +1213,7 @@ const BookingPage: React.FC = () => {
                     <div className="bg-gray-50 p-3 rounded-lg">
                       <div className="flex justify-between items-center">
                         <div>
-                          <span className="font-semibold text-gray-900">Giá cơ bản</span>
+                          <span className="font-semibold text-gray-900">基本價格</span>
                           <div className="text-sm text-gray-600">
                             {parkingTypes.find(t => t._id === formData.parkingTypeId)?.name} • {pricing.durationDays} ngày
                           </div>
@@ -1107,7 +1225,7 @@ const BookingPage: React.FC = () => {
                     {/* Daily Prices Breakdown */}
                     {pricing?.dailyPrices && pricing.dailyPrices.length > 0 && (
                       <div className="bg-blue-50 p-3 rounded-lg">
-                        <div className="text-sm font-semibold text-blue-700 mb-2">📅 Chi tiết giá từng ngày:</div>
+                        <div className="text-sm font-semibold text-blue-700 mb-2">📅 每日價格詳細:</div>
                         <div className="space-y-2">
                           {pricing.dailyPrices.map((dayPrice: any, index: number) => (
                             <div key={index} className="flex justify-between items-center text-sm bg-white p-2 rounded">
@@ -1121,7 +1239,7 @@ const BookingPage: React.FC = () => {
                                 </span>
                                 {dayPrice.isSpecialPrice && (
                                   <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-200 max-w-32 truncate" title={dayPrice.specialPriceReason}>
-                                    💰 {dayPrice.specialPriceReason || 'Giá đặc biệt'}
+                                    💰 {dayPrice.specialPriceReason || '特殊價格'}
                                   </Badge>
                                 )}
                               </div>
@@ -1144,7 +1262,7 @@ const BookingPage: React.FC = () => {
                     {/* Addon Services */}
                     {formData.selectedAddonServices.length > 0 && (
                       <div className="bg-blue-50 p-3 rounded-lg">
-                        <div className="text-sm font-semibold text-blue-700 mb-2">🚀 Dịch vụ bổ sung:</div>
+                        <div className="text-sm font-semibold text-blue-700 mb-2">🚀 附加服務:</div>
                         <div className="space-y-2">
                           {formData.selectedAddonServices.map((serviceId) => {
                             const service = addonServices.find(s => s._id === serviceId);
@@ -1165,17 +1283,17 @@ const BookingPage: React.FC = () => {
                     {/* Luggage Fees */}
                     {formData.luggageCount > 0 && (
                       <div className="bg-purple-50 p-3 rounded-lg">
-                        <div className="text-sm font-semibold text-purple-700 mb-2">🧳 Hành lý:</div>
+                        <div className="text-sm font-semibold text-purple-700 mb-2">🧳 行李:</div>
                         <div className="space-y-2">
                           <div className="flex justify-between items-center text-sm bg-white p-2 rounded">
                             <div className="flex items-center space-x-2">
                               <span className="text-lg">🧳</span>
-                              <span>{formData.luggageCount} hành lý</span>
+                              <span>{formData.luggageCount} 行李</span>
                               {systemSettings?.luggageSettings && (
                                 <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
                                   {formData.luggageCount <= systemSettings.luggageSettings.freeLuggageCount 
-                                    ? 'Miễn phí' 
-                                    : `${systemSettings.luggageSettings.freeLuggageCount} miễn phí + ${formData.luggageCount - systemSettings.luggageSettings.freeLuggageCount} tính phí`
+                                    ? '免費' 
+                                    : `${systemSettings.luggageSettings.freeLuggageCount} 免費 + ${formData.luggageCount - systemSettings.luggageSettings.freeLuggageCount} 收費`
                                   }
                                 </span>
                               )}
@@ -1198,9 +1316,9 @@ const BookingPage: React.FC = () => {
                     {isVIP && currentUser && (
                       <div className="flex justify-between items-center py-2 bg-blue-50 rounded-lg px-3">
                         <div className="flex items-center space-x-2">
-                          <span className="text-blue-600">👑 VIP Discount:</span>
+                          <span className="text-blue-600">👑 VIP 折扣:</span>
                           <span className="text-xs text-blue-500 bg-blue-100 px-2 py-1 rounded">
-                            {currentUser.vipDiscount}% off
+                            {currentUser.vipDiscount}% 折扣
                           </span>
                         </div>
                         {discountInfo ? (
@@ -1217,9 +1335,9 @@ const BookingPage: React.FC = () => {
                     {discountInfo && discountInfo.discountAmount > 0 && (
                       <div className="flex justify-between items-center py-2 bg-green-50 rounded-lg px-3">
                         <div className="flex items-center space-x-2">
-                          <span className="text-green-600">🎫 Voucher:</span>
+                          <span className="text-green-600">🎫 優惠券:</span>
                           <span className="text-xs text-green-500 bg-green-100 px-2 py-1 rounded">
-                            {discountInfo.code} ({discountInfo.discountType === 'percentage' ? `${discountInfo.discountValue}%` : 'Fixed'})
+                            {discountInfo.code} ({discountInfo.discountType === 'percentage' ? `${discountInfo.discountValue}%` : '固定'})
                           </span>
                         </div>
                         <span className="font-semibold text-green-600">-{formatCurrency(discountInfo.discountAmount)}</span>
@@ -1232,7 +1350,7 @@ const BookingPage: React.FC = () => {
                     <div className="bg-gradient-to-r from-emerald-100 to-teal-100 p-4 rounded-lg border-2 border-emerald-300">
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
-                          <span className="font-semibold text-gray-700">Tổng tiền gốc:</span>
+                          <span className="font-semibold text-gray-700">總原價:</span>
                           <span className="font-semibold text-gray-900">
                             {formatCurrency(pricing.totalPrice + ((addonServices || [])
                               .filter(service => formData.selectedAddonServices.includes(service._id))
@@ -1244,7 +1362,7 @@ const BookingPage: React.FC = () => {
                         {/* Show total discount if there's any discount */}
                         {(discountInfo && (discountInfo.discountAmount > 0 || discountInfo.vipDiscount > 0)) || (isVIP && currentUser) ? (
                           <div className="flex justify-between items-center">
-                            <span className="font-semibold text-green-700">Tổng giảm giá:</span>
+                            <span className="font-semibold text-green-700">總折扣:</span>
                             <span className="font-bold text-green-700 text-lg">
                               -{formatCurrency(
                                 discountInfo 
@@ -1273,7 +1391,7 @@ const BookingPage: React.FC = () => {
                         
                         <div className="border-t pt-2">
                           <div className="flex justify-between items-center">
-                            <span className="font-bold text-lg text-gray-900">Tổng thanh toán:</span>
+                            <span className="font-bold text-lg text-gray-900">總付款:</span>
                             <span className="text-2xl font-bold text-emerald-600">
                               {(() => {
                                 // Calculate base total
@@ -1322,7 +1440,7 @@ const BookingPage: React.FC = () => {
                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, termsAccepted: !!checked }))}
                   />
                   <Label htmlFor="termsAccepted" className="text-sm font-medium">
-                    Tôi đồng ý với các điều khoản và quy định đặt chỗ
+                    我同意所有預訂條款和條件
                   </Label>
                 </div>
               </CardContent>
@@ -1355,7 +1473,7 @@ const BookingPage: React.FC = () => {
               <span>{error}</span>
             </div>
             <Button onClick={loadInitialData} className="mt-4">
-              Thử lại
+              重試
             </Button>
           </CardContent>
         </Card>
@@ -1374,7 +1492,7 @@ const BookingPage: React.FC = () => {
                 <div key={step.id} className="flex items-center">
                   <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 ${
                     currentStep >= step.id 
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-lg' 
+                      ? 'bg-[#39653f] border-[#39653f] text-white shadow-lg' 
                       : 'bg-white border-gray-300 text-gray-500'
                   }`}>
                     {currentStep > step.id ? (
@@ -1390,7 +1508,7 @@ const BookingPage: React.FC = () => {
                   </span>
                   {index < steps.length - 1 && (
                     <div className={`w-20 h-0.5 mx-4 transition-colors duration-300 ${
-                      currentStep > step.id ? 'bg-blue-600' : 'bg-gray-300'
+                      currentStep > step.id ? 'bg-[#39653f]' : 'bg-gray-300'
                     }`} />
                   )}
                 </div>
@@ -1401,16 +1519,16 @@ const BookingPage: React.FC = () => {
           {/* Selected Date Information */}
           {currentStep >= 2 && formData.checkInTime && formData.checkOutTime && (
             <div className="mb-6">
-              <Card className="border-2 border-blue-200 bg-blue-50/50">
+              <Card className="border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <Clock className="h-5 w-5 text-blue-600" />
                       <div>
-                        <h3 className="font-semibold text-blue-900">Thời gian đã chọn:</h3>
+                        <h3 className="font-semibold text-blue-900">已選擇時間:</h3>
                         <div className="flex items-center space-x-4 text-sm text-blue-800">
                           <span>
-                            <strong>Vào bãi:</strong> {new Date(formData.checkInTime).toLocaleDateString('vi-VN', {
+                            <strong>進入:</strong> {new Date(formData.checkInTime).toLocaleDateString('zh-TW', {
                               weekday: 'long',
                               year: 'numeric',
                               month: 'long',
@@ -1421,7 +1539,7 @@ const BookingPage: React.FC = () => {
                           </span>
                           <span className="text-blue-600">→</span>
                           <span>
-                            <strong>Rời bãi:</strong> {new Date(formData.checkOutTime).toLocaleDateString('vi-VN', {
+                            <strong>離開:</strong> {new Date(formData.checkOutTime).toLocaleDateString('zh-TW', {
                               weekday: 'long',
                               year: 'numeric',
                               month: 'long',
@@ -1436,7 +1554,7 @@ const BookingPage: React.FC = () => {
                     {formData.parkingTypeId && (
                       <div className="text-right">
                         <div className="text-sm text-blue-700">
-                          <strong>Bãi đậu:</strong> {parkingTypes.find(pt => pt._id === formData.parkingTypeId)?.name || 'Chưa chọn'}
+                          <strong>停車場:</strong> {parkingTypes.find(pt => pt._id === formData.parkingTypeId)?.name || '未選擇'}
                         </div>
                         <div className="text-xs text-blue-600">
                           {(() => {
@@ -1444,7 +1562,7 @@ const BookingPage: React.FC = () => {
                             const checkOut = new Date(formData.checkOutTime);
                             const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
                             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                            return `${diffDays} ngày`;
+                            return `${diffDays} 天`;
                           })()}
                         </div>
                       </div>
@@ -1467,7 +1585,7 @@ const BookingPage: React.FC = () => {
               className="px-6 py-3"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Quay lại
+              返回
             </Button>
             
             <div className="flex space-x-3">
@@ -1480,18 +1598,18 @@ const BookingPage: React.FC = () => {
                 (currentStep === 2 && (!formData.checkInTime || !formData.checkOutTime)) ||
                 (currentStep === 2 && maintenanceDays.length > 0)
               }
-              className="px-8 py-3 bg-blue-600 hover:bg-blue-700"
+              className="px-8 py-3 bg-[#39653f] hover:bg-[#2d4f33]"
             >
-                  Tiếp theo
+                  下一步
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               ) : (
                 <Button
                   onClick={handleSubmit}
                   disabled={loading || !formData.termsAccepted}
-                  className="px-8 py-3 bg-green-600 hover:bg-green-700"
+                  className="px-8 py-3 bg-[#39653f] hover:bg-[#2d4f33]"
                 >
-                  {loading ? 'Đang xử lý...' : 'Hoàn tất đặt chỗ'}
+                  {loading ? '正在處理...' : '完成預訂'}
                 </Button>
               )}
             </div>

@@ -101,7 +101,7 @@ const AdminServices: React.FC = () => {
       resetForm();
       loadServices();
     } catch (error: any) {
-      toast.error('Không thể cập nhật dịch vụ');
+      toast.error('無法更新服務');
     }
   };
 
@@ -110,12 +110,12 @@ const AdminServices: React.FC = () => {
     
     try {
       await deleteAddonService(selectedService._id);
-      toast.success('Xóa dịch vụ thành công');
+      toast.success('刪除服務成功');
       setShowDeleteDialog(false);
       setSelectedService(null);
       loadServices();
     } catch (error: any) {
-      toast.error('Không thể xóa dịch vụ');
+      toast.error('無法刪除服務');
     }
   };
 
@@ -259,18 +259,18 @@ const AdminServices: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Filter className="h-5 w-5 mr-2" />
-            Bộ lọc
+            篩選
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label htmlFor="search">Tìm kiếm</Label>
+              <Label htmlFor="search">搜尋</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
                   id="search"
-                  placeholder="Tên, mô tả..."
+                  placeholder="名稱、描述..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -279,26 +279,26 @@ const AdminServices: React.FC = () => {
             </div>
             
             <div>
-              <Label htmlFor="category">Danh mục</Label>
+              <Label htmlFor="category">類別</Label>
               <select
                 id="category"
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
                 className="w-full p-2 border border-gray-300 rounded-md"
               >
-                <option value="all">Tất cả danh mục</option>
-                <option value="transport">Vận chuyển</option>
-                <option value="cleaning">Làm sạch</option>
-                <option value="security">Bảo mật</option>
-                <option value="convenience">Tiện ích</option>
-                <option value="other">Khác</option>
+                <option value="all">所有類別</option>
+                <option value="transport">運輸</option>
+                <option value="cleaning">清潔</option>
+                <option value="security">安全</option>
+                <option value="convenience">便利</option>
+                <option value="other">其他</option>
               </select>
             </div>
             
             <div className="flex items-end">
               <Button variant="outline" className="w-full">
                 <Filter className="h-4 w-4 mr-2" />
-                Lọc
+                篩選
               </Button>
             </div>
           </div>
@@ -308,22 +308,22 @@ const AdminServices: React.FC = () => {
       {/* Services Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Danh sách dịch vụ</CardTitle>
+          <CardTitle>服務清單</CardTitle>
           <CardDescription>
-            Tổng cộng {filteredServices.length} dịch vụ
+            共 {filteredServices.length} 項服務
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Thông tin</TableHead>
-                <TableHead>Danh mục</TableHead>
-                <TableHead>Giá cả</TableHead>
-                <TableHead>Thời gian</TableHead>
-                <TableHead>Tính năng</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead>Thao tác</TableHead>
+                <TableHead>資訊</TableHead>
+                <TableHead>類別</TableHead>
+                <TableHead>價格</TableHead>
+                <TableHead>時間</TableHead>
+                <TableHead>功能</TableHead>
+                <TableHead>狀態</TableHead>
+                <TableHead>操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -345,11 +345,11 @@ const AdminServices: React.FC = () => {
                     <TableCell>
                       <Badge className={getCategoryBadge(service.category)}>
                         <CategoryIcon className="h-3 w-3 mr-1" />
-                        {service.category === 'transport' && 'Vận chuyển'}
-                        {service.category === 'cleaning' && 'Làm sạch'}
-                        {service.category === 'security' && 'Bảo mật'}
-                        {service.category === 'convenience' && 'Tiện ích'}
-                        {service.category === 'other' && 'Khác'}
+                        {service.category === 'transport' && '運輸'}
+                        {service.category === 'cleaning' && '清潔'}
+                        {service.category === 'security' && '安全'}
+                        {service.category === 'convenience' && '便利'}
+                        {service.category === 'other' && '其他'}
                         {!['transport', 'cleaning', 'security', 'convenience', 'other'].includes(service.category) && service.category}
                       </Badge>
                     </TableCell>
@@ -360,7 +360,7 @@ const AdminServices: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        {service.duration ? `${service.duration} phút` : 'N/A'}
+                        {service.duration ? `${service.duration} 分鐘` : 'N/A'}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -372,7 +372,7 @@ const AdminServices: React.FC = () => {
                         ))}
                         {(service.features || []).length > 2 && (
                           <Badge variant="outline" className="text-xs">
-                            +{(service.features || []).length - 2} nữa
+                            +{(service.features || []).length - 2} 更多
                           </Badge>
                         )}
                       </div>
@@ -382,12 +382,12 @@ const AdminServices: React.FC = () => {
                         {service.isActive ? (
                           <>
                             <CheckCircle className="h-3 w-3 mr-1" />
-                            Hoạt động
+                            啟用
                           </>
                         ) : (
                           <>
                             <XCircle className="h-3 w-3 mr-1" />
-                            Tạm khóa
+                            暫停
                           </>
                         )}
                       </Badge>
@@ -420,9 +420,9 @@ const AdminServices: React.FC = () => {
           {filteredServices.length === 0 && (
             <div className="p-8 text-center">
               <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-600 mb-2">Không tìm thấy dịch vụ</h3>
+              <h3 className="text-lg font-semibold text-gray-600 mb-2">找不到服務</h3>
               <p className="text-gray-500">
-                Không có dịch vụ nào phù hợp với bộ lọc hiện tại.
+                沒有符合當前篩選條件的服務。
               </p>
             </div>
           )}
@@ -439,25 +439,25 @@ const AdminServices: React.FC = () => {
       }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{isEditing ? 'Sửa dịch vụ' : 'Thêm dịch vụ mới'}</DialogTitle>
+            <DialogTitle>{isEditing ? '編輯服務' : '新增服務'}</DialogTitle>
             <DialogDescription>
-              {isEditing ? 'Cập nhật thông tin dịch vụ' : 'Tạo dịch vụ bổ sung mới với các thông tin cần thiết'}
+              {isEditing ? '更新服務資訊' : '創建新的附加服務，包含必要資訊'}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="name">Tên dịch vụ *</Label>
+                <Label htmlFor="name">服務名稱 *</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Ví dụ: Rửa xe, Đưa đón sân bay..."
+                  placeholder="例如：洗車、機場接送..."
                 />
               </div>
               <div>
-                <Label htmlFor="icon">Biểu tượng</Label>
+                <Label htmlFor="icon">圖示</Label>
                 <Input
                   id="icon"
                   value={formData.icon}
@@ -468,19 +468,19 @@ const AdminServices: React.FC = () => {
             </div>
 
             <div>
-              <Label htmlFor="description">Mô tả</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Mô tả chi tiết về dịch vụ..."
-                rows={3}
-              />
+                              <Label htmlFor="description">描述</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="詳細描述服務..."
+                  rows={3}
+                />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="price">Giá (TWD)</Label>
+                <Label htmlFor="price">價格 (TWD)</Label>
                 <Input
                   id="price"
                   type="number"
@@ -490,7 +490,7 @@ const AdminServices: React.FC = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="duration">Thời gian (phút)</Label>
+                <Label htmlFor="duration">時間 (分鐘)</Label>
                 <Input
                   id="duration"
                   type="number"
@@ -502,14 +502,14 @@ const AdminServices: React.FC = () => {
             </div>
 
             <div>
-              <Label>Tính năng</Label>
+              <Label>功能</Label>
               <div className="space-y-2">
                 {formData.features.map((feature, index) => (
                   <div key={index} className="flex space-x-2">
                     <Input
                       value={feature}
                       onChange={(e) => updateFeature(index, e.target.value)}
-                      placeholder="Nhập tính năng..."
+                      placeholder="輸入功能..."
                     />
                     <Button
                       variant="outline"
@@ -522,7 +522,7 @@ const AdminServices: React.FC = () => {
                 ))}
                 <Button variant="outline" size="sm" onClick={addFeature}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Thêm tính năng
+                  新增功能
                 </Button>
               </div>
             </div>
@@ -533,7 +533,7 @@ const AdminServices: React.FC = () => {
                 checked={formData.isActive}
                 onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
               />
-              <Label htmlFor="isActive">Kích hoạt dịch vụ này</Label>
+              <Label htmlFor="isActive">啟用此服務</Label>
             </div>
           </div>
 
@@ -543,10 +543,10 @@ const AdminServices: React.FC = () => {
               setShowEditDialog(false);
               resetForm();
             }}>
-              Hủy
+              取消
             </Button>
             <Button onClick={isEditing ? handleEdit : handleCreate}>
-              {isEditing ? 'Cập nhật' : 'Tạo dịch vụ'}
+              {isEditing ? '更新' : '創建服務'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -556,18 +556,18 @@ const AdminServices: React.FC = () => {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xác nhận xóa</DialogTitle>
+            <DialogTitle>確認刪除</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn xóa dịch vụ "{selectedService?.name}"? 
-              Hành động này không thể hoàn tác.
+              您確定要刪除服務 "{selectedService?.name}" 嗎？ 
+              此操作無法撤銷。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Hủy
+              取消
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
-              Xóa
+              刪除
             </Button>
           </DialogFooter>
         </DialogContent>

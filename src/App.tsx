@@ -4,7 +4,6 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import Layout from './components/Layout'
 import AdminLayout from './components/AdminLayout'
 import StaffLayout from './components/StaffLayout'
-import HomePage from './pages/HomePage'
 import BookingPage from './pages/BookingPage'
 import BookingConfirmationPage from './pages/BookingConfirmationPage'
 import LookupPage from './pages/LookupPage'
@@ -33,7 +32,7 @@ function App() {
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<Layout />}>
-            <Route index element={<HomePage />} />
+            <Route index element={<BookingPage />} />
             <Route path="booking" element={<BookingPage />} />
             <Route path="booking-confirmation" element={<BookingConfirmationPage />} />
             <Route path="lookup" element={<LookupPage />} />

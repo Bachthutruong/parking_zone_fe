@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Users,
   Search,
@@ -95,6 +96,8 @@ const AdminUsers: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [allUsers, setAllUsers] = useState<UserWithStats[]>([]);
+  const [activeTab, setActiveTab] = useState<'all' | 'vip' | 'non-vip'>('all');
   const [stats, setStats] = useState({
     totalUsers: 0,
     vipUsers: 0,
@@ -120,7 +123,7 @@ const AdminUsers: React.FC = () => {
 
   useEffect(() => {
     loadUsers();
-  }, [currentPage, filters.search, filters.role, filters.vipStatus, filters.isActive]);
+  }, [filters.search, filters.role, filters.vipStatus, filters.isActive]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -135,8 +138,8 @@ const AdminUsers: React.FC = () => {
     try {
       setLoading(true);
       const params: any = {
-        page: currentPage,
-        limit: 10
+        page: 1,
+        limit: 1000 // Load all users at once
       };
 
       if (filters.search) {
@@ -186,9 +189,10 @@ const AdminUsers: React.FC = () => {
         })
       );
       
+      setAllUsers(usersWithStats);
       setUsers(usersWithStats);
-      setTotalPages(data.totalPages || 1);
       setTotalUsers(data.total || 0);
+      setTotalPages(Math.ceil((data.total || 0) / 10));
       
       // Update stats
       setStats({
@@ -467,6 +471,23 @@ const AdminUsers: React.FC = () => {
     }, 500);
   }, []);
 
+  const getPaginatedUsers = (userList: UserWithStats[], page: number, pageSize: number = 10) => {
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return userList.slice(startIndex, endIndex);
+  };
+
+  const getFilteredUsers = (userList: UserWithStats[], filterType: 'all' | 'vip' | 'non-vip') => {
+    switch (filterType) {
+      case 'vip':
+        return userList.filter(user => user.isVIP);
+      case 'non-vip':
+        return userList.filter(user => !user.isVIP);
+      default:
+        return userList;
+    }
+  };
+
   const handleExportUsers = () => {
     // In a real app, this would call an API to export users
     toast.success('導出數據成功');
@@ -536,10 +557,10 @@ const AdminUsers: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">活動用戶</p>
-                <p className="text-2xl font-bold">{stats.activeUsers}</p>
+                <p className="text-sm font-medium text-gray-600">非VIP用戶</p>
+                <p className="text-2xl font-bold">{stats.totalUsers - stats.vipUsers}</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <UserIcon className="h-8 w-8 text-gray-600" />
             </div>
           </CardContent>
         </Card>
@@ -548,10 +569,10 @@ const AdminUsers: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">新用戶（月）</p>
-                <p className="text-2xl font-bold">{stats.newUsersThisMonth}</p>
+                <p className="text-sm font-medium text-gray-600">活動用戶</p>
+                <p className="text-2xl font-bold">{stats.activeUsers}</p>
               </div>
-              <TrendingUp className="h-8 w-8 text-green-600" />
+              <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
@@ -658,202 +679,575 @@ const AdminUsers: React.FC = () => {
         <CardHeader>
           <CardTitle>用戶列表</CardTitle>
           <CardDescription>
-            總共 {totalUsers} 用戶 • 第 {currentPage} 頁 / {totalPages} 頁
+            總共 {totalUsers} 用戶 • VIP: {stats.vipUsers} • 非VIP: {stats.totalUsers - stats.vipUsers} • 第 {currentPage} 頁 / {totalPages} 頁
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>信息</TableHead>
-                <TableHead>角色 & VIP</TableHead>
-                <TableHead>統計</TableHead>
-                <TableHead>狀態</TableHead>
-                <TableHead>操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user._id}>
-                  <TableCell>
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <UserIcon className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <div className="font-medium">{user.name}</div>
-                        <div className="text-sm text-gray-600 flex items-center">
-                          <Mail className="h-3 w-3 mr-1" />
-                          {user.email}
-                        </div>
-                        <div className="text-sm text-gray-600 flex items-center">
-                          <Phone className="h-3 w-3 mr-1" />
-                          {user.phone}
-                        </div>
-                        {user.licensePlate && (
-                          <div className="text-sm text-gray-600 flex items-center">
-                            <Car className="h-3 w-3 mr-1" />
-                            {user.licensePlate}
+                     <Tabs defaultValue="all" className="w-full" onValueChange={(value) => {
+             setActiveTab(value as 'all' | 'vip' | 'non-vip');
+             setCurrentPage(1); // Reset to first page when switching tabs
+           }}>
+             <TabsList className="grid w-full grid-cols-3">
+               <TabsTrigger value="all">所有用戶</TabsTrigger>
+               <TabsTrigger value="vip">VIP用戶</TabsTrigger>
+               <TabsTrigger value="non-vip">非VIP用戶</TabsTrigger>
+             </TabsList>
+            <TabsContent value="all">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>信息</TableHead>
+                    <TableHead>角色 & VIP</TableHead>
+                    <TableHead>統計</TableHead>
+                    <TableHead>狀態</TableHead>
+                    <TableHead>操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                                 <TableBody>
+                   {getPaginatedUsers(getFilteredUsers(allUsers, 'all'), currentPage).map((user) => (
+                    <TableRow key={user._id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                            <UserIcon className="h-5 w-5 text-blue-600" />
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-2">
-                      {getRoleBadge(user.role)}
-                      {user.isVIP && (
-                        <div className="space-y-1">
-                          <Badge variant="default" className="bg-yellow-100 text-yellow-800">
-                            <Star className="h-3 w-3 mr-1" />
-                            VIP {user.vipDiscount}%
-                          </Badge>
-                          {user.vipCode ? (
-                            <div className="text-xs">
-                              <code className="bg-yellow-50 px-1 py-0.5 rounded text-yellow-700 font-mono">
-                                {user.vipCode}
-                              </code>
+                          <div>
+                            <div className="font-medium">{user.name}</div>
+                            <div className="text-sm text-gray-600 flex items-center">
+                              <Mail className="h-3 w-3 mr-1" />
+                              {user.email}
                             </div>
-                          ) : (
-                            <div className="text-xs text-red-600">
-                              ⚠️ 尚未有VIP碼
+                            <div className="text-sm text-gray-600 flex items-center">
+                              <Phone className="h-3 w-3 mr-1" />
+                              {user.phone}
+                            </div>
+                            {user.licensePlate && (
+                              <div className="text-sm text-gray-600 flex items-center">
+                                <Car className="h-3 w-3 mr-1" />
+                                {user.licensePlate}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-2">
+                          {getRoleBadge(user.role)}
+                          {user.isVIP && (
+                            <div className="space-y-1">
+                              <Badge variant="default" className="bg-yellow-100 text-yellow-800">
+                                <Star className="h-3 w-3 mr-1" />
+                                VIP {user.vipDiscount}%
+                              </Badge>
+                              {user.vipCode ? (
+                                <div className="text-xs">
+                                  <code className="bg-yellow-50 px-1 py-0.5 rounded text-yellow-700 font-mono">
+                                    {user.vipCode}
+                                  </code>
+                                </div>
+                              ) : (
+                                <div className="text-xs text-red-600">
+                                  ⚠️ 尚未有VIP碼
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span>預訂:</span>
-                        <span className="font-medium">{user.stats?.totalBookings || 0}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>總支出:</span>
-                        <span className="font-medium">{formatCurrency(user.stats?.totalSpent || 0)}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>平均:</span>  
-                        <span className="font-medium">{formatCurrency(user.stats?.averageSpent || 0)}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>趨勢:</span>  
-                        {getTrendIcon(user.stats?.bookingTrend || 'stable')}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(user.isActive)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openUserDetails(user)}
-                        title="查看詳細信息"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openEditDialog(user)}
-                        title="編輯"   
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openVIPDialog(user)}
-                        title="管理VIP"
-                      >
-                        <Crown className="h-4 w-4" />
-                      </Button>
-                      {user.isVIP && !user.vipCode && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleGenerateVIPCode(user._id)}
-                          title="創建VIP碼"  
-                          className="bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
-                        >
-                          <Star className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {user.role !== 'admin' && (
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => openDeleteDialog(user)}
-                          title="刪除用戶"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span>預訂:</span>
+                            <span className="font-medium">{user.stats?.totalBookings || 0}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>總支出:</span>
+                            <span className="font-medium">{formatCurrency(user.stats?.totalSpent || 0)}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>平均:</span>  
+                            <span className="font-medium">{formatCurrency(user.stats?.averageSpent || 0)}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>趨勢:</span>  
+                            {getTrendIcon(user.stats?.bookingTrend || 'stable')}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(user.isActive)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openUserDetails(user)}
+                            title="查看詳細信息"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditDialog(user)}
+                            title="編輯"   
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openVIPDialog(user)}
+                            title="管理VIP"
+                          >
+                            <Crown className="h-4 w-4" />
+                          </Button>
+                          {user.isVIP && !user.vipCode && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleGenerateVIPCode(user._id)}
+                              title="創建VIP碼"  
+                              className="bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
+                            >
+                              <Star className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {user.role !== 'admin' && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => openDeleteDialog(user)}
+                              title="刪除用戶"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
 
-          {/* No Results */}
-          {users.length === 0 && (
-            <div className="p-8 text-center">
-              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-600 mb-2">找不到用戶</h3>
-              <p className="text-gray-500">
-                找不到任何用戶符合當前過濾器。
-              </p>
-            </div>
-          )}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6">
-              <div className="text-sm text-gray-600">
-                顯示 {((currentPage - 1) * 10) + 1} - {Math.min(currentPage * 10, totalUsers)} 的 {totalUsers} 用戶
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  上一頁
-                </Button>
-                <div className="flex items-center space-x-1">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const page = i + 1;
-                    return (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setCurrentPage(page)}
-                      >
-                        {page}
-                      </Button>
-                    );
-                  })}
+                             {/* No Results */}
+               {getFilteredUsers(allUsers, 'all').length === 0 && (
+                <div className="p-8 text-center">
+                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-600 mb-2">找不到用戶</h3>
+                  <p className="text-gray-500">
+                    找不到任何用戶符合當前過濾器。
+                  </p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  下一頁
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
+              )}
+
+                             {/* Pagination */}
+               {Math.ceil(getFilteredUsers(allUsers, 'non-vip').length / 10) > 1 && (
+                 <div className="flex items-center justify-between mt-6">
+                   <div className="text-sm text-gray-600">
+                     顯示 {((currentPage - 1) * 10) + 1} - {Math.min(currentPage * 10, getFilteredUsers(allUsers, 'non-vip').length)} 的 {getFilteredUsers(allUsers, 'non-vip').length} 用戶
+                   </div>
+                   <div className="flex items-center space-x-2">
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                       disabled={currentPage === 1}
+                     >
+                       <ChevronLeft className="h-4 w-4" />
+                       上一頁
+                     </Button>
+                     <div className="flex items-center space-x-1">
+                       {Array.from({ length: Math.min(5, Math.ceil(getFilteredUsers(allUsers, 'non-vip').length / 10)) }, (_, i) => {
+                         const page = i + 1;
+                         return (
+                           <Button
+                             key={page}
+                             variant={currentPage === page ? "default" : "outline"}
+                             size="sm"
+                             onClick={() => setCurrentPage(page)}
+                           >
+                             {page}
+                           </Button>
+                         );
+                       })}
+                     </div>
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => setCurrentPage(prev => Math.min(Math.ceil(getFilteredUsers(allUsers, 'non-vip').length / 10), prev + 1))}
+                       disabled={currentPage === Math.ceil(getFilteredUsers(allUsers, 'non-vip').length / 10)}
+                     >
+                       下一頁
+                       <ChevronRight className="h-4 w-4" />
+                     </Button>
+                   </div>
+                 </div>
+               )}
+            </TabsContent>
+            <TabsContent value="vip">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>信息</TableHead>
+                    <TableHead>角色 & VIP</TableHead>
+                    <TableHead>統計</TableHead>
+                    <TableHead>狀態</TableHead>
+                    <TableHead>操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                                 <TableBody>
+                   {getPaginatedUsers(getFilteredUsers(allUsers, 'vip'), currentPage).map((user) => (
+                    <TableRow key={user._id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                            <UserIcon className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <div className="font-medium">{user.name}</div>
+                            <div className="text-sm text-gray-600 flex items-center">
+                              <Mail className="h-3 w-3 mr-1" />
+                              {user.email}
+                            </div>
+                            <div className="text-sm text-gray-600 flex items-center">
+                              <Phone className="h-3 w-3 mr-1" />
+                              {user.phone}
+                            </div>
+                            {user.licensePlate && (
+                              <div className="text-sm text-gray-600 flex items-center">
+                                <Car className="h-3 w-3 mr-1" />
+                                {user.licensePlate}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-2">
+                          {getRoleBadge(user.role)}
+                          {user.isVIP && (
+                            <div className="space-y-1">
+                              <Badge variant="default" className="bg-yellow-100 text-yellow-800">
+                                <Star className="h-3 w-3 mr-1" />
+                                VIP {user.vipDiscount}%
+                              </Badge>
+                              {user.vipCode ? (
+                                <div className="text-xs">
+                                  <code className="bg-yellow-50 px-1 py-0.5 rounded text-yellow-700 font-mono">
+                                    {user.vipCode}
+                                  </code>
+                                </div>
+                              ) : (
+                                <div className="text-xs text-red-600">
+                                  ⚠️ 尚未有VIP碼
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span>預訂:</span>
+                            <span className="font-medium">{user.stats?.totalBookings || 0}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>總支出:</span>
+                            <span className="font-medium">{formatCurrency(user.stats?.totalSpent || 0)}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>平均:</span>  
+                            <span className="font-medium">{formatCurrency(user.stats?.averageSpent || 0)}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>趨勢:</span>  
+                            {getTrendIcon(user.stats?.bookingTrend || 'stable')}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(user.isActive)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openUserDetails(user)}
+                            title="查看詳細信息"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditDialog(user)}
+                            title="編輯"   
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openVIPDialog(user)}
+                            title="管理VIP"
+                          >
+                            <Crown className="h-4 w-4" />
+                          </Button>
+                          {user.isVIP && !user.vipCode && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleGenerateVIPCode(user._id)}
+                              title="創建VIP碼"  
+                              className="bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
+                            >
+                              <Star className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {user.role !== 'admin' && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => openDeleteDialog(user)}
+                              title="刪除用戶"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+                             {/* No Results */}
+               {getFilteredUsers(allUsers, 'vip').length === 0 && (
+                <div className="p-8 text-center">
+                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-600 mb-2">找不到VIP用戶</h3>
+                  <p className="text-gray-500">
+                    找不到任何VIP用戶符合當前過濾器。
+                  </p>
+                </div>
+              )}
+
+              {/* Pagination */}
+              {Math.ceil(getFilteredUsers(allUsers, 'vip').length / 10) > 1 && (
+                <div className="flex items-center justify-between mt-6">
+                  <div className="text-sm text-gray-600">
+                    顯示 {((currentPage - 1) * 10) + 1} - {Math.min(currentPage * 10, getFilteredUsers(allUsers, 'vip').length)} 的 {getFilteredUsers(allUsers, 'vip').length} 用戶
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      上一頁
+                    </Button>
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: Math.min(5, Math.ceil(getFilteredUsers(allUsers, 'vip').length / 10)) }, (_, i) => {
+                        const page = i + 1;
+                        return (
+                          <Button
+                            key={page}
+                            variant={currentPage === page ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(page)}
+                          >
+                            {page}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(Math.ceil(getFilteredUsers(allUsers, 'vip').length / 10), prev + 1))}
+                      disabled={currentPage === Math.ceil(getFilteredUsers(allUsers, 'vip').length / 10)}
+                    >
+                      下一頁
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                             )}
+             </TabsContent>
+             <TabsContent value="non-vip">
+               <Table>
+                 <TableHeader>
+                   <TableRow>
+                     <TableHead>信息</TableHead>
+                     <TableHead>角色 & VIP</TableHead>
+                     <TableHead>統計</TableHead>
+                     <TableHead>狀態</TableHead>
+                     <TableHead>操作</TableHead>
+                   </TableRow>
+                 </TableHeader>
+                 <TableBody>
+                   {getPaginatedUsers(getFilteredUsers(allUsers, 'non-vip'), currentPage).map((user) => (
+                     <TableRow key={user._id}>
+                       <TableCell>
+                         <div className="flex items-center space-x-3">
+                           <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                             <UserIcon className="h-5 w-5 text-blue-600" />
+                           </div>
+                           <div>
+                             <div className="font-medium">{user.name}</div>
+                             <div className="text-sm text-gray-600 flex items-center">
+                               <Mail className="h-3 w-3 mr-1" />
+                               {user.email}
+                             </div>
+                             <div className="text-sm text-gray-600 flex items-center">
+                               <Phone className="h-3 w-3 mr-1" />
+                               {user.phone}
+                             </div>
+                             {user.licensePlate && (
+                               <div className="text-sm text-gray-600 flex items-center">
+                                 <Car className="h-3 w-3 mr-1" />
+                                 {user.licensePlate}
+                               </div>
+                             )}
+                           </div>
+                         </div>
+                       </TableCell>
+                       <TableCell>
+                         <div className="space-y-2">
+                           {getRoleBadge(user.role)}
+                           <div className="text-xs text-gray-500">
+                             非VIP用戶
+                           </div>
+                         </div>
+                       </TableCell>
+                       <TableCell>
+                         <div className="space-y-1 text-sm">
+                           <div className="flex items-center justify-between">
+                             <span>預訂:</span>
+                             <span className="font-medium">{user.stats?.totalBookings || 0}</span>
+                           </div>
+                           <div className="flex items-center justify-between">
+                             <span>總支出:</span>
+                             <span className="font-medium">{formatCurrency(user.stats?.totalSpent || 0)}</span>
+                           </div>
+                           <div className="flex items-center justify-between">
+                             <span>平均:</span>  
+                             <span className="font-medium">{formatCurrency(user.stats?.averageSpent || 0)}</span>
+                           </div>
+                           <div className="flex items-center justify-between">
+                             <span>趨勢:</span>  
+                             {getTrendIcon(user.stats?.bookingTrend || 'stable')}
+                           </div>
+                         </div>
+                       </TableCell>
+                       <TableCell>
+                         {getStatusBadge(user.isActive)}
+                       </TableCell>
+                       <TableCell>
+                         <div className="flex items-center space-x-2">
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             onClick={() => openUserDetails(user)}
+                             title="查看詳細信息"
+                           >
+                             <Eye className="h-4 w-4" />
+                           </Button>
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             onClick={() => openEditDialog(user)}
+                             title="編輯"   
+                           >
+                             <Edit className="h-4 w-4" />
+                           </Button>
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             onClick={() => openVIPDialog(user)}
+                             title="管理VIP"
+                           >
+                             <Crown className="h-4 w-4" />
+                           </Button>
+                           {user.role !== 'admin' && (
+                             <Button
+                               size="sm"
+                               variant="destructive"
+                               onClick={() => openDeleteDialog(user)}
+                               title="刪除用戶"
+                             >
+                               <Trash2 className="h-4 w-4" />
+                             </Button>
+                           )}
+                         </div>
+                       </TableCell>
+                     </TableRow>
+                   ))}
+                 </TableBody>
+               </Table>
+
+               {/* No Results */}
+               {getFilteredUsers(allUsers, 'non-vip').length === 0 && (
+                 <div className="p-8 text-center">
+                   <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                   <h3 className="text-lg font-semibold text-gray-600 mb-2">找不到非VIP用戶</h3>
+                   <p className="text-gray-500">
+                     找不到任何非VIP用戶符合當前過濾器。
+                   </p>
+                 </div>
+               )}
+
+               {/* Pagination */}
+               {Math.ceil(getFilteredUsers(allUsers, 'all').length / 10) > 1 && (
+                 <div className="flex items-center justify-between mt-6">
+                   <div className="text-sm text-gray-600">
+                     顯示 {((currentPage - 1) * 10) + 1} - {Math.min(currentPage * 10, getFilteredUsers(allUsers, 'all').length)} 的 {getFilteredUsers(allUsers, 'all').length} 用戶
+                   </div>
+                   <div className="flex items-center space-x-2">
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                       disabled={currentPage === 1}
+                     >
+                       <ChevronLeft className="h-4 w-4" />
+                       上一頁
+                     </Button>
+                     <div className="flex items-center space-x-1">
+                       {Array.from({ length: Math.min(5, Math.ceil(getFilteredUsers(allUsers, 'all').length / 10)) }, (_, i) => {
+                         const page = i + 1;
+                         return (
+                           <Button
+                             key={page}
+                             variant={currentPage === page ? "default" : "outline"}
+                             size="sm"
+                             onClick={() => setCurrentPage(page)}
+                           >
+                             {page}
+                           </Button>
+                         );
+                       })}
+                     </div>
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => setCurrentPage(prev => Math.min(Math.ceil(getFilteredUsers(allUsers, 'all').length / 10), prev + 1))}
+                       disabled={currentPage === Math.ceil(getFilteredUsers(allUsers, 'all').length / 10)}
+                     >
+                       下一頁
+                       <ChevronRight className="h-4 w-4" />
+                     </Button>
+                   </div>
+                 </div>
+               )}
+             </TabsContent>
+           </Tabs>
         </CardContent>
       </Card>
 

@@ -305,9 +305,9 @@ const Dashboard: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <TrendingUp className="h-5 w-5" />
-              <span>Xu hướng doanh thu</span>
+              <span>營收趨勢</span>
             </CardTitle>
-            <CardDescription>Doanh thu theo thời gian</CardDescription>
+            <CardDescription>按時間的營收</CardDescription>
           </CardHeader>
           <CardContent style={{ height: 300 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -327,9 +327,9 @@ const Dashboard: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <MapPin className="h-5 w-5" />
-              <span>Tỷ lệ sử dụng bãi đậu xe</span>
+              <span>停車場使用率</span>
             </CardTitle>
-            <CardDescription>Phân bố sử dụng các loại bãi</CardDescription>
+            <CardDescription>各類型停車場的使用分布</CardDescription>
           </CardHeader>
           <CardContent style={{ height: 300 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -358,11 +358,11 @@ const Dashboard: React.FC = () => {
       {/* Peak Hours Chart */}
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Clock className="h-5 w-5" />
-            <span>Giờ cao điểm</span>
-          </CardTitle>
-          <CardDescription>Số lượng đặt chỗ theo giờ trong ngày</CardDescription>
+                      <CardTitle className="flex items-center space-x-2">
+              <Clock className="h-5 w-5" />
+              <span>高峰時段</span>
+            </CardTitle>
+            <CardDescription>每日各時段的預訂數量</CardDescription>
         </CardHeader>
         <CardContent style={{ height: 300 }}>
           <ResponsiveContainer width="100%" height="100%">
@@ -380,11 +380,11 @@ const Dashboard: React.FC = () => {
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-          <TabsTrigger value="revenue">Doanh thu</TabsTrigger>
-          <TabsTrigger value="bookings">Đặt chỗ</TabsTrigger>
-          <TabsTrigger value="customers">Khách hàng</TabsTrigger>
-          <TabsTrigger value="parking">Bãi đậu xe</TabsTrigger>
+          <TabsTrigger value="overview">概覽</TabsTrigger>
+          <TabsTrigger value="revenue">營收</TabsTrigger>
+          <TabsTrigger value="bookings">預訂</TabsTrigger>
+          <TabsTrigger value="customers">客戶</TabsTrigger>
+          <TabsTrigger value="parking">停車場</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -393,13 +393,13 @@ const Dashboard: React.FC = () => {
             {/* Recent Bookings */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Activity className="h-5 w-5" />
-                  <span>Đặt chỗ gần đây</span>
-                </CardTitle>
-                <CardDescription>
-                  Danh sách đặt chỗ mới nhất
-                </CardDescription>
+                                  <CardTitle className="flex items-center space-x-2">
+                    <Activity className="h-5 w-5" />
+                    <span>最近預訂</span>
+                  </CardTitle>
+                  <CardDescription>
+                    最新預訂清單
+                  </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -429,32 +429,32 @@ const Dashboard: React.FC = () => {
             {/* Quick Actions */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Settings className="h-5 w-5" />
-                  <span>Thao tác nhanh</span>
-                </CardTitle>
-                <CardDescription>
-                  Các thao tác thường dùng
-                </CardDescription>
+                                  <CardTitle className="flex items-center space-x-2">
+                    <Settings className="h-5 w-5" />
+                    <span>快速操作</span>
+                  </CardTitle>
+                  <CardDescription>
+                    常用操作
+                  </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
-                  <Button className="h-20 flex flex-col space-y-2">
-                    <Plus className="h-6 w-6" />
-                    <span>Tạo đặt chỗ</span>
-                  </Button>
-                  <Button variant="outline" className="h-20 flex flex-col space-y-2">
-                    <BarChart3 className="h-6 w-6" />
-                    <span>Báo cáo</span>
-                  </Button>
-                  <Button variant="outline" className="h-20 flex flex-col space-y-2">
-                    <Users className="h-6 w-6" />
-                    <span>Quản lý khách</span>
-                  </Button>
-                  <Button variant="outline" className="h-20 flex flex-col space-y-2">
-                    <Settings className="h-6 w-6" />
-                    <span>Cài đặt</span>
-                  </Button>
+                                      <Button className="h-20 flex flex-col space-y-2">
+                      <Plus className="h-6 w-6" />
+                      <span>創建預訂</span>
+                    </Button>
+                    <Button variant="outline" className="h-20 flex flex-col space-y-2">
+                      <BarChart3 className="h-6 w-6" />
+                      <span>報告</span>
+                    </Button>
+                    <Button variant="outline" className="h-20 flex flex-col space-y-2">
+                      <Users className="h-6 w-6" />
+                      <span>管理客戶</span>
+                    </Button>
+                    <Button variant="outline" className="h-20 flex flex-col space-y-2">
+                      <Settings className="h-6 w-6" />
+                      <span>設定</span>
+                    </Button>
                 </div>
               </CardContent>
             </Card>
@@ -465,8 +465,8 @@ const Dashboard: React.FC = () => {
         <TabsContent value="revenue" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Phân tích doanh thu</CardTitle>
-              <CardDescription>Chi tiết doanh thu theo thời gian</CardDescription>
+                          <CardTitle>營收分析</CardTitle>
+            <CardDescription>按時間的詳細營收</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
@@ -485,31 +485,31 @@ const Dashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Doanh thu trung bình/ngày</CardTitle>
+                <CardTitle className="text-lg">平均每日營收</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-green-600">{formatCurrency(516000)}</div>
-                <p className="text-sm text-gray-500">Tăng 12.5% so với tháng trước</p>
+                <p className="text-sm text-gray-500">比上個月增長12.5%</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Doanh thu cao nhất</CardTitle>
+                <CardTitle className="text-lg">最高營收</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-blue-600">{formatCurrency(3490000)}</div>
-                <p className="text-sm text-gray-500">Tháng 7 năm 2024</p>
+                <p className="text-sm text-gray-500">2024年7月</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Tỷ lệ tăng trưởng</CardTitle>
+                <CardTitle className="text-lg">增長率</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-purple-600">+15.2%</div>
-                <p className="text-sm text-gray-500">So với cùng kỳ năm trước</p>
+                <p className="text-sm text-gray-500">與去年同期相比</p>
               </CardContent>
             </Card>
           </div>
@@ -519,8 +519,8 @@ const Dashboard: React.FC = () => {
         <TabsContent value="bookings" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Xu hướng đặt chỗ</CardTitle>
-              <CardDescription>Thống kê đặt chỗ theo trạng thái</CardDescription>
+                          <CardTitle>預訂趨勢</CardTitle>
+            <CardDescription>按狀態的預訂統計</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
@@ -540,31 +540,31 @@ const Dashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Đặt chỗ thành công</CardTitle>
+                <CardTitle className="text-lg">成功預訂</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-green-600">2,679</div>
-                <p className="text-sm text-gray-500">94.2% tổng số đặt chỗ</p>
+                <p className="text-sm text-gray-500">94.2% 總預訂數</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Đặt chỗ đã hủy</CardTitle>
+                <CardTitle className="text-lg">已取消預訂</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-red-600">168</div>
-                <p className="text-sm text-gray-500">5.8% tổng số đặt chỗ</p>
+                <p className="text-sm text-gray-500">5.8% 總預訂數</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Đang chờ xác nhận</CardTitle>
+                <CardTitle className="text-lg">等待確認</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-yellow-600">45</div>
-                <p className="text-sm text-gray-500">1.6% tổng số đặt chỗ</p>
+                <p className="text-sm text-gray-500">1.6% 總預訂數</p>
               </CardContent>
             </Card>
           </div>
@@ -574,8 +574,8 @@ const Dashboard: React.FC = () => {
         <TabsContent value="customers" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Khách hàng hàng đầu</CardTitle>
-              <CardDescription>Top 5 khách hàng có số lượng đặt chỗ cao nhất</CardDescription>
+                          <CardTitle>頂級客戶</CardTitle>
+            <CardDescription>預訂數量最高的前5名客戶</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -588,12 +588,12 @@ const Dashboard: React.FC = () => {
                       <div>
                         <h4 className="font-semibold">{customer.name}</h4>
                         <p className="text-sm text-gray-500">
-                          {customer.bookings} đặt chỗ • {formatCurrency(customer.totalSpent)}
+                          {customer.bookings} 預訂 • {formatCurrency(customer.totalSpent)}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-gray-500">Đặt chỗ cuối</p>
+                      <p className="text-sm text-gray-500">最後預訂</p>
                       <p className="text-sm font-medium">{formatDate(customer.lastBooking)}</p>
                     </div>
                   </div>
@@ -605,8 +605,8 @@ const Dashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Khách hàng mới</CardTitle>
-                <CardDescription>Thống kê khách hàng mới theo tháng</CardDescription>
+                              <CardTitle>新客戶</CardTitle>
+              <CardDescription>按月份的新客戶統計</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -623,24 +623,24 @@ const Dashboard: React.FC = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Thống kê khách hàng</CardTitle>
-                <CardDescription>Tổng quan về khách hàng</CardDescription>
+                              <CardTitle>客戶統計</CardTitle>
+              <CardDescription>客戶概覽</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span>Tổng khách hàng</span>
+                  <span>總客戶數</span>
                   <span className="font-semibold">1,247</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>Khách hàng mới tháng này</span>
+                  <span>本月新客戶</span>
                   <span className="font-semibold text-green-600">156</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>Khách hàng VIP</span>
+                  <span>VIP客戶</span>
                   <span className="font-semibold text-purple-600">89</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>Tỷ lệ quay lại</span>
+                  <span>回訪率</span>
                   <span className="font-semibold text-blue-600">78.5%</span>
                 </div>
               </CardContent>
@@ -655,10 +655,10 @@ const Dashboard: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <MapPin className="h-5 w-5" />
-                  <span>Trạng thái bãi đậu xe</span>
+                  <span>停車場狀態</span>
                 </CardTitle>
                 <CardDescription>
-                  Tổng quan tình trạng các bãi đậu xe
+                  各停車場狀況概覽
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -676,23 +676,23 @@ const Dashboard: React.FC = () => {
                         
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
-                            <span>Chỗ trống:</span>
+                            <span>空位:</span>
                             <span className="font-medium">{lot.availableSpaces}/{lot.totalSpaces}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span>Tỷ lệ sử dụng:</span>
+                            <span>使用率:</span>
                             <span className="font-medium">{lot.occupancyRate}%</span>
                           </div>
                           <div className="flex justify-between">
-                            <span>Giá cơ bản:</span>
-                            <span className="font-medium">{formatCurrency(lot.pricePerDay)}/ngày</span>
+                            <span>基本價格:</span>
+                            <span className="font-medium">{formatCurrency(lot.pricePerDay)}/天</span>
                           </div>
                         </div>
 
                         <div className="mt-3">
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div 
-                              className="bg-blue-600 h-2 rounded-full" 
+                              className="bg-[#39653f] h-2 rounded-full" 
                               style={{ width: `${100 - lot.occupancyRate}%` }}
                             ></div>
                           </div>
@@ -706,8 +706,8 @@ const Dashboard: React.FC = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Hiệu suất bãi đậu xe</CardTitle>
-                <CardDescription>Tỷ lệ sử dụng các loại bãi đậu xe</CardDescription>
+                            <CardTitle>停車場效能</CardTitle>
+            <CardDescription>各類型停車場的使用率</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -740,10 +740,10 @@ const Dashboard: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Car className="h-5 w-5" />
-                  <span>Xe đang đỗ ({currentStatus?.parkedVehicles?.length || 0})</span>
+                  <span>正在停車 ({currentStatus?.parkedVehicles?.length || 0})</span>
                 </CardTitle>
                 <CardDescription>
-                  Danh sách xe đang trong bãi
+                  停車場內的車輛清單
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -756,8 +756,8 @@ const Dashboard: React.FC = () => {
                       </div>
                       <div className="text-sm text-gray-600 space-y-1">
                         <div>{booking.licensePlate}</div>
-                        <div>Vào: {formatDateTime(booking.actualCheckInTime || booking.checkInTime)}</div>
-                        <div>Dự kiến ra: {formatDateTime(booking.checkOutTime)}</div>
+                        <div>進入: {formatDateTime(booking.actualCheckInTime || booking.checkInTime)}</div>
+                        <div>預計離開: {formatDateTime(booking.checkOutTime)}</div>
                       </div>
                     </div>
                   ))}
@@ -770,10 +770,10 @@ const Dashboard: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Clock className="h-5 w-5" />
-                  <span>Sắp đến ({currentStatus?.arrivingToday?.length || 0})</span>
+                  <span>即將到達 ({currentStatus?.arrivingToday?.length || 0})</span>
                 </CardTitle>
                 <CardDescription>
-                  Xe dự kiến đến hôm nay
+                  今天預計到達的車輛
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -786,8 +786,8 @@ const Dashboard: React.FC = () => {
                       </div>
                       <div className="text-sm text-gray-600 space-y-1">
                         <div>{booking.licensePlate}</div>
-                        <div>Dự kiến: {formatDateTime(booking.estimatedArrivalTime || booking.checkInTime)}</div>
-                        <div>Chuyến bay: {booking.flightNumber || 'N/A'}</div>
+                        <div>預計: {formatDateTime(booking.estimatedArrivalTime || booking.checkInTime)}</div>
+                        <div>航班: {booking.flightNumber || 'N/A'}</div>
                       </div>
                     </div>
                   ))}
@@ -800,10 +800,10 @@ const Dashboard: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <XCircle className="h-5 w-5" />
-                  <span>Sắp rời ({currentStatus?.leavingToday?.length || 0})</span>
+                  <span>即將離開 ({currentStatus?.leavingToday?.length || 0})</span>
                 </CardTitle>
                 <CardDescription>
-                  Xe dự kiến rời hôm nay
+                  今天預計離開的車輛
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -816,8 +816,8 @@ const Dashboard: React.FC = () => {
                       </div>
                       <div className="text-sm text-gray-600 space-y-1">
                         <div>{booking.licensePlate}</div>
-                        <div>Dự kiến rời: {formatDateTime(booking.checkOutTime)}</div>
-                        <div>Đã đỗ: {formatDateTime(booking.actualCheckInTime || booking.checkInTime)}</div>
+                        <div>預計離開: {formatDateTime(booking.checkOutTime)}</div>
+                        <div>已停車: {formatDateTime(booking.actualCheckInTime || booking.checkInTime)}</div>
                       </div>
                     </div>
                   ))}

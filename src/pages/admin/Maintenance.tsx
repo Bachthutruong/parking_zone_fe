@@ -198,18 +198,18 @@ const AdminMaintenance: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Filter className="h-5 w-5 mr-2" />
-            Bộ lọc
+            篩選
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="search">Tìm kiếm</Label>
+              <Label htmlFor="search">搜尋</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
                   id="search"
-                  placeholder="Lý do, mô tả..."
+                  placeholder="原因、描述..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -220,7 +220,7 @@ const AdminMaintenance: React.FC = () => {
             <div className="flex items-end">
               <Button variant="outline" className="w-full">
                 <Filter className="h-4 w-4 mr-2" />
-                Lọc
+                篩選
               </Button>
             </div>
           </div>
@@ -230,20 +230,20 @@ const AdminMaintenance: React.FC = () => {
       {/* Maintenance Days Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Danh sách ngày bảo trì</CardTitle>
+          <CardTitle>維護日期清單</CardTitle>
           <CardDescription>
-            Tổng cộng {filteredMaintenanceDays.length} ngày bảo trì
+            總共 {filteredMaintenanceDays.length} 個維護日期
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Ngày</TableHead>
-                <TableHead>Lý do</TableHead>
-                <TableHead>Bãi đậu xe bị ảnh hưởng</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead>Thao tác</TableHead>
+                <TableHead>日期</TableHead>
+                <TableHead>原因</TableHead>
+                <TableHead>受影響的停車場</TableHead>
+                <TableHead>狀態</TableHead>
+                <TableHead>操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -277,12 +277,12 @@ const AdminMaintenance: React.FC = () => {
                       {maintenance.isActive ? (
                         <>
                           <CheckCircle className="h-3 w-3 mr-1" />
-                          Hoạt động
-                        </>
+                          啟用
+                        </> 
                       ) : (
                         <>
                           <XCircle className="h-3 w-3 mr-1" />
-                          Tạm khóa
+                          暫停
                         </>
                       )}
                     </Badge>
@@ -314,9 +314,9 @@ const AdminMaintenance: React.FC = () => {
           {filteredMaintenanceDays.length === 0 && (
             <div className="p-8 text-center">
               <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-600 mb-2">Không có ngày bảo trì</h3>
+              <h3 className="text-lg font-semibold text-gray-600 mb-2">沒有維護日期</h3>
               <p className="text-gray-500">
-                Chưa có ngày bảo trì nào được thiết lập.
+                沒有維護日期。
               </p>
             </div>
           )}
@@ -333,15 +333,15 @@ const AdminMaintenance: React.FC = () => {
       }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{isEditing ? 'Sửa ngày bảo trì' : 'Thêm ngày bảo trì mới'}</DialogTitle>
+            <DialogTitle>{isEditing ? '編輯維護日期' : '新增維護日期'}</DialogTitle>
             <DialogDescription>
-              {isEditing ? 'Cập nhật thông tin ngày bảo trì' : 'Tạo ngày bảo trì mới'}
+              {isEditing ? '更新維護日期資訊' : '創建新的維護日期'}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-6">
             <div>
-              <Label htmlFor="date">Ngày bảo trì *</Label>
+              <Label htmlFor="date">維護日期 *</Label>
               <Input
                 id="date"
                 type="date"
@@ -351,28 +351,28 @@ const AdminMaintenance: React.FC = () => {
             </div>
 
             <div>
-              <Label htmlFor="reason">Lý do bảo trì *</Label>
+              <Label htmlFor="reason">維護原因 *</Label>
               <Input
                 id="reason"
                 value={formData.reason}
                 onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
-                placeholder="Ví dụ: Bảo trì hệ thống, Sửa chữa..."
+                placeholder="例如: 系統維護, 修理..."
               />
             </div>
 
             <div>
-              <Label htmlFor="description">Mô tả chi tiết</Label>
+              <Label htmlFor="description">詳細描述</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Mô tả chi tiết về việc bảo trì..."
+                placeholder="輸入維護詳細描述..."
                 rows={3}
               />
             </div>
 
             <div>
-              <Label>Bãi đậu xe bị ảnh hưởng</Label>
+              <Label>受影響的停車場</Label>
               <div className="space-y-2 mt-2">
                 {parkingTypes.map((parkingType) => (
                   <div key={parkingType._id} className="flex items-center space-x-2">
@@ -408,7 +408,7 @@ const AdminMaintenance: React.FC = () => {
                 checked={formData.isActive}
                 onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
               />
-              <Label htmlFor="isActive">Kích hoạt ngày bảo trì này</Label>
+              <Label htmlFor="isActive">啟用此維護日期</Label>
             </div>
           </div>
 
@@ -421,7 +421,7 @@ const AdminMaintenance: React.FC = () => {
               Hủy
             </Button>
             <Button onClick={isEditing ? handleEdit : handleCreate}>
-              {isEditing ? 'Cập nhật' : 'Tạo ngày bảo trì'}
+              {isEditing ? '更新' : '創建'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -431,18 +431,18 @@ const AdminMaintenance: React.FC = () => {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xác nhận xóa</DialogTitle>
+            <DialogTitle>確認刪除</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn xóa ngày bảo trì "{selectedMaintenance?.reason}"? 
-              Hành động này không thể hoàn tác.
+              您確定要刪除維護日期 "{selectedMaintenance?.reason}"? 
+              此操作無法撤銷。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Hủy
+              取消
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
-              Xóa
+              刪除
             </Button>
           </DialogFooter>
         </DialogContent>

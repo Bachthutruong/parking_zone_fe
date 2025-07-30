@@ -177,33 +177,33 @@ const AdminTodayOverview: React.FC = () => {
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{data.summary.totalCheckIns}</div>
             <p className="text-xs text-muted-foreground">
-              Xe sẽ vào bãi đậu xe hôm nay
+              今天將進入停車場的車輛
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Xe ra hôm nay</CardTitle>
+            <CardTitle className="text-sm font-medium">今天離開車輛</CardTitle>
             <TrendingDown className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{data.summary.totalCheckOuts}</div>
             <p className="text-xs text-muted-foreground">
-              Xe sẽ rời bãi đậu xe hôm nay
+              今天將離開停車場的車輛
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Xe quá hạn</CardTitle>
+            <CardTitle className="text-sm font-medium">逾期車輛</CardTitle>
             <AlertTriangle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{data.summary.totalOverdue}</div>
             <p className="text-xs text-muted-foreground">
-              Xe đã quá thời gian đặt chỗ
+              已超過預訂時間的車輛
             </p>
           </CardContent>
         </Card>
@@ -212,9 +212,9 @@ const AdminTodayOverview: React.FC = () => {
       {/* Tabs */}
       <Card>
         <CardHeader>
-          <CardTitle>Chi tiết hôm nay</CardTitle>
+          <CardTitle>今日詳情</CardTitle>
           <CardDescription>
-            Xem chi tiết các xe vào/ra bãi đậu xe
+            查看進出停車場車輛的詳細資訊
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -224,34 +224,34 @@ const AdminTodayOverview: React.FC = () => {
               onClick={() => setActiveTab('checkins')}
             >
               <TrendingUp className="h-4 w-4 mr-2" />
-              Xe vào ({data.summary.totalCheckIns})
+              進入車輛 ({data.summary.totalCheckIns})
             </Button>
             <Button
               variant={activeTab === 'checkouts' ? 'default' : 'outline'}
               onClick={() => setActiveTab('checkouts')}
             >
               <TrendingDown className="h-4 w-4 mr-2" />
-              Xe ra ({data.summary.totalCheckOuts})
+              離開車輛 ({data.summary.totalCheckOuts})
             </Button>
             <Button
               variant={activeTab === 'overdue' ? 'default' : 'outline'}
               onClick={() => setActiveTab('overdue')}
             >
               <AlertTriangle className="h-4 w-4 mr-2" />
-              Quá hạn ({data.summary.totalOverdue})
+              逾期 ({data.summary.totalOverdue})
             </Button>
           </div>
 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Mã đặt chỗ</TableHead>
-                <TableHead>Khách hàng</TableHead>
-                <TableHead>Biển số xe</TableHead>
-                <TableHead>Bãi đậu xe</TableHead>
-                <TableHead>Thời gian</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead>Số tiền</TableHead>
+                <TableHead>預訂編號</TableHead>
+                <TableHead>客戶</TableHead>
+                <TableHead>車牌號碼</TableHead>
+                <TableHead>停車場</TableHead>
+                <TableHead>時間</TableHead>
+                <TableHead>狀態</TableHead>
+                <TableHead>金額</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -278,10 +278,10 @@ const AdminTodayOverview: React.FC = () => {
                   <TableCell>
                     <div>
                       <div className="text-sm">
-                        <span className="font-medium">Vào:</span> {formatDateTime(booking.checkInTime)}
+                        <span className="font-medium">進入:</span> {formatDateTime(booking.checkInTime)}
                       </div>
                       <div className="text-sm text-gray-600">
-                        <span className="font-medium">Ra:</span> {formatDateTime(booking.checkOutTime)}
+                        <span className="font-medium">離開:</span> {formatDateTime(booking.checkOutTime)}
                       </div>
                     </div>
                   </TableCell>
@@ -302,14 +302,14 @@ const AdminTodayOverview: React.FC = () => {
             <div className="p-8 text-center">
               <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                {activeTab === 'checkins' && 'Không có xe vào hôm nay'}
-                {activeTab === 'checkouts' && 'Không có xe ra hôm nay'}
-                {activeTab === 'overdue' && 'Không có xe quá hạn'}
+                {activeTab === 'checkins' && '今天沒有車輛進入'}
+                {activeTab === 'checkouts' && '今天沒有車輛離開'}
+                {activeTab === 'overdue' && '沒有逾期車輛'}
               </h3>
               <p className="text-gray-500">
-                {activeTab === 'checkins' && 'Chưa có xe nào đặt chỗ vào hôm nay.'}
-                {activeTab === 'checkouts' && 'Chưa có xe nào đặt chỗ ra hôm nay.'}
-                {activeTab === 'overdue' && 'Tất cả xe đều đúng thời gian.'}
+                {activeTab === 'checkins' && '今天還沒有車輛預訂進入。'}
+                {activeTab === 'checkouts' && '今天還沒有車輛預訂離開。'}
+                {activeTab === 'overdue' && '所有車輛都按時。'}
               </p>
             </div>
           )}

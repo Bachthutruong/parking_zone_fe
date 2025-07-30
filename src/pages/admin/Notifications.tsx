@@ -123,7 +123,7 @@ const AdminNotifications: React.FC = () => {
       });
       setTemplates(data.templates);
     } catch (error: any) {
-      toast.error('Không thể tải danh sách mẫu thông báo');
+      toast.error('無法載入通知模板清單');
       console.error('Load templates error:', error);
     } finally {
       setLoading(false);
@@ -142,13 +142,13 @@ const AdminNotifications: React.FC = () => {
   const handleCreate = async () => {
     try {
       await createNotificationTemplate(formData);
-      toast.success('Tạo mẫu thông báo thành công');
+      toast.success('創建通知模板成功');
       setShowCreateDialog(false);
       resetForm();
       loadTemplates();
       loadStats();
     } catch (error: any) {
-      toast.error('Không thể tạo mẫu thông báo');
+      toast.error('無法創建通知模板');
       console.error('Create template error:', error);
     }
   };
@@ -158,13 +158,13 @@ const AdminNotifications: React.FC = () => {
     
     try {
       await updateNotificationTemplate(selectedTemplate._id, formData);
-      toast.success('Cập nhật mẫu thông báo thành công');
+      toast.success('更新通知模板成功');
       setShowEditDialog(false);
       resetForm();
       loadTemplates();
       loadStats();
     } catch (error: any) {
-      toast.error('Không thể cập nhật mẫu thông báo');
+      toast.error('無法更新通知模板');
       console.error('Update template error:', error);
     }
   };
@@ -174,13 +174,13 @@ const AdminNotifications: React.FC = () => {
     
     try {
       await deleteNotificationTemplate(selectedTemplate._id);
-      toast.success('Xóa mẫu thông báo thành công');
+      toast.success('刪除通知模板成功');
       setShowDeleteDialog(false);
       setSelectedTemplate(null);
       loadTemplates();
       loadStats();
     } catch (error: any) {
-      toast.error('Không thể xóa mẫu thông báo');
+      toast.error('無法刪除通知模板');
       console.error('Delete template error:', error);
     }
   };
@@ -190,11 +190,11 @@ const AdminNotifications: React.FC = () => {
       setTestLoading(true);
       const result = await testNotification(testFormData);
       console.log('Test notification result:', result);
-      toast.success('Gửi thông báo test thành công');
+      toast.success('發送測試通知成功');
       setShowTestDialog(false);
       resetTestForm();
     } catch (error: any) {
-      toast.error('Không thể gửi thông báo test');
+      toast.error('無法發送測試通知');
       console.error('Test notification error:', error);
     } finally {
       setTestLoading(false);
@@ -209,11 +209,11 @@ const AdminNotifications: React.FC = () => {
         ...bulkFormData,
         recipients
       });
-      toast.success(`Gửi thông báo hàng loạt thành công: ${result.message}`);
+      toast.success(`發送批量通知成功: ${result.message}`);
       setShowBulkDialog(false);
       resetBulkForm();
     } catch (error: any) {
-      toast.error('Không thể gửi thông báo hàng loạt');
+      toast.error('無法發送批量通知');
       console.error('Bulk notification error:', error);
     } finally {
       setBulkLoading(false);
@@ -377,17 +377,17 @@ const AdminNotifications: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Mẫu thông báo</h1>
-          <p className="text-gray-600">Quản lý các mẫu thông báo hệ thống</p>
+          <h1 className="text-3xl font-bold">通知模板</h1>
+          <p className="text-gray-600">管理系統通知模板</p>
         </div>
         <div className="flex space-x-2">
           <Button variant="outline" onClick={loadTemplates}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Làm mới
+            重新整理
           </Button>
           <Button onClick={openCreateDialog}>
             <Plus className="h-4 w-4 mr-2" />
-            Thêm mẫu mới
+            新增模板
           </Button>
         </div>
       </div>
@@ -400,7 +400,7 @@ const AdminNotifications: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <BarChart3 className="h-5 w-5 text-blue-600" />
                 <div>
-                  <p className="text-sm text-gray-600">Tổng mẫu</p>
+                  <p className="text-sm text-gray-600">總共模板</p>
                   <p className="text-2xl font-bold">{stats.total}</p>
                 </div>
               </div>
@@ -411,7 +411,7 @@ const AdminNotifications: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <CheckCircle className="h-5 w-5 text-green-600" />
                 <div>
-                  <p className="text-sm text-gray-600">Đang hoạt động</p>
+                  <p className="text-sm text-gray-600">啟用</p>
                   <p className="text-2xl font-bold">{stats.active}</p>
                 </div>
               </div>
@@ -422,7 +422,7 @@ const AdminNotifications: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <XCircle className="h-5 w-5 text-red-600" />
                 <div>
-                  <p className="text-sm text-gray-600">Tạm khóa</p>
+                  <p className="text-sm text-gray-600">暫停</p>
                   <p className="text-2xl font-bold">{stats.inactive}</p>
                 </div>
               </div>
@@ -433,7 +433,7 @@ const AdminNotifications: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Bell className="h-5 w-5 text-purple-600" />
                 <div>
-                  <p className="text-sm text-gray-600">Loại</p>
+                  <p className="text-sm text-gray-600">類型</p>
                   <p className="text-2xl font-bold">{stats.stats.length}</p>
                 </div>
               </div>
@@ -447,14 +447,14 @@ const AdminNotifications: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Search className="h-5 w-5 mr-2" />
-            Tìm kiếm
+            搜尋
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Tên, mô tả..."
+              placeholder="名稱、描述..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -468,28 +468,28 @@ const AdminNotifications: React.FC = () => {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="email">Email</TabsTrigger>
           <TabsTrigger value="sms">SMS</TabsTrigger>
-          <TabsTrigger value="push">Push Notification</TabsTrigger>
+          <TabsTrigger value="push">推送通知</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-4">
           {/* Templates Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Danh sách mẫu thông báo</CardTitle>
+              <CardTitle>通知模板清單</CardTitle>
               <CardDescription>
-                Tổng cộng {filteredTemplates.length} mẫu thông báo {activeTab.toUpperCase()}
+                總共 {filteredTemplates.length} 個通知模板 {activeTab.toUpperCase()}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Thông tin</TableHead>
-                    <TableHead>Loại</TableHead>
-                    <TableHead>Tiêu đề</TableHead>
-                    <TableHead>Biến</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                    <TableHead>Thao tác</TableHead>
+                    <TableHead>資訊</TableHead>
+                    <TableHead>類型</TableHead>
+                    <TableHead>標題</TableHead>
+                    <TableHead>變數</TableHead>
+                    <TableHead>狀態</TableHead>
+                    <TableHead>操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -537,12 +537,12 @@ const AdminNotifications: React.FC = () => {
                             {template.isActive ? (
                               <>
                                 <CheckCircle className="h-3 w-3 mr-1" />
-                                Hoạt động
+                                啟用
                               </>
                             ) : (
                               <>
                                 <XCircle className="h-3 w-3 mr-1" />
-                                Tạm khóa
+                                暫停
                               </>
                             )}
                           </Badge>
@@ -596,9 +596,9 @@ const AdminNotifications: React.FC = () => {
               {filteredTemplates.length === 0 && (
                 <div className="p-8 text-center">
                   <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-600 mb-2">Không có mẫu thông báo</h3>
+                  <h3 className="text-lg font-semibold text-gray-600 mb-2">沒有通知模板</h3>
                   <p className="text-gray-500">
-                    Chưa có mẫu thông báo nào cho loại {activeTab.toUpperCase()}.
+                    沒有通知模板 {activeTab.toUpperCase()}.
                   </p>
                 </div>
               )}
@@ -618,26 +618,26 @@ const AdminNotifications: React.FC = () => {
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {isEditing ? 'Chỉnh sửa mẫu thông báo' : 'Thêm mẫu thông báo mới'}
+              {isEditing ? '編輯通知模板' : '新增通知模板'}
             </DialogTitle>
             <DialogDescription>
-              {isEditing ? 'Cập nhật nội dung mẫu thông báo' : 'Tạo mẫu thông báo mới với các thông tin cần thiết'}
+              {isEditing ? '更新通知模板內容' : '創建新的通知模板並提供必要資訊'}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="name">Tên mẫu *</Label>
+                <Label htmlFor="name">通知模板名稱 *</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Ví dụ: Xác nhận đặt chỗ"
+                  placeholder="例如: 確認預約"
                 />
               </div>
               <div>
-                <Label htmlFor="type">Loại thông báo</Label>
+                <Label htmlFor="type">通知類型</Label>
                 <select
                   id="type"
                   value={formData.type}
@@ -646,42 +646,42 @@ const AdminNotifications: React.FC = () => {
                 >
                   <option value="email">Email</option>
                   <option value="sms">SMS</option>
-                  <option value="push">Push Notification</option>
+                  <option value="push">推送通知</option>
                 </select>
               </div>
             </div>
 
             {formData.type === 'email' && (
               <div>
-                <Label htmlFor="subject">Tiêu đề email</Label>
+                <Label htmlFor="subject">電郵標題</Label>
                 <Input
                   id="subject"
                   value={formData.subject}
                   onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
-                  placeholder="Nhập tiêu đề email..."
+                  placeholder="輸入電郵標題..."
                 />
               </div>
             )}
 
             <div>
-              <Label htmlFor="description">Mô tả</Label>
+              <Label htmlFor="description">描述</Label>
               <Input
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Mô tả mẫu thông báo..."
+                placeholder="輸入通知模板描述..."
               />
             </div>
 
             <div>
-              <Label htmlFor="content">Nội dung *</Label>
+              <Label htmlFor="content">內容 *</Label>
               <Textarea
                 id="content"
                 value={formData.content}
                 onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
                 rows={15}
                 className="font-mono text-sm"
-                placeholder="Nhập nội dung thông báo... Sử dụng {{variable}} để chèn biến."
+                placeholder="輸入通知模板內容... 使用 {{variable}} 插入變數."
               />
             </div>
 
@@ -691,7 +691,7 @@ const AdminNotifications: React.FC = () => {
                 checked={formData.isActive}
                 onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
               />
-              <Label htmlFor="isActive">Kích hoạt mẫu thông báo này</Label>
+              <Label htmlFor="isActive">啟用此通知模板</Label>
             </div>
           </div>
 
@@ -705,7 +705,7 @@ const AdminNotifications: React.FC = () => {
             </Button>
             <Button onClick={isEditing ? handleEdit : handleCreate}>
               <Save className="h-4 w-4 mr-2" />
-              {isEditing ? 'Cập nhật' : 'Tạo mẫu'}
+              {isEditing ? '更新' : '創建'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -715,15 +715,15 @@ const AdminNotifications: React.FC = () => {
       <Dialog open={showTestDialog} onOpenChange={setShowTestDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Test gửi thông báo</DialogTitle>
+            <DialogTitle>測試發送通知</DialogTitle>
             <DialogDescription>
-              Gửi thông báo test để kiểm tra mẫu "{selectedTemplate?.name}"
+              發送測試通知以測試模板 "{selectedTemplate?.name}"
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
             <div>
-              <Label htmlFor="testRecipient">Người nhận *</Label>
+              <Label htmlFor="testRecipient">接收者 *</Label>
               <Input
                 id="testRecipient"
                 value={testFormData.recipient}
@@ -733,7 +733,7 @@ const AdminNotifications: React.FC = () => {
             </div>
 
             <div>
-              <Label>Biến (tùy chọn)</Label>
+              <Label>變數 (可選)</Label>
               <div className="space-y-2">
                 {(selectedTemplate?.variables || []).map((variable) => (
                   <div key={variable} className="flex space-x-2">
@@ -744,7 +744,7 @@ const AdminNotifications: React.FC = () => {
                         ...prev,
                         variables: { ...prev.variables, [variable]: e.target.value }
                       }))}
-                      placeholder={`Giá trị cho ${variable}`}
+                      placeholder={`輸入 ${variable} 的值`}
                     />
                   </div>
                 ))}
@@ -754,11 +754,11 @@ const AdminNotifications: React.FC = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowTestDialog(false)}>
-              Hủy
+              取消
             </Button>
             <Button onClick={handleTestNotification} disabled={testLoading}>
               <Send className="h-4 w-4 mr-2" />
-              {testLoading ? 'Đang gửi...' : 'Gửi test'}
+              {testLoading ? '正在發送...' : '發送測試'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -768,15 +768,15 @@ const AdminNotifications: React.FC = () => {
       <Dialog open={showBulkDialog} onOpenChange={setShowBulkDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Gửi thông báo hàng loạt</DialogTitle>
+            <DialogTitle>發送批量通知</DialogTitle>
             <DialogDescription>
-              Gửi thông báo "{selectedTemplate?.name}" cho nhiều người nhận
+              發送通知 "{selectedTemplate?.name}" 給多個接收者
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
             <div>
-              <Label htmlFor="bulkRecipients">Danh sách người nhận *</Label>
+              <Label htmlFor="bulkRecipients">接收者列表 *</Label>
               <Textarea
                 id="bulkRecipients"
                 value={bulkFormData.recipients}
@@ -785,12 +785,12 @@ const AdminNotifications: React.FC = () => {
                 rows={4}
               />
               <p className="text-sm text-gray-500 mt-1">
-                Mỗi người nhận trên một dòng hoặc phân cách bằng dấu phẩy
+                每個接收者一行或用逗號分隔
               </p>
             </div>
 
             <div>
-              <Label>Biến (tùy chọn)</Label>
+              <Label>變數 (可選)</Label>
               <div className="space-y-2">
                 {(selectedTemplate?.variables || []).map((variable) => (
                   <div key={variable} className="flex space-x-2">
@@ -801,7 +801,7 @@ const AdminNotifications: React.FC = () => {
                         ...prev,
                         variables: { ...prev.variables, [variable]: e.target.value }
                       }))}
-                      placeholder={`Giá trị cho ${variable}`}
+                      placeholder={`輸入 ${variable} 的值`}
                     />
                   </div>
                 ))}
@@ -811,11 +811,11 @@ const AdminNotifications: React.FC = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowBulkDialog(false)}>
-              Hủy
+              取消
             </Button>
             <Button onClick={handleBulkNotification} disabled={bulkLoading}>
               <Users className="h-4 w-4 mr-2" />
-              {bulkLoading ? 'Đang gửi...' : 'Gửi hàng loạt'}
+              {bulkLoading ? '正在發送...' : '發送批量'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -825,7 +825,7 @@ const AdminNotifications: React.FC = () => {
       <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Xem trước mẫu thông báo</DialogTitle>
+            <DialogTitle>預覽通知模板</DialogTitle>
             <DialogDescription>
               {selectedTemplate?.name} - {selectedTemplate?.type.toUpperCase()}
             </DialogDescription>
@@ -834,7 +834,7 @@ const AdminNotifications: React.FC = () => {
           <div className="space-y-4">
             {selectedTemplate?.subject && (
               <div>
-                <Label className="text-sm font-medium">Tiêu đề:</Label>
+                <Label className="text-sm font-medium">標題:</Label>
                 <div className="mt-1 p-3 bg-gray-50 rounded-lg">
                   <p className="text-sm">{selectedTemplate.subject}</p>
                 </div>
@@ -842,7 +842,7 @@ const AdminNotifications: React.FC = () => {
             )}
             
             <div>
-              <Label className="text-sm font-medium">Nội dung:</Label>
+              <Label className="text-sm font-medium">內容:</Label>
               <div className="mt-1 p-4 bg-gray-50 rounded-lg">
                 <pre className="text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto">
                   {previewContent}
@@ -851,7 +851,7 @@ const AdminNotifications: React.FC = () => {
             </div>
 
             <div>
-              <Label className="text-sm font-medium">Biến đã thay thế:</Label>
+              <Label className="text-sm font-medium">已替換的變數:</Label>
               <div className="flex flex-wrap gap-1 mt-1">
                 {(selectedTemplate?.variables || []).map((variable) => (
                   <Badge key={variable} variant="outline" className="text-xs">
@@ -864,7 +864,7 @@ const AdminNotifications: React.FC = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPreviewDialog(false)}>
-              Đóng
+              關閉
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -874,18 +874,18 @@ const AdminNotifications: React.FC = () => {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xác nhận xóa</DialogTitle>
+            <DialogTitle>確認刪除</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn xóa mẫu thông báo "{selectedTemplate?.name}"? 
-              Hành động này không thể hoàn tác.
+              您確定要刪除通知模板 "{selectedTemplate?.name}"? 
+              此操作無法撤銷。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Hủy
+              取消
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
-              Xóa
+              刪除
             </Button>
           </DialogFooter>
         </DialogContent>

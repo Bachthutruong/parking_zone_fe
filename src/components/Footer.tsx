@@ -1,79 +1,31 @@
 import React from 'react';
-import { Car, Phone, Mail, MapPin } from 'lucide-react';
 
 const Footer: React.FC = () => {
   return (
-    <footer className="bg-muted/50 border-t">
+    <footer className="bg-[#39653f] text-white">
       <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Company info */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Car className="h-6 w-6 text-primary" />
-              <span className="text-lg font-bold">Parking Zone</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              台灣頂級機場停車預訂服務
+        <div className="text-center space-y-6">
+          {/* Logo */}
+          <div className="flex justify-center">
+            <img src="/logo.png" alt="晶順出國停車場" className="h-12 w-auto" />
+          </div>
+          
+          {/* Content */}
+          <div className="max-w-4xl mx-auto">
+            <p className="text-white/90 leading-relaxed text-lg">
+              晶順出國停車場位於大園區，桃園機場外圍。我們提供多元化的停車服務，包括露天停車場與室內停車場，滿足不同出國的顧客需求。此外，我們還提供24小時免費機場接送服務，確保您從停車場到機場航廈的過程快速、安全、無縫銜接，讓您的旅程從一開始就充滿愉快與便利…
             </p>
-          </div>
-
-          {/* Quick links */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">快速連結</h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <a href="/booking" className="text-muted-foreground hover:text-primary transition-colors">
-                  預訂
-                </a>
-              </li>
-              <li>
-                <a href="/lookup" className="text-muted-foreground hover:text-primary transition-colors">
-                  查詢預訂
-                </a>
-              </li>
-              <li>
-                <a href="/login" className="text-muted-foreground hover:text-primary transition-colors">
-                  登入
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Services */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">服務</h3>
-            <ul className="space-y-2 text-sm">
-              <li className="text-muted-foreground">室內停車</li>
-              <li className="text-muted-foreground">戶外停車</li>
-              <li className="text-muted-foreground">無障礙區域</li>
-              <li className="text-muted-foreground">附加服務</li>
-            </ul>
-          </div>
-
-          {/* Contact */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">聯絡我們</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center space-x-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">+886 2 1234 5678</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">info@parkingzone.com</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">123 Parking Street, Taipei</span>
-              </div>
+            <div className="mt-4">
+              <a 
+                href="https://jingparking.com/about-us/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-white font-semibold hover:text-white/80 transition-colors"
+              >
+                繼續了解我們
+              </a>
             </div>
           </div>
-        </div>
-
-        <div className="border-t mt-8 pt-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            © 2024 Parking Zone. 版權所有。
-          </p>
         </div>
       </div>
     </footer>

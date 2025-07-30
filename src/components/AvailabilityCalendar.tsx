@@ -184,14 +184,37 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   };
 
   const getDayStatus = (day: DayInfo) => {
-    const isSelected = selectedStartDate === day.date || selectedEndDate === day.date;
-    const isInSelectionRange = selectedStartDate && selectedEndDate && 
-      day.date >= selectedStartDate && day.date <= selectedEndDate;
+    if (!day.isAvailable || day.availableSlots === 0) {
+      return 'unavailable';
+    }
     
-    if (isSelected) return 'selected';
-    if (isInSelectionRange) return 'in-range';
-    if (day.isInRange) return 'in-booking-range';
-    if (!day.isAvailable || day.availableSlots === 0) return 'unavailable';
+    // Check if day is in the selected booking range
+    if (checkInTime && checkOutTime) {
+      const dayDate = new Date(day.date);
+      const checkInDate = new Date(checkInTime);
+      const checkOutDate = new Date(checkOutTime);
+      
+      if (dayDate >= checkInDate && dayDate <= checkOutDate) {
+        return 'in-booking-range';
+      }
+    }
+    
+    // Check if day is in the calendar selection range
+    if (selectedStartDate && selectedEndDate) {
+      const dayDate = new Date(day.date);
+      const startDate = new Date(selectedStartDate);
+      const endDate = new Date(selectedEndDate);
+      
+      if (dayDate >= startDate && dayDate <= endDate) {
+        return 'in-range';
+      }
+    }
+    
+    // Check if day is selected
+    if (selectedStartDate && day.date === selectedStartDate) {
+      return 'selected';
+    }
+    
     return 'available';
   };
 
@@ -201,15 +224,15 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
     
     switch (status) {
       case 'selected':
-        return `${baseClasses} bg-blue-600 text-white border-blue-600 shadow-lg hover:bg-blue-700`;
+        return `${baseClasses} bg-[#39653f] text-white border-[#39653f] shadow-lg hover:bg-[#2d4f33] hover:shadow-xl`;
       case 'in-range':
-        return `${baseClasses} bg-blue-200 text-blue-800 border-blue-300 hover:bg-blue-300`;
+        return `${baseClasses} bg-blue-200 text-blue-800 border-blue-300 hover:bg-blue-300 hover:shadow-md`;
       case 'in-booking-range':
-        return `${baseClasses} bg-green-100 text-green-800 border-green-300 hover:bg-green-200`;
+        return `${baseClasses} bg-green-100 text-green-800 border-green-300 hover:bg-green-200 hover:shadow-md`;
       case 'unavailable':
         return `${baseClasses} bg-red-50 text-red-600 border-red-200 cursor-not-allowed opacity-60`;
       default:
-        return `${baseClasses} bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-blue-300`;
+        return `${baseClasses} bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-blue-300 hover:shadow-md`;
     }
   };
 
@@ -223,7 +246,10 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   };
 
   const getMonthName = (date: Date) => {
-    return date.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
+    return date.toLocaleDateString('zh-TW', {
+      year: 'numeric',
+      month: 'long'
+    });
   };
 
   const goToPreviousMonth = () => {
@@ -278,10 +304,13 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
     const dayInfo = availabilityData.find(day => day.date === dateStr);
     if (!dayInfo || !dayInfo.isAvailable || dayInfo.availableSlots === 0) return;
     
+    // Always call onDateSelect for single date selection
+    onDateSelect?.(dateStr);
+    
+    // Handle range selection logic
     if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
       setSelectedStartDate(dateStr);
       setSelectedEndDate(null);
-      onDateSelect?.(dateStr);
     } else {
       if (dateStr >= selectedStartDate) {
         setSelectedEndDate(dateStr);
@@ -327,13 +356,13 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
             variant="outline"
             size="sm"
             onClick={goToPreviousMonth}
-            className="flex items-center space-x-2"
+            className="flex items-center space-x-2 hover:bg-blue-50 hover:border-blue-300"
           >
-            <span>←</span>
-            <span>上個月</span>
+            <span className="text-blue-600">←</span>
+            <span className="text-blue-600">上個月</span>
           </Button>
           
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-gray-900 bg-blue-50 px-4 py-2 rounded-lg">
             {getMonthName(currentMonth)}
           </h3>
           
@@ -341,10 +370,10 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
             variant="outline"
             size="sm"
             onClick={goToNextMonth}
-            className="flex items-center space-x-2"
+            className="flex items-center space-x-2 hover:bg-blue-50 hover:border-blue-300"
           >
-            <span>下個月</span>
-            <span>→</span>
+            <span className="text-blue-600">下個月</span>
+            <span className="text-blue-600">→</span>
           </Button>
         </div>
 
@@ -353,7 +382,7 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
           {/* Week Days Header */}
           <div className="grid grid-cols-7 gap-2">
             {getWeekDays().map((day, index) => (
-              <div key={index} className="text-center text-sm font-medium text-gray-600 py-2">
+              <div key={index} className="text-center text-sm font-medium text-gray-600 py-2 bg-gray-50 rounded-lg">
                 {day}
               </div>
             ))}
@@ -373,23 +402,27 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
               return (
                 <div
                   key={index}
-                  className={className}
+                  className={`${className} cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-md ${
+                    dayInfo?.isAvailable && (dayInfo?.availableSlots || 0) > 0 
+                      ? 'hover:bg-blue-50 hover:border-blue-300' 
+                      : 'cursor-not-allowed opacity-60'
+                  }`}
                   onClick={() => handleDateClick(day.date)}
                   title={`${day.date} - ${status}`}
                 >
                   {/* Date at top */}
-                  <div className="text-lg font-bold mb-1">
+                  <div className="text-lg font-bold mb-1 text-gray-900">
                     {day.day}
                   </div>
                   
-                                     {/* Availability and price info in center */}
-                   <div className="text-center">
-                     {dayInfo?.isAvailable && (dayInfo?.availableSlots || 0) > 0 ? (
+                  {/* Availability and price info in center */}
+                  <div className="text-center">
+                    {dayInfo?.isAvailable && (dayInfo?.availableSlots || 0) > 0 ? (
                       <>
                         {/* Available slots */}
                         <div className="flex items-center justify-center space-x-1 mb-1">
-                          <Car className="h-3 w-3" />
-                          <span className="text-xs font-medium">
+                          <Car className="h-3 w-3 text-green-600" />
+                          <span className="text-xs font-medium text-green-700">
                             {dayInfo.availableSlots} 位
                           </span>
                         </div>
@@ -403,7 +436,7 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                         
                         {/* Special price indicator */}
                         {dayInfo.isSpecialPrice && (
-                          <div className="text-xs text-orange-500 font-medium">
+                          <div className="text-xs text-orange-500 font-medium truncate">
                             {dayInfo.specialPriceReason}
                           </div>
                         )}
@@ -411,9 +444,9 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                     ) : (
                       <>
                         <div className="flex items-center justify-center mb-1">
-                          <XCircle className="h-4 w-4" />
+                          <XCircle className="h-4 w-4 text-red-500" />
                         </div>
-                        <div className="text-xs font-medium">
+                        <div className="text-xs font-medium text-red-600">
                           已滿
                         </div>
                       </>
@@ -430,19 +463,33 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 bg-white border-2 border-gray-200 rounded"></div>
-              <span className="text-gray-600">Có sẵn</span>
+              <span className="text-gray-600">可用</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 bg-green-100 border-2 border-green-300 rounded"></div>
-              <span className="text-gray-600">Đã đặt</span>
+              <span className="text-gray-600">已預訂</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 bg-red-50 border-2 border-red-200 rounded opacity-60"></div>
-              <span className="text-gray-600">Hết chỗ</span>
+              <span className="text-gray-600">已滿</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-blue-600 border-2 border-blue-600 rounded"></div>
-              <span className="text-gray-600">Đã chọn</span>
+              <div className="w-4 h-4 bg-[#39653f] border-2 border-blue-600 rounded"></div>
+              <span className="text-gray-600">已選擇</span>
+            </div>
+          </div>
+          
+          {/* Instructions */}
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <div className="flex items-center space-x-2 mb-2">
+              <span className="text-blue-600">💡</span>
+              <span className="text-sm font-medium text-blue-800">使用說明</span>
+            </div>
+            <div className="text-xs text-blue-700 space-y-1">
+              <p>• 點擊日期可選擇進入時間</p>
+              <p>• 再次點擊其他日期可選擇離開時間</p>
+              <p>• 綠色數字表示可用車位數量</p>
+              <p>• 橙色價格表示特殊價格</p>
             </div>
           </div>
         </div>

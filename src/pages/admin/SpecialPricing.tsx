@@ -142,13 +142,13 @@ const AdminSpecialPricing: React.FC = () => {
     
     try {
       await addSpecialPrice(selectedParkingType._id, formData);
-      toast.success('Thêm giá đặc biệt thành công');
+      toast.success('新增特殊價格成功');
       setShowCreateDialog(false);
       resetForm();
       await loadParkingTypes(); // Reload all data
     } catch (error: any) {
       console.error('Error creating special price:', error);
-      toast.error('Không thể thêm giá đặc biệt');
+      toast.error('無法新增特殊價格');
     }
   };
 
@@ -183,11 +183,11 @@ const AdminSpecialPricing: React.FC = () => {
       const failedCount = results.filter(r => !r.success).length;
 
       if (successCount > 0) {
-        toast.success(`Tạo thành công ${successCount} giá đặc biệt`);
+        toast.success(`成功創建 ${successCount} 個特殊價格`);
       }
       
       if (failedCount > 0) {
-        toast.error(`${failedCount} giá đặc biệt tạo thất bại`);
+        toast.error(`${failedCount} 個特殊價格創建失敗`);
       }
 
       setShowBulkCreateDialog(false);
@@ -196,7 +196,7 @@ const AdminSpecialPricing: React.FC = () => {
       await loadParkingTypes(); // Reload all data
     } catch (error: any) {
       console.error('Error creating bulk special prices:', error);
-      toast.error(error.response?.data?.message || 'Lỗi khi tạo giá đặc biệt hàng loạt');
+      toast.error(error.response?.data?.message || '批量創建特殊價格時發生錯誤');
     }
   };
 
@@ -210,13 +210,13 @@ const AdminSpecialPricing: React.FC = () => {
     
     try {
       await updateSpecialPrice(selectedParkingType._id, selectedSpecialPrice._id, formData);
-      toast.success('Cập nhật giá đặc biệt thành công');
+      toast.success('更新特殊價格成功');
       setShowEditDialog(false);
       resetForm();
       await loadParkingTypes(); // Reload all data
     } catch (error: any) {
       console.error('Error updating special price:', error);
-      toast.error('Không thể cập nhật giá đặc biệt');
+      toast.error('無法更新特殊價格');
     }
   };
 
@@ -225,12 +225,12 @@ const AdminSpecialPricing: React.FC = () => {
     
     try {
       await deleteSpecialPrice(selectedParkingType._id, selectedSpecialPrice._id);
-      toast.success('Xóa giá đặc biệt thành công');
+      toast.success('刪除特殊價格成功');
       setShowDeleteDialog(false);
       setSelectedSpecialPrice(null);
       await loadParkingTypes(); // Reload all data
     } catch (error: any) {
-      toast.error('Không thể xóa giá đặc biệt');
+      toast.error('無法刪除特殊價格');
     }
   };
 
@@ -288,7 +288,7 @@ const AdminSpecialPricing: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN', {
+    return new Date(dateString).toLocaleDateString('zh-TW', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -308,7 +308,7 @@ const AdminSpecialPricing: React.FC = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return amount.toLocaleString('vi-VN', {
+    return amount.toLocaleString('zh-TW', {
       style: 'currency',
       currency: 'TWD',
       minimumFractionDigits: 0,
@@ -349,7 +349,7 @@ const AdminSpecialPricing: React.FC = () => {
             startDate: currentWeekend.toISOString().split('T')[0],
             endDate: weekendEnd.toISOString().split('T')[0],
             price: selectedParkingType ? Math.round(selectedParkingType.pricePerDay * 1.2) : 0,
-            reason: 'Cuối tuần',
+            reason: '週末',
             isActive: true
           });
           
@@ -366,7 +366,7 @@ const AdminSpecialPricing: React.FC = () => {
           startDate: today.toISOString().split('T')[0],
           endDate: new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           price: selectedParkingType ? Math.round(selectedParkingType.pricePerDay * 1.5) : 0,
-          reason: 'Ngày lễ',
+          reason: '節日',
           isActive: true
         }];
         
@@ -375,7 +375,7 @@ const AdminSpecialPricing: React.FC = () => {
           startDate: today.toISOString().split('T')[0],
           endDate: new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           price: selectedParkingType ? Math.round(selectedParkingType.pricePerDay * 1.3) : 0,
-          reason: 'Mùa cao điểm',
+          reason: '旺季',
           isActive: true
         }];
         
@@ -600,21 +600,21 @@ const AdminSpecialPricing: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Giá đặc biệt</h1>
-          <p className="text-gray-600">Quản lý giá đặc biệt cho các ngày cụ thể</p>
+          <h1 className="text-3xl font-bold">特殊價格</h1>
+          <p className="text-gray-600">管理特定日期的特殊價格</p>
         </div>
         <div className="flex space-x-2">
           <Button variant="outline" onClick={loadParkingTypes}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Làm mới
+            重新整理
           </Button>
           <Button variant="outline" onClick={openBulkCreateDialog}>
             <Layers className="h-4 w-4 mr-2" />
-            Cấu hình hàng loạt
+            批量配置
           </Button>
           <Button onClick={openCreateDialog} disabled={!selectedParkingType}>
             <Plus className="h-4 w-4 mr-2" />
-            Thêm giá đặc biệt
+            新增特殊價格
           </Button>
         </div>
       </div>
@@ -623,11 +623,11 @@ const AdminSpecialPricing: React.FC = () => {
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="single" className="flex items-center space-x-2">
             <Settings className="h-4 w-4" />
-            <span>Cấu hình từng bãi</span>
+            <span>個別停車場配置</span>
           </TabsTrigger>
           <TabsTrigger value="overview" className="flex items-center space-x-2">
             <Globe className="h-4 w-4" />
-            <span>Tổng quan tất cả</span>
+            <span>全部概覽</span>
           </TabsTrigger>
         </TabsList>
 
@@ -637,13 +637,13 @@ const AdminSpecialPricing: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <TrendingUp className="h-5 w-5 mr-2" />
-                Chọn bãi đậu xe
+                選擇停車場
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="parkingType">Bãi đậu xe</Label>
+                  <Label htmlFor="parkingType">停車場</Label>
                   <select
                     id="parkingType"
                     value={selectedParkingType?._id || ''}
@@ -652,7 +652,7 @@ const AdminSpecialPricing: React.FC = () => {
                   >
                     {parkingTypes.map((parkingType) => (
                       <option key={parkingType._id} value={parkingType._id}>
-                        {parkingType.name} ({parkingType.code}) - {formatCurrency(parkingType.pricePerDay)}/ngày
+                        {parkingType.name} ({parkingType.code}) - {formatCurrency(parkingType.pricePerDay)}/天
                       </option>
                     ))}
                   </select>
@@ -660,7 +660,7 @@ const AdminSpecialPricing: React.FC = () => {
                 
                 <div className="flex items-end">
                   <div className="text-sm text-gray-600">
-                    Giá cơ bản: {selectedParkingType ? formatCurrency(selectedParkingType.pricePerDay) : 'N/A'}
+                    基本價格: {selectedParkingType ? formatCurrency(selectedParkingType.pricePerDay) : 'N/A'}
                   </div>
                 </div>
               </div>
@@ -672,18 +672,18 @@ const AdminSpecialPricing: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Filter className="h-5 w-5 mr-2" />
-                Bộ lọc
+                篩選
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="search">Tìm kiếm</Label>
+                  <Label htmlFor="search">搜尋</Label>
                   <div className="relative">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                     <Input
                       id="search"
-                      placeholder="Lý do..."
+                      placeholder="原因..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10"
@@ -694,7 +694,7 @@ const AdminSpecialPricing: React.FC = () => {
                 <div className="flex items-end">
                   <Button variant="outline" className="w-full">
                     <Filter className="h-4 w-4 mr-2" />
-                    Lọc
+                    篩選
                   </Button>
                 </div>
               </div>
@@ -704,21 +704,21 @@ const AdminSpecialPricing: React.FC = () => {
           {/* Special Prices Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Danh sách giá đặc biệt</CardTitle>
+              <CardTitle>特殊價格清單</CardTitle>
               <CardDescription>
-                {selectedParkingType && `Bãi đậu xe: ${selectedParkingType.name}`} - 
-                Tổng cộng {filteredSpecialPrices.length} giá đặc biệt
+                {selectedParkingType && `停車場: ${selectedParkingType.name}`} - 
+                共 {filteredSpecialPrices.length} 個特殊價格
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Ngày</TableHead>
-                    <TableHead>Giá</TableHead>
-                    <TableHead>Lý do</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                    <TableHead>Thao tác</TableHead>
+                    <TableHead>日期</TableHead>
+                    <TableHead>價格</TableHead>
+                    <TableHead>原因</TableHead>
+                    <TableHead>狀態</TableHead>
+                    <TableHead>操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -783,9 +783,9 @@ const AdminSpecialPricing: React.FC = () => {
               {filteredSpecialPrices.length === 0 && (
                 <div className="p-8 text-center">
                   <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-600 mb-2">Không có giá đặc biệt</h3>
+                  <h3 className="text-lg font-semibold text-gray-600 mb-2">沒有特殊價格</h3>
                   <p className="text-gray-500">
-                    Chưa có giá đặc biệt nào được thiết lập cho bãi đậu xe này.
+                    此停車場尚未設置任何特殊價格。
                   </p>
                 </div>
               )}
@@ -799,7 +799,7 @@ const AdminSpecialPricing: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Layers className="h-5 w-5 mr-2" />
-                Chọn bãi đậu xe cho thao tác hàng loạt
+                選擇停車場進行批量操作
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -810,7 +810,7 @@ const AdminSpecialPricing: React.FC = () => {
                     checked={selectedParkingTypes.length === parkingTypes.length}
                     onCheckedChange={handleSelectAllParkingTypes}
                   />
-                  <Label htmlFor="selectAllOverview" className="font-medium">Chọn tất cả bãi đậu xe</Label>
+                  <Label htmlFor="selectAllOverview" className="font-medium">選擇所有停車場</Label>
                 </div>
                 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto border rounded-md p-3">
@@ -829,7 +829,7 @@ const AdminSpecialPricing: React.FC = () => {
                 </div>
                 
                 <div className="text-sm text-gray-600">
-                  Đã chọn: {selectedParkingTypes.length}/{parkingTypes.length} bãi đậu xe
+                  已選擇: {selectedParkingTypes.length}/{parkingTypes.length} 個停車場
                 </div>
               </div>
             </CardContent>
@@ -840,18 +840,18 @@ const AdminSpecialPricing: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Filter className="h-5 w-5 mr-2" />
-                Bộ lọc tổng quan
+                概覽篩選
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="overviewSearch">Tìm kiếm</Label>
+                  <Label htmlFor="overviewSearch">搜尋</Label>
                   <div className="relative">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                     <Input
                       id="overviewSearch"
-                      placeholder="Lý do hoặc tên bãi đậu xe..."
+                      placeholder="原因或停車場名稱..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10"
@@ -861,7 +861,7 @@ const AdminSpecialPricing: React.FC = () => {
                 
                 <div className="flex items-end">
                   <div className="text-sm text-gray-600">
-                    Tổng cộng: {filteredAllSpecialPrices.length} giá đặc biệt
+                    總計: {filteredAllSpecialPrices.length} 個特殊價格
                   </div>
                 </div>
               </div>
@@ -871,20 +871,20 @@ const AdminSpecialPricing: React.FC = () => {
           {/* Overview Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Tổng quan tất cả giá đặc biệt</CardTitle>
+              <CardTitle>所有特殊價格概覽</CardTitle>
               <CardDescription>
-                Xem tất cả giá đặc biệt của tất cả bãi đậu xe
+                查看所有停車場的特殊價格
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Bãi đậu xe</TableHead>
-                    <TableHead>Ngày</TableHead>
-                    <TableHead>Giá</TableHead>
-                    <TableHead>Lý do</TableHead>
-                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>停車場</TableHead>
+                    <TableHead>日期</TableHead>
+                    <TableHead>價格</TableHead>
+                    <TableHead>原因</TableHead>
+                    <TableHead>狀態</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -939,9 +939,9 @@ const AdminSpecialPricing: React.FC = () => {
               {filteredAllSpecialPrices.length === 0 && (
                 <div className="p-8 text-center">
                   <Globe className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-600 mb-2">Không có giá đặc biệt</h3>
+                  <h3 className="text-lg font-semibold text-gray-600 mb-2">沒有特殊價格</h3>
                   <p className="text-gray-500">
-                    Chưa có giá đặc biệt nào được thiết lập cho bất kỳ bãi đậu xe nào.
+                    尚未為任何停車場設置特殊價格。
                   </p>
                 </div>
               )}
@@ -960,16 +960,16 @@ const AdminSpecialPricing: React.FC = () => {
       }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{isEditing ? 'Sửa giá đặc biệt' : 'Thêm giá đặc biệt mới'}</DialogTitle>
+            <DialogTitle>{isEditing ? '編輯特殊價格' : '新增特殊價格'}</DialogTitle>
             <DialogDescription>
-              {isEditing ? 'Cập nhật thông tin giá đặc biệt' : 'Tạo giá đặc biệt mới cho ngày cụ thể'}
+              {isEditing ? '更新特殊價格資訊' : '為特定日期創建新的特殊價格'}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="startDate">Từ ngày *</Label>
+                <Label htmlFor="startDate">開始日期 *</Label>
                 <Input
                   id="startDate"
                   type="date"
@@ -978,7 +978,7 @@ const AdminSpecialPricing: React.FC = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="endDate">Đến ngày *</Label>
+                <Label htmlFor="endDate">結束日期 *</Label>
                 <Input
                   id="endDate"
                   type="date"
@@ -989,7 +989,7 @@ const AdminSpecialPricing: React.FC = () => {
             </div>
 
             <div>
-              <Label htmlFor="price">Giá (TWD) *</Label>
+              <Label htmlFor="price">價格 (TWD) *</Label>
               <Input
                 id="price"
                 type="number"
@@ -1000,7 +1000,7 @@ const AdminSpecialPricing: React.FC = () => {
             </div>
 
                           <div>
-                <Label htmlFor="reason">Lý do *</Label>
+                <Label htmlFor="reason">原因 *</Label>
                 <Textarea
                   id="reason"
                   value={formData.reason}
@@ -1019,7 +1019,7 @@ const AdminSpecialPricing: React.FC = () => {
                 checked={formData.isActive}
                 onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
               />
-              <Label htmlFor="isActive">Kích hoạt giá đặc biệt này</Label>
+              <Label htmlFor="isActive">啟用此特殊價格</Label>
             </div>
           </div>
 
@@ -1029,10 +1029,10 @@ const AdminSpecialPricing: React.FC = () => {
               setShowEditDialog(false);
               resetForm();
             }}>
-              Hủy
+              取消
             </Button>
             <Button onClick={isEditing ? handleEdit : handleCreate}>
-              {isEditing ? 'Cập nhật' : 'Tạo giá đặc biệt'}
+              {isEditing ? '更新' : '創建特殊價格'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1042,9 +1042,9 @@ const AdminSpecialPricing: React.FC = () => {
        <Dialog open={showBulkTemplateDialog} onOpenChange={setShowBulkTemplateDialog}>
          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
            <DialogHeader>
-             <DialogTitle>Chọn template để áp dụng</DialogTitle>
+             <DialogTitle>選擇要應用的模板</DialogTitle>
              <DialogDescription>
-               Chọn một template để áp dụng cho các bãi đậu xe đã chọn.
+               選擇一個模板應用到已選擇的停車場。
              </DialogDescription>
            </DialogHeader>
            
@@ -1061,7 +1061,7 @@ const AdminSpecialPricing: React.FC = () => {
                  </div>
                  <div className="flex items-center space-x-2">
                    <Badge variant={template.isActive ? 'default' : 'secondary'}>
-                     {template.isActive ? 'Hoạt động' : 'Tạm khóa'}
+                     {template.isActive ? '啟用' : '暫停'}
                    </Badge>
                  </div>
                  <div className="flex items-center space-x-2">
@@ -1099,7 +1099,7 @@ const AdminSpecialPricing: React.FC = () => {
              </Button>
              <Button onClick={handleBulkTemplateApply} disabled={bulkTemplateData.length === 0}>
                <Copy className="h-4 w-4 mr-2" />
-               Áp dụng cho {selectedParkingTypes.length} bãi đậu xe
+               應用到 {selectedParkingTypes.length} 個停車場
              </Button>
            </DialogFooter>
          </DialogContent>
@@ -1109,19 +1109,19 @@ const AdminSpecialPricing: React.FC = () => {
        <Dialog open={showBulkCreateDialog} onOpenChange={setShowBulkCreateDialog}>
          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Cấu hình giá đặc biệt hàng loạt</DialogTitle>
+            <DialogTitle>批量特殊價格配置</DialogTitle>
             <DialogDescription>
-              Áp dụng giá đặc biệt cho nhiều bãi đậu xe cùng lúc
+              同時為多個停車場應用特殊價格
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-6">
                          {/* Quick Templates */}
              <div>
-               <Label className="text-sm font-medium">Template nhanh</Label>
+               <Label className="text-sm font-medium">快速模板</Label>
                {selectedTemplate === 'weekend' && formData.startDate && formData.endDate && (
                  <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded-md mt-1">
-                   💡 Template "Cuối tuần" sẽ tạo giá đặc biệt cho tất cả cuối tuần trong khoảng từ {formData.startDate} đến {formData.endDate}
+                   💡 "週末"模板將為 {formData.startDate} 到 {formData.endDate} 期間的所有週末創建特殊價格
                  </div>
                )}
                <div className="grid grid-cols-3 gap-2 mt-2">
@@ -1132,7 +1132,7 @@ const AdminSpecialPricing: React.FC = () => {
                    className="flex items-center space-x-2"
                  >
                    <Zap className="h-3 w-3" />
-                   <span>Cuối tuần</span>
+                   <span>週末</span>
                  </Button>
                  <Button 
                    variant={selectedTemplate === 'holiday' ? 'default' : 'outline'}
@@ -1141,7 +1141,7 @@ const AdminSpecialPricing: React.FC = () => {
                    className="flex items-center space-x-2"
                  >
                    <Calendar className="h-3 w-3" />
-                   <span>Ngày lễ</span>
+                   <span>節日</span>
                  </Button>
                  <Button 
                    variant={selectedTemplate === 'peak' ? 'default' : 'outline'}
@@ -1150,7 +1150,7 @@ const AdminSpecialPricing: React.FC = () => {
                    className="flex items-center space-x-2"
                  >
                    <TrendingUp className="h-3 w-3" />
-                   <span>Cao điểm</span>
+                   <span>旺季</span>
                  </Button>
                </div>
              </div>
@@ -1159,7 +1159,7 @@ const AdminSpecialPricing: React.FC = () => {
              <div className="space-y-4">
                <div className="grid grid-cols-2 gap-4">
                  <div>
-                   <Label htmlFor="bulkStartDate">Từ ngày *</Label>
+                   <Label htmlFor="bulkStartDate">開始日期 *</Label>
                    <Input
                      id="bulkStartDate"
                      type="date"
@@ -1175,7 +1175,7 @@ const AdminSpecialPricing: React.FC = () => {
                    />
                  </div>
                  <div>
-                   <Label htmlFor="bulkEndDate">Đến ngày *</Label>
+                   <Label htmlFor="bulkEndDate">結束日期 *</Label>
                    <Input
                      id="bulkEndDate"
                      type="date"
@@ -1193,18 +1193,18 @@ const AdminSpecialPricing: React.FC = () => {
                </div>
 
               <div>
-                <Label htmlFor="bulkPrice">Giá (TWD) *</Label>
+                <Label htmlFor="bulkPrice">價格 (TWD) *</Label>
                 <Input
                   id="bulkPrice"
                   type="number"
                   value={formData.price}
                   onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) }))}
-                  placeholder="Nhập giá..."
+                  placeholder="輸入價格..."
                 />
               </div>
 
               <div>
-                <Label htmlFor="bulkReason">Lý do *</Label>
+                <Label htmlFor="bulkReason">原因 *</Label>
                 <Textarea
                   id="bulkReason"
                   value={formData.reason}
@@ -1223,7 +1223,7 @@ const AdminSpecialPricing: React.FC = () => {
                    checked={formData.isActive}
                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
                  />
-                 <Label htmlFor="bulkIsActive">Kích hoạt giá đặc biệt này</Label>
+                 <Label htmlFor="bulkIsActive">啟用此特殊價格</Label>
                </div>
                
                <div className="flex items-center space-x-2">
@@ -1233,7 +1233,7 @@ const AdminSpecialPricing: React.FC = () => {
                    onCheckedChange={setForceOverride}
                  />
                  <Label htmlFor="forceOverride" className="text-orange-600">
-                   Ghi đè giá đặc biệt đã tồn tại
+                   覆蓋已存在的特殊價格
                  </Label>
                </div>
             </div>
@@ -1246,7 +1246,7 @@ const AdminSpecialPricing: React.FC = () => {
                   checked={selectedParkingTypes.length === parkingTypes.length}
                   onCheckedChange={handleSelectAllParkingTypes}
                 />
-                <Label htmlFor="selectAll" className="font-medium">Chọn tất cả bãi đậu xe</Label>
+                <Label htmlFor="selectAll" className="font-medium">選擇所有停車場</Label>
               </div>
               
               <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-3">
@@ -1265,7 +1265,7 @@ const AdminSpecialPricing: React.FC = () => {
               </div>
               
               <div className="text-sm text-gray-600 mt-2">
-                Đã chọn: {selectedParkingTypes.length}/{parkingTypes.length} bãi đậu xe
+                已選擇: {selectedParkingTypes.length}/{parkingTypes.length} 個停車場
               </div>
             </div>
           </div>
@@ -1280,7 +1280,7 @@ const AdminSpecialPricing: React.FC = () => {
             </Button>
             <Button onClick={handleBulkCreate} disabled={selectedParkingTypes.length === 0}>
               <Copy className="h-4 w-4 mr-2" />
-              Áp dụng cho {selectedParkingTypes.length} bãi đậu xe
+              應用到 {selectedParkingTypes.length} 個停車場
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1357,10 +1357,10 @@ const AdminSpecialPricing: React.FC = () => {
       <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xác nhận xóa</DialogTitle>
+            <DialogTitle>確認刪除</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn xóa tất cả giá đặc biệt cho các bãi đậu xe đã chọn? 
-              Hành động này không thể hoàn tác.
+              您確定要刪除所選停車場的所有特殊價格嗎？ 
+              此操作無法撤銷。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1368,7 +1368,7 @@ const AdminSpecialPricing: React.FC = () => {
               Hủy
             </Button>
             <Button variant="destructive" onClick={handleBulkDelete}>
-              Xóa
+              刪除
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1378,16 +1378,16 @@ const AdminSpecialPricing: React.FC = () => {
       <Dialog open={showBulkEditDialog} onOpenChange={setShowBulkEditDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Cập nhật giá đặc biệt hàng loạt</DialogTitle>
+            <DialogTitle>批量更新特殊價格</DialogTitle>
             <DialogDescription>
-              Cập nhật thông tin giá đặc biệt cho tất cả các giá đặc biệt của các bãi đậu xe đã chọn.
+              更新所選停車場所有特殊價格的資訊。
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="bulkStartDateEdit">Từ ngày *</Label>
+                <Label htmlFor="bulkStartDateEdit">開始日期 *</Label>
                 <Input
                   id="bulkStartDateEdit"
                   type="date"
@@ -1459,7 +1459,7 @@ const AdminSpecialPricing: React.FC = () => {
        <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
          <DialogContent>
            <DialogHeader>
-             <DialogTitle>Xác nhận xóa hàng loạt</DialogTitle>
+             <DialogTitle>確認批量刪除</DialogTitle>
              <DialogDescription>
                Bạn có chắc chắn muốn xóa tất cả giá đặc biệt cho các bãi đậu xe đã chọn? 
                Hành động này không thể hoàn tác.
@@ -1539,7 +1539,7 @@ const AdminSpecialPricing: React.FC = () => {
                  checked={formData.isActive}
                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
                />
-               <Label htmlFor="bulkIsActiveEdit">Kích hoạt giá đặc biệt này</Label>
+               <Label htmlFor="bulkIsActiveEdit">啟用此特殊價格</Label>
              </div>
            </div>
 
@@ -1551,7 +1551,7 @@ const AdminSpecialPricing: React.FC = () => {
                Hủy
              </Button>
              <Button onClick={handleBulkEdit}>
-               Cập nhật
+               更新
              </Button>
            </DialogFooter>
          </DialogContent>
@@ -1561,18 +1561,18 @@ const AdminSpecialPricing: React.FC = () => {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xác nhận xóa</DialogTitle>
+            <DialogTitle>確認刪除</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn xóa giá đặc biệt cho khoảng thời gian "{selectedSpecialPrice ? formatDateRange(selectedSpecialPrice.startDate, selectedSpecialPrice.endDate) : ''}"? 
-              Hành động này không thể hoàn tác.
+              您確定要刪除時間範圍 "{selectedSpecialPrice ? formatDateRange(selectedSpecialPrice.startDate, selectedSpecialPrice.endDate) : ''}" 的特殊價格嗎？ 
+              此操作無法撤銷。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Hủy
+              取消
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
-              Xóa
+              刪除
             </Button>
           </DialogFooter>
         </DialogContent>
