@@ -24,7 +24,7 @@ const StaffLayout: React.FC = () => {
 
   const menuItems = [
     { path: '/staff', icon: LayoutDashboard, label: '儀表板', exact: true },
-    { path: '/staff/bookings', icon: Calendar, label: '預訂', exact: false },
+    { path: '/staff/bookings', icon: Calendar, label: '預約', exact: false },
   ];
 
   const isActive = (path: string, exact: boolean = false) => {

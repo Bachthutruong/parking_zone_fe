@@ -68,6 +68,7 @@ const AdminSpecialPricing: React.FC = () => {
   const [showBulkEditDialog, setShowBulkEditDialog] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [forceOverride, setForceOverride] = useState(false);
+  const [singleForceOverride, setSingleForceOverride] = useState(false);
   const [formData, setFormData] = useState({
     startDate: '',
     endDate: '',
@@ -75,6 +76,7 @@ const AdminSpecialPricing: React.FC = () => {
     reason: '',
     isActive: true
   });
+  const [isSingleDayMode, setIsSingleDayMode] = useState(false);
 
   useEffect(() => {
     loadParkingTypes();
@@ -135,20 +137,33 @@ const AdminSpecialPricing: React.FC = () => {
   const handleCreate = async () => {
     if (!selectedParkingType) return;
     
-    if (!formData.startDate || !formData.endDate || !formData.price || !formData.reason.trim()) {
+    if (!formData.startDate || !formData.price || !formData.reason.trim()) {
       toast.error('Vui lòng điền đầy đủ thông tin bao gồm lý do');
       return;
     }
+
+    if (!isSingleDayMode && !formData.endDate) {
+      toast.error('Vui lòng chọn ngày kết thúc');
+      return;
+    }
+
+    // Nếu là chế độ 1 ngày, sử dụng startDate cho cả endDate
+    const dataToSubmit = {
+      ...formData,
+      endDate: isSingleDayMode ? formData.startDate : formData.endDate,
+      forceOverride: singleForceOverride
+    };
     
     try {
-      await addSpecialPrice(selectedParkingType._id, formData);
-      toast.success('新增特殊價格成功');
+      const result = await addSpecialPrice(selectedParkingType._id, dataToSubmit);
+      toast.success(result.message || '新增特殊價格成功');
       setShowCreateDialog(false);
       resetForm();
       await loadParkingTypes(); // Reload all data
     } catch (error: any) {
       console.error('Error creating special price:', error);
-      toast.error('無法新增特殊價格');
+      const errorMessage = error.response?.data?.message || '無法新增特殊價格';
+      toast.error(errorMessage);
     }
   };
 
@@ -158,17 +173,23 @@ const AdminSpecialPricing: React.FC = () => {
       return;
     }
 
-    if (!formData.startDate || !formData.endDate || !formData.price || !formData.reason.trim()) {
+    if (!formData.startDate || !formData.price || !formData.reason.trim()) {
       toast.error('Vui lòng điền đầy đủ thông tin bao gồm lý do');
       return;
     }
+
+    // Nếu là chế độ 1 ngày, sử dụng startDate cho cả endDate
+    const dataToSubmit = {
+      ...formData,
+      endDate: isSingleDayMode ? formData.startDate : formData.endDate
+    };
 
     try {
       // Sử dụng bulk endpoint cho từng parking type
       const results = [];
       for (const parkingTypeId of selectedParkingTypes) {
         try {
-          const result = await addBulkSpecialPrices(parkingTypeId, [formData], forceOverride);
+          const result = await addBulkSpecialPrices(parkingTypeId, [dataToSubmit], forceOverride);
           results.push({ parkingTypeId, success: true, result });
         } catch (error: any) {
           results.push({ 
@@ -203,13 +224,19 @@ const AdminSpecialPricing: React.FC = () => {
   const handleEdit = async () => {
     if (!selectedSpecialPrice || !selectedParkingType) return;
     
-    if (!formData.startDate || !formData.endDate || !formData.price || !formData.reason.trim()) {
+    if (!formData.startDate || !formData.price || !formData.reason.trim()) {
       toast.error('Vui lòng điền đầy đủ thông tin bao gồm lý do');
       return;
     }
+
+    // Nếu là chế độ 1 ngày, sử dụng startDate cho cả endDate
+    const dataToSubmit = {
+      ...formData,
+      endDate: isSingleDayMode ? formData.startDate : formData.endDate
+    };
     
     try {
-      await updateSpecialPrice(selectedParkingType._id, selectedSpecialPrice._id, formData);
+      await updateSpecialPrice(selectedParkingType._id, selectedSpecialPrice._id, dataToSubmit);
       toast.success('更新特殊價格成功');
       setShowEditDialog(false);
       resetForm();
@@ -245,6 +272,8 @@ const AdminSpecialPricing: React.FC = () => {
     setIsEditing(false);
     setSelectedSpecialPrice(null);
     setSelectedTemplate('');
+    setIsSingleDayMode(false);
+    setSingleForceOverride(false);
   };
 
   const openCreateDialog = () => {
@@ -255,6 +284,8 @@ const AdminSpecialPricing: React.FC = () => {
       reason: '',
       isActive: true
     });
+    setIsSingleDayMode(false);
+    setSingleForceOverride(false);
     setShowCreateDialog(true);
   };
 
@@ -266,18 +297,25 @@ const AdminSpecialPricing: React.FC = () => {
       reason: '',
       isActive: true
     });
+    setIsSingleDayMode(false);
     setShowBulkCreateDialog(true);
   };
 
   const openEditDialog = (specialPrice: SpecialPrice) => {
     setSelectedSpecialPrice(specialPrice);
+    const startDate = new Date(specialPrice.startDate).toISOString().split('T')[0];
+    const endDate = new Date(specialPrice.endDate).toISOString().split('T')[0];
+    
     setFormData({
-      startDate: new Date(specialPrice.startDate).toISOString().split('T')[0],
-      endDate: new Date(specialPrice.endDate).toISOString().split('T')[0],
+      startDate: startDate,
+      endDate: endDate,
       price: specialPrice.price,
       reason: specialPrice.reason,
       isActive: specialPrice.isActive
     });
+    
+    // Kiểm tra xem có phải là 1 ngày không
+    setIsSingleDayMode(startDate === endDate);
     setIsEditing(true);
     setShowEditDialog(true);
   };
@@ -509,7 +547,7 @@ const AdminSpecialPricing: React.FC = () => {
       return;
     }
     
-    if (!formData.startDate || !formData.endDate || !formData.price || !formData.reason.trim()) {
+    if (!formData.startDate || !formData.price || !formData.reason.trim()) {
       toast.error('Vui lòng điền đầy đủ thông tin bao gồm lý do');
       return;
     }
@@ -967,26 +1005,53 @@ const AdminSpecialPricing: React.FC = () => {
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center space-x-2 mb-4">
+              <Switch
+                id="singleDayMode"
+                checked={isSingleDayMode}
+                onCheckedChange={setIsSingleDayMode}
+              />
+              <Label htmlFor="singleDayMode" className="font-medium">
+                {isSingleDayMode ? '單日模式' : '日期範圍模式'}
+              </Label>
+            </div>
+
+            {isSingleDayMode ? (
               <div>
-                <Label htmlFor="startDate">開始日期 *</Label>
+                <Label htmlFor="singleDate">選擇日期 *</Label>
                 <Input
-                  id="startDate"
+                  id="singleDate"
                   type="date"
                   value={formData.startDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    startDate: e.target.value,
+                    endDate: e.target.value // Tự động set endDate giống startDate
+                  }))}
                 />
               </div>
-              <div>
-                <Label htmlFor="endDate">結束日期 *</Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                />
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="startDate">開始日期 *</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="endDate">結束日期 *</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={formData.endDate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <div>
               <Label htmlFor="price">價格 (TWD) *</Label>
@@ -1020,6 +1085,17 @@ const AdminSpecialPricing: React.FC = () => {
                 onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
               />
               <Label htmlFor="isActive">啟用此特殊價格</Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="singleForceOverride"
+                checked={singleForceOverride}
+                onCheckedChange={setSingleForceOverride}
+              />
+              <Label htmlFor="singleForceOverride" className="text-orange-600">
+                覆蓋已存在的特殊價格
+              </Label>
             </div>
           </div>
 
@@ -1155,42 +1231,70 @@ const AdminSpecialPricing: React.FC = () => {
                </div>
              </div>
 
-                         {/* Form */}
-             <div className="space-y-4">
-               <div className="grid grid-cols-2 gap-4">
-                 <div>
-                   <Label htmlFor="bulkStartDate">開始日期 *</Label>
-                   <Input
-                     id="bulkStartDate"
-                     type="date"
-                     value={formData.startDate}
-                     onChange={(e) => {
-                       setFormData(prev => ({ ...prev, startDate: e.target.value }));
-                       // Nếu đã chọn template cuối tuần, cập nhật lại template
-                       if (selectedTemplate === 'weekend' && formData.endDate) {
-                         const templateData = getQuickTemplate('weekend', e.target.value, formData.endDate);
-                         setBulkTemplateData(templateData);
-                       }
-                     }}
-                   />
-                 </div>
-                 <div>
-                   <Label htmlFor="bulkEndDate">結束日期 *</Label>
-                   <Input
-                     id="bulkEndDate"
-                     type="date"
-                     value={formData.endDate}
-                     onChange={(e) => {
-                       setFormData(prev => ({ ...prev, endDate: e.target.value }));
-                       // Nếu đã chọn template cuối tuần, cập nhật lại template
-                       if (selectedTemplate === 'weekend' && formData.startDate) {
-                         const templateData = getQuickTemplate('weekend', formData.startDate, e.target.value);
-                         setBulkTemplateData(templateData);
-                       }
-                     }}
-                   />
-                 </div>
-               </div>
+                         {/* Date Mode Toggle */}
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="bulkSingleDayMode"
+                checked={isSingleDayMode}
+                onCheckedChange={setIsSingleDayMode}
+              />
+              <Label htmlFor="bulkSingleDayMode" className="font-medium">
+                {isSingleDayMode ? '單日模式' : '日期範圍模式'}
+              </Label>
+            </div>
+
+            {/* Form */}
+            <div className="space-y-4">
+              {isSingleDayMode ? (
+                <div>
+                  <Label htmlFor="bulkSingleDate">選擇日期 *</Label>
+                  <Input
+                    id="bulkSingleDate"
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      startDate: e.target.value,
+                      endDate: e.target.value // Tự động set endDate giống startDate
+                    }))}
+                  />
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="bulkStartDate">開始日期 *</Label>
+                    <Input
+                      id="bulkStartDate"
+                      type="date"
+                      value={formData.startDate}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, startDate: e.target.value }));
+                        // Nếu đã chọn template cuối tuần, cập nhật lại template
+                        if (selectedTemplate === 'weekend' && formData.endDate) {
+                          const templateData = getQuickTemplate('weekend', e.target.value, formData.endDate);
+                          setBulkTemplateData(templateData);
+                        }
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="bulkEndDate">結束日期 *</Label>
+                    <Input
+                      id="bulkEndDate"
+                      type="date"
+                      value={formData.endDate}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, endDate: e.target.value }));
+                        // Nếu đã chọn template cuối tuần, cập nhật lại template
+                        if (selectedTemplate === 'weekend' && formData.startDate) {
+                          const templateData = getQuickTemplate('weekend', formData.startDate, e.target.value);
+                          setBulkTemplateData(templateData);
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="bulkPrice">價格 (TWD) *</Label>
@@ -1385,29 +1489,56 @@ const AdminSpecialPricing: React.FC = () => {
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="bulkStartDateEdit">開始日期 *</Label>
-                <Input
-                  id="bulkStartDateEdit"
-                  type="date"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="bulkEndDateEdit">Đến ngày *</Label>
-                <Input
-                  id="bulkEndDateEdit"
-                  type="date"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                />
-              </div>
+            <div className="flex items-center space-x-2 mb-4">
+              <Switch
+                id="bulkEditSingleDayMode"
+                checked={isSingleDayMode}
+                onCheckedChange={setIsSingleDayMode}
+              />
+              <Label htmlFor="bulkEditSingleDayMode" className="font-medium">
+                {isSingleDayMode ? '單日模式' : '日期範圍模式'}
+              </Label>
             </div>
 
+            {isSingleDayMode ? (
+              <div>
+                <Label htmlFor="bulkEditSingleDate">選擇日期 *</Label>
+                <Input
+                  id="bulkEditSingleDate"
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    startDate: e.target.value,
+                    endDate: e.target.value // Tự động set endDate giống startDate
+                  }))}
+                />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="bulkStartDateEdit">開始日期 *</Label>
+                  <Input
+                    id="bulkStartDateEdit"
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="bulkEndDateEdit">結束日期 *</Label>
+                  <Input
+                    id="bulkEndDateEdit"
+                    type="date"
+                    value={formData.endDate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                  />
+                </div>
+              </div>
+            )}
+
             <div>
-              <Label htmlFor="bulkPriceEdit">Giá (TWD) *</Label>
+              <Label htmlFor="bulkPriceEdit">價格 (TWD) *</Label>
               <Input
                 id="bulkPriceEdit"
                 type="number"
@@ -1418,7 +1549,7 @@ const AdminSpecialPricing: React.FC = () => {
             </div>
 
             <div>
-              <Label htmlFor="bulkReasonEdit">Lý do *</Label>
+              <Label htmlFor="bulkReasonEdit">原因 *</Label>
               <Textarea
                 id="bulkReasonEdit"
                 value={formData.reason}
@@ -1437,7 +1568,7 @@ const AdminSpecialPricing: React.FC = () => {
                 checked={formData.isActive}
                 onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
               />
-              <Label htmlFor="bulkIsActiveEdit">Kích hoạt giá đặc biệt này</Label>
+              <Label htmlFor="bulkIsActiveEdit">啟用此特殊價格</Label>
             </div>
           </div>
 

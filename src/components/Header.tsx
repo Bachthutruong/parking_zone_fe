@@ -18,7 +18,6 @@ const Header: React.FC = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
             <img src="/logo.png" alt="晶順出國停車場" className="h-8 w-auto" />
-            <span className="text-xl font-bold text-white">晶順出國停車場</span>
           </Link>
 
           {/* Desktop Navigation */}

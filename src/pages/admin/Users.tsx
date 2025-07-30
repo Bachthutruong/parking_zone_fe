@@ -432,7 +432,7 @@ const AdminUsers: React.FC = () => {
   const getBookingStatusBadge = (status: string) => {
     const statusConfig = {
       'pending': { label: '等待確認', color: 'bg-yellow-100 text-yellow-800' },
-      'confirmed': { label: '預訂成功', color: 'bg-blue-100 text-blue-800' },
+      'confirmed': { label: '預約成功', color: 'bg-blue-100 text-blue-800' },
       'checked-in': { label: '已進入停車場', color: 'bg-green-100 text-green-800' },
       'checked-out': { label: '已離開停車場', color: 'bg-gray-100 text-gray-800' },
       'cancelled': { label: '已取消', color: 'bg-red-100 text-red-800' }
@@ -758,7 +758,7 @@ const AdminUsers: React.FC = () => {
                       <TableCell>
                         <div className="space-y-1 text-sm">
                           <div className="flex items-center justify-between">
-                            <span>預訂:</span>
+                            <span>預約:</span>
                             <span className="font-medium">{user.stats?.totalBookings || 0}</span>
                           </div>
                           <div className="flex items-center justify-between">
@@ -952,7 +952,7 @@ const AdminUsers: React.FC = () => {
                       <TableCell>
                         <div className="space-y-1 text-sm">
                           <div className="flex items-center justify-between">
-                            <span>預訂:</span>
+                            <span>預約:</span>
                             <span className="font-medium">{user.stats?.totalBookings || 0}</span>
                           </div>
                           <div className="flex items-center justify-between">
@@ -1130,7 +1130,7 @@ const AdminUsers: React.FC = () => {
                        <TableCell>
                          <div className="space-y-1 text-sm">
                            <div className="flex items-center justify-between">
-                             <span>預訂:</span>
+                             <span>預約:</span>
                              <span className="font-medium">{user.stats?.totalBookings || 0}</span>
                            </div>
                            <div className="flex items-center justify-between">
@@ -1324,7 +1324,7 @@ const AdminUsers: React.FC = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div className="text-center p-3 bg-gray-50 rounded">
                     <div className="text-2xl font-bold text-blue-600">{selectedUser.stats?.totalBookings || 0}</div>
-                    <div className="text-gray-500">總預訂</div>
+                    <div className="text-gray-500">總預約</div>
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded">
                     <div className="text-2xl font-bold text-green-600">{formatCurrency(selectedUser.stats?.totalSpent || 0)}</div>
@@ -1332,7 +1332,7 @@ const AdminUsers: React.FC = () => {
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded">
                     <div className="text-2xl font-bold text-purple-600">{formatCurrency(selectedUser.stats?.averageSpent || 0)}</div>
-                    <div className="text-gray-500">平均/預訂</div>
+                    <div className="text-gray-500">平均/預約</div>
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded">
                     <div className="text-2xl font-bold text-orange-600">{getTrendIcon(selectedUser.stats?.bookingTrend || 'stable')}</div>
@@ -1373,7 +1373,7 @@ const AdminUsers: React.FC = () => {
                       </div>
                     </div>
                     <div className="text-sm text-gray-600 mt-1">
-                      從 {selectedUser.stats?.vipBookingsCount || 0} 預訂VIP
+                      從 {selectedUser.stats?.vipBookingsCount || 0} 預約VIP
                     </div>
                   </div>
                 )}
@@ -1384,7 +1384,7 @@ const AdminUsers: React.FC = () => {
                 <div>
                   <h4 className="font-semibold mb-3 flex items-center">
                     <Calendar className="h-4 w-4 mr-2" />
-                    最近預訂
+                    最近預約
                   </h4>
                   <div className="space-y-2">
                     {selectedUser.stats.recentBookings.map((booking) => (

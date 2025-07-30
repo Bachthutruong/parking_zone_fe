@@ -391,10 +391,10 @@ const AdminSettings: React.FC = () => {
         bookingTerms: formData.bookingTerms,
         bookingRules: formData.bookingRules
       });
-      toast.success('預訂條款儲存成功！');
+      toast.success('預約條款儲存成功！');
     } catch (error: any) {
       console.error('Error saving booking terms:', error);
-      const errorMessage = error.response?.data?.message || error.message || '無法儲存預訂條款';
+      const errorMessage = error.response?.data?.message || error.message || '無法儲存預約條款';
       toast.error(errorMessage);
     } finally {
       setSaving(false);
@@ -490,8 +490,8 @@ const AdminSettings: React.FC = () => {
 
   const getSectionName = (section: keyof TermsData) => {
     const names = {
-      bookingTerms: '預訂條款',
-      bookingRules: '預訂規定',
+      bookingTerms: '預約條款',
+      bookingRules: '預約規定',
       privacyPolicy: '隱私政策',
       contactInfo: '聯絡資訊',
       timeSlotInterval: '時段間隔',
@@ -546,7 +546,7 @@ const AdminSettings: React.FC = () => {
       <Tabs defaultValue="general" className="space-y-6">
         <TabsList>
           <TabsTrigger value="general">一般</TabsTrigger>
-          <TabsTrigger value="booking">預訂</TabsTrigger>
+          <TabsTrigger value="booking">預約</TabsTrigger>
           <TabsTrigger value="notifications">通知</TabsTrigger>
           <TabsTrigger value="payment">付款</TabsTrigger>
           <TabsTrigger value="luggage">行李</TabsTrigger>
@@ -659,7 +659,7 @@ const AdminSettings: React.FC = () => {
                 <h4 className="font-semibold text-blue-800 mb-2">💡 注意事項</h4>
                 <ul className="text-sm text-blue-700 space-y-1">
                   <li>• 聯絡資訊將顯示在首頁</li>
-                  <li>• 營業時間會影響預訂功能</li>
+                  <li>• 營業時間會影響預約功能</li>
                   <li>• 維護模式將暫停整個系統</li>
                 </ul>
               </div>
@@ -690,7 +690,7 @@ const AdminSettings: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="bookingAdvanceHours">提前預訂 (小時)</Label>
+                  <Label htmlFor="bookingAdvanceHours">提前預約 (小時)</Label>
                   <Input
                     id="bookingAdvanceHours"
                     type="number"
@@ -722,13 +722,13 @@ const AdminSettings: React.FC = () => {
               </div>
 
               <div className="bg-yellow-50 p-4 rounded-lg">
-                <h4 className="font-semibold text-yellow-800 mb-2">⚙️ 預訂設定</h4>
+                <h4 className="font-semibold text-yellow-800 mb-2">⚙️ 預約設定</h4>
                 <ul className="text-sm text-yellow-700 space-y-1">
                   <li>• VIP折扣：適用於VIP客戶</li>
-                  <li>• 提前預訂：預訂的最短時間</li>
-                  <li>• 最少：客戶必須預訂的最少天數</li>
-                  <li>• 最大：可提前預訂的最大天數</li>
-                  <li>• 時段間隔：預訂時段的精確度</li>
+                  <li>• 提前預約：預約的最短時間</li>
+                  <li>• 最少：客戶必須預約的最少天數</li>
+                  <li>• 最大：可提前預約的最大天數</li>
+                  <li>• 時段間隔：預約時段的精確度</li>
                   <li>• 自動取消：等待確認的時間</li>
                 </ul>
               </div>
@@ -746,7 +746,7 @@ const AdminSettings: React.FC = () => {
               </div>
 
               <div>
-                <Label htmlFor="timeSlotInterval">預訂時段間隔 (分鐘)</Label>
+                <Label htmlFor="timeSlotInterval">預約時段間隔 (分鐘)</Label>
                 <select
                   id="timeSlotInterval"
                   value={formData.timeSlotInterval}
@@ -783,28 +783,28 @@ const AdminSettings: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-gray-600">
-                請在預訂停車位前仔細閱讀相關規定和條款。
+                請在預約停車位前仔細閱讀相關規定和條款。
               </p>
               
               <div>
-                <Label htmlFor="bookingTerms">預訂條款</Label>
+                <Label htmlFor="bookingTerms">預約條款</Label>
                 <Textarea
                   id="bookingTerms"
                   value={formData.bookingTerms}
                   onChange={(e) => setFormData(prev => ({ ...prev, bookingTerms: e.target.value }))}
                   rows={10}
-                  placeholder="輸入預訂條款..."
+                  placeholder="輸入預約條款..."
                 />
               </div>
 
               <div>
-                <Label htmlFor="bookingRules">預訂規定</Label>
+                <Label htmlFor="bookingRules">預約規定</Label>
                 <Textarea
                   id="bookingRules"
                   value={formData.bookingRules}
                   onChange={(e) => setFormData(prev => ({ ...prev, bookingRules: e.target.value }))}
                   rows={10}
-                  placeholder="輸入預訂規定..."
+                  placeholder="輸入預約規定..."
                 />
               </div>
 
@@ -853,7 +853,7 @@ const AdminSettings: React.FC = () => {
                   checked={formData.notificationSettings.confirmationEmail}
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, notificationSettings: { ...prev.notificationSettings, confirmationEmail: checked } }))}
                 />
-                <Label htmlFor="confirmationEmail">預訂確認電子郵件</Label>
+                <Label htmlFor="confirmationEmail">預約確認電子郵件</Label>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -978,7 +978,7 @@ const AdminSettings: React.FC = () => {
                     placeholder="1"
                   />
                   <p className="text-sm text-gray-500 mt-1">
-                    每個預訂的免費行李數量
+                    每個預約的免費行李數量
                   </p>
                 </div>
                 <div>

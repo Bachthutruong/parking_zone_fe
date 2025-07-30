@@ -97,7 +97,7 @@ const AdminTodayOverview: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return <Badge variant="default"><CheckCircle className="h-3 w-3 mr-1" />預訂成功</Badge>;
+        return <Badge variant="default"><CheckCircle className="h-3 w-3 mr-1" />預約成功</Badge>;
       case 'checked-in':
         return <Badge variant="secondary"><Car className="h-3 w-3 mr-1" />已進入停車場</Badge>;
       case 'checked-out':
@@ -203,7 +203,7 @@ const AdminTodayOverview: React.FC = () => {
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{data.summary.totalOverdue}</div>
             <p className="text-xs text-muted-foreground">
-              已超過預訂時間的車輛
+              已超過預約時間的車輛
             </p>
           </CardContent>
         </Card>
@@ -245,7 +245,7 @@ const AdminTodayOverview: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>預訂編號</TableHead>
+                <TableHead>預約編號</TableHead>
                 <TableHead>客戶</TableHead>
                 <TableHead>車牌號碼</TableHead>
                 <TableHead>停車場</TableHead>
@@ -307,8 +307,8 @@ const AdminTodayOverview: React.FC = () => {
                 {activeTab === 'overdue' && '沒有逾期車輛'}
               </h3>
               <p className="text-gray-500">
-                {activeTab === 'checkins' && '今天還沒有車輛預訂進入。'}
-                {activeTab === 'checkouts' && '今天還沒有車輛預訂離開。'}
+                {activeTab === 'checkins' && '今天還沒有車輛預約進入。'}
+                {activeTab === 'checkouts' && '今天還沒有車輛預約離開。'}
                 {activeTab === 'overdue' && '所有車輛都按時。'}
               </p>
             </div>

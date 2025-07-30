@@ -56,7 +56,7 @@ const BookingsPage: React.FC = () => {
       setTotal(response.total);
       setTotalPages(response.totalPages);
     } catch (error) {
-      toast.error('無法載入預訂清單');
+      toast.error('無法載入預約清單');
     } finally {
       setLoading(false);
     }
@@ -86,7 +86,7 @@ const BookingsPage: React.FC = () => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>預訂詳情 - ${booking.driverName}</title>
+        <title>預約詳情 - ${booking.driverName}</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 20px; }
           .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
@@ -112,8 +112,8 @@ const BookingsPage: React.FC = () => {
       </head>
       <body>
         <div class="header">
-          <h1>預訂詳細資訊</h1>
-          <p>預訂編號: ${booking._id}</p>
+          <h1>預約詳細資訊</h1>
+          <p>預約編號: ${booking._id}</p>
         </div>
 
         <div class="section">
@@ -141,7 +141,7 @@ const BookingsPage: React.FC = () => {
         </div>
 
         <div class="section">
-          <h3>預訂資訊</h3>
+          <h3>預約資訊</h3>
           <div class="info-grid">
             <div class="info-item">
               <span class="label">停車場:</span> ${booking.parkingType.name}
@@ -278,8 +278,8 @@ const BookingsPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">預訂管理</h1>
-        <p className="text-gray-600">管理系統中的所有預訂</p>
+        <h1 className="text-3xl font-bold">預約管理</h1>
+        <p className="text-gray-600">管理系統中的所有預約</p>
       </div>
 
       {/* Filters */}
@@ -359,9 +359,9 @@ const BookingsPage: React.FC = () => {
       {/* Bookings Table */}
       <Card>
         <CardHeader>
-          <CardTitle>預訂清單</CardTitle>
+          <CardTitle>預約清單</CardTitle>
           <CardDescription>
-            共 {total} 筆預訂 • 第 {page} 頁，共 {totalPages} 頁
+            共 {total} 筆預約 • 第 {page} 頁，共 {totalPages} 頁
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -402,8 +402,8 @@ const BookingsPage: React.FC = () => {
                         <div className="space-y-1">
                           <div className="font-medium">{booking.parkingType.name}</div>
                           <div className="text-sm text-gray-600">
-                            {(booking.parkingType.type || 'indoor') === 'indoor' ? '🏢 室內' : 
-                             (booking.parkingType.type || 'indoor') === 'outdoor' ? '🌤 戶外' : '♿️ 無障礙'}
+                            {booking.parkingType.icon || '🏢'} {(booking.parkingType.type || 'indoor') === 'indoor' ? '室內' : 
+                             (booking.parkingType.type || 'indoor') === 'outdoor' ? '戶外' : '無障礙'}
                           </div>
                         </div>
                       </TableCell>
@@ -530,9 +530,9 @@ const BookingsPage: React.FC = () => {
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>預訂詳細資訊</DialogTitle>
+            <DialogTitle>預約詳細資訊</DialogTitle>
             <DialogDescription>
-              預訂的詳細資訊
+              預約的詳細資訊
             </DialogDescription>
           </DialogHeader>
           
@@ -552,7 +552,7 @@ const BookingsPage: React.FC = () => {
                 </div>
                 
                 <div>
-                  <h4 className="font-semibold mb-2">預訂資訊</h4>
+                  <h4 className="font-semibold mb-2">預約資訊</h4>
                   <div className="space-y-2 text-sm">
                     <div><strong>停車場:</strong> {selectedBooking.parkingType.name}</div>
                     <div><strong>類型:</strong> {selectedBooking.parkingType.type || 'indoor'}</div>

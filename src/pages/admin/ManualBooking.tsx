@@ -330,10 +330,10 @@ const AdminManualBooking: React.FC = () => {
       setCreatedBooking(result.booking);
       setShowSuccessDialog(true);
       resetForm();
-      toast.success('手動預訂創建成功');
+      toast.success('手動預約創建成功');
     } catch (error: any) {
       console.error('Error creating manual booking:', error);
-      toast.error('無法創建手動預訂');
+      toast.error('無法創建手動預約');
     }
   };
 
@@ -422,8 +422,8 @@ const AdminManualBooking: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold">手動預訂</h1>
-          <p className="text-gray-600">為客戶創建預訂</p>
+          <h1 className="text-3xl font-bold">手動預約</h1>
+          <p className="text-gray-600">為客戶創建預約</p>
         </div>
       </div>
 
@@ -433,10 +433,10 @@ const AdminManualBooking: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center">
               <Plus className="h-5 w-5 mr-2" />
-              預訂資訊
+              預約資訊
             </CardTitle>
             <CardDescription>
-              輸入新預訂的詳細資訊
+              輸入新預約的詳細資訊
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -530,12 +530,12 @@ const AdminManualBooking: React.FC = () => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="driverName">司機姓名 *</Label>
+                  <Label htmlFor="driverName">您的姓名 *</Label>
                   <Input
                     id="driverName"
                     value={formData.driverName}
                     onChange={(e) => setFormData(prev => ({ ...prev, driverName: e.target.value }))}
-                    placeholder="輸入司機姓名"
+                    placeholder="輸入您的姓名"
                   />
                 </div>
                 <div>
@@ -598,7 +598,8 @@ const AdminManualBooking: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="luggageCount">行李數量</Label>
+                  <Label htmlFor="luggageCount">行李數量（免費1個，第2個以上每一個加100元）
+                  </Label>
                   <Input
                     id="luggageCount"
                     type="number"
@@ -687,14 +688,14 @@ const AdminManualBooking: React.FC = () => {
               </div>
 
               <div>
-                <Label htmlFor="status">預訂狀態</Label>
+                <Label htmlFor="status">預約狀態</Label>
                 <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                                           <SelectItem value="pending">等待確認</SelectItem>
-                      <SelectItem value="confirmed">預訂成功</SelectItem>
+                      <SelectItem value="confirmed">預約成功</SelectItem>
                       <SelectItem value="checked-in">已進入停車場</SelectItem>
                       <SelectItem value="checked-out">已離開停車場</SelectItem>
                   </SelectContent>
@@ -703,7 +704,7 @@ const AdminManualBooking: React.FC = () => {
             </div>
 
             <Button onClick={handleSubmit} className="w-full">
-              創建手動預訂
+              創建手動預約
             </Button>
           </CardContent>
         </Card>
@@ -1047,17 +1048,17 @@ const AdminManualBooking: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <CheckCircle className="h-5 w-5 mr-2 text-green-500" />
-              預訂成功
+              預約成功
             </DialogTitle>
             <DialogDescription>
-              手動預訂已成功創建
+              手動預約已成功創建
             </DialogDescription>
           </DialogHeader>
           
           {createdBooking && (
             <div className="space-y-4">
               <div className="p-4 bg-green-50 rounded-lg">
-                <div className="font-semibold">預訂編號: {createdBooking.bookingNumber}</div>
+                <div className="font-semibold">預約編號: {createdBooking.bookingNumber}</div>
                 <div className="text-sm text-gray-600">
                   客戶: {createdBooking.driverName}
                 </div>

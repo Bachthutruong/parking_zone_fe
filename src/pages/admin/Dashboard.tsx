@@ -160,7 +160,7 @@ const Dashboard: React.FC = () => {
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       pending: { label: '等待確認', variant: 'secondary' as const, color: 'bg-yellow-100 text-yellow-800' },
-      confirmed: { label: '預訂成功', variant: 'default' as const, color: 'bg-blue-100 text-blue-800' },
+      confirmed: { label: '預約成功', variant: 'default' as const, color: 'bg-blue-100 text-blue-800' },
       'checked-in': { label: '已進入停車場', variant: 'default' as const, color: 'bg-green-100 text-green-800' },
       'checked-out': { label: '已離開停車場', variant: 'secondary' as const, color: 'bg-gray-100 text-gray-800' },
       cancelled: { label: '已取消', variant: 'destructive' as const, color: 'bg-red-100 text-red-800' }
@@ -245,7 +245,7 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">今日預訂</CardTitle>
+            <CardTitle className="text-sm font-medium">今日預約</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -362,7 +362,7 @@ const Dashboard: React.FC = () => {
               <Clock className="h-5 w-5" />
               <span>高峰時段</span>
             </CardTitle>
-            <CardDescription>每日各時段的預訂數量</CardDescription>
+            <CardDescription>每日各時段的預約數量</CardDescription>
         </CardHeader>
         <CardContent style={{ height: 300 }}>
           <ResponsiveContainer width="100%" height="100%">
@@ -382,7 +382,7 @@ const Dashboard: React.FC = () => {
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">概覽</TabsTrigger>
           <TabsTrigger value="revenue">營收</TabsTrigger>
-          <TabsTrigger value="bookings">預訂</TabsTrigger>
+          <TabsTrigger value="bookings">預約</TabsTrigger>
           <TabsTrigger value="customers">客戶</TabsTrigger>
           <TabsTrigger value="parking">停車場</TabsTrigger>
         </TabsList>
@@ -395,10 +395,10 @@ const Dashboard: React.FC = () => {
               <CardHeader>
                                   <CardTitle className="flex items-center space-x-2">
                     <Activity className="h-5 w-5" />
-                    <span>最近預訂</span>
+                    <span>最近預約</span>
                   </CardTitle>
                   <CardDescription>
-                    最新預訂清單
+                    最新預約清單
                   </CardDescription>
               </CardHeader>
               <CardContent>
@@ -441,7 +441,7 @@ const Dashboard: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                                       <Button className="h-20 flex flex-col space-y-2">
                       <Plus className="h-6 w-6" />
-                      <span>創建預訂</span>
+                      <span>創建預約</span>
                     </Button>
                     <Button variant="outline" className="h-20 flex flex-col space-y-2">
                       <BarChart3 className="h-6 w-6" />
@@ -519,8 +519,8 @@ const Dashboard: React.FC = () => {
         <TabsContent value="bookings" className="space-y-6">
           <Card>
             <CardHeader>
-                          <CardTitle>預訂趨勢</CardTitle>
-            <CardDescription>按狀態的預訂統計</CardDescription>
+                          <CardTitle>預約趨勢</CardTitle>
+            <CardDescription>按狀態的預約統計</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
@@ -540,21 +540,21 @@ const Dashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">成功預訂</CardTitle>
+                <CardTitle className="text-lg">成功預約</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-green-600">2,679</div>
-                <p className="text-sm text-gray-500">94.2% 總預訂數</p>
+                <p className="text-sm text-gray-500">94.2% 總預約數</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">已取消預訂</CardTitle>
+                <CardTitle className="text-lg">已取消預約</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-red-600">168</div>
-                <p className="text-sm text-gray-500">5.8% 總預訂數</p>
+                <p className="text-sm text-gray-500">5.8% 總預約數</p>
               </CardContent>
             </Card>
 
@@ -564,7 +564,7 @@ const Dashboard: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-yellow-600">45</div>
-                <p className="text-sm text-gray-500">1.6% 總預訂數</p>
+                <p className="text-sm text-gray-500">1.6% 總預約數</p>
               </CardContent>
             </Card>
           </div>
@@ -575,7 +575,7 @@ const Dashboard: React.FC = () => {
           <Card>
             <CardHeader>
                           <CardTitle>頂級客戶</CardTitle>
-            <CardDescription>預訂數量最高的前5名客戶</CardDescription>
+            <CardDescription>預約數量最高的前5名客戶</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -588,12 +588,12 @@ const Dashboard: React.FC = () => {
                       <div>
                         <h4 className="font-semibold">{customer.name}</h4>
                         <p className="text-sm text-gray-500">
-                          {customer.bookings} 預訂 • {formatCurrency(customer.totalSpent)}
+                          {customer.bookings} 預約 • {formatCurrency(customer.totalSpent)}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-gray-500">最後預訂</p>
+                      <p className="text-sm text-gray-500">最後預約</p>
                       <p className="text-sm font-medium">{formatDate(customer.lastBooking)}</p>
                     </div>
                   </div>

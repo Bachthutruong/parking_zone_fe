@@ -434,7 +434,7 @@ const BookingPage: React.FC = () => {
     }
 
     if (!formData.checkInTime || !formData.checkOutTime) {
-      toast.error('請選擇預訂時間');
+      toast.error('請選擇預約時間');
       return;
     }
 
@@ -446,7 +446,7 @@ const BookingPage: React.FC = () => {
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       
       if (diffDays < minBookingDays) {
-        toast.error(`最少需要預訂 ${minBookingDays} 天，您選擇了 ${diffDays} 天`);
+        toast.error(`最少需要預約 ${minBookingDays} 天，您選擇了 ${diffDays} 天`);
         return;
       }
     }
@@ -518,9 +518,9 @@ const BookingPage: React.FC = () => {
       console.error('Error creating booking:', error);
       // Handle authentication errors gracefully for public booking
       if (error.response?.status === 401) {
-        toast.error('請登入以創建預訂');
+        toast.error('請登入以創建預約');
       } else {
-        const errorMessage = error.response?.data?.message || error.message || '無法創建預訂';
+        const errorMessage = error.response?.data?.message || error.message || '無法創建預約';
         toast.error(errorMessage);
       }
     } finally {
@@ -528,13 +528,19 @@ const BookingPage: React.FC = () => {
     }
   };
 
-  const getParkingTypeIcon = (type: string) => {
+  const getParkingTypeIcon = (parkingType: any) => {
+    // Use icon from database if available, otherwise fallback to type-based icons
+    if (parkingType.icon) {
+      return parkingType.icon;
+    }
+    
+    // Fallback to type-based icons
     const iconMap = {
       indoor: '🏢',
       outdoor: '☀️',
       disabled: '♿'
     };
-    return iconMap[type as keyof typeof iconMap] || '🚗';
+    return iconMap[parkingType.type as keyof typeof iconMap] || '🚗';
   };
 
   const getParkingTypeBadge = (type: string) => {
@@ -591,7 +597,7 @@ const BookingPage: React.FC = () => {
               </CardHeader>
               <CardContent className="p-6 space-y-6">
                 <p className="text-gray-600 mb-6 leading-relaxed">
-                  請在預訂停車位之前仔細閱讀規定和條款。
+                  請在預約停車位之前仔細閱讀規定和條款。
                 </p>
                 
                 <div className="space-y-6">
@@ -600,7 +606,7 @@ const BookingPage: React.FC = () => {
                     <div className="bg-blue-50 rounded-lg p-4">
                       <h4 className="font-semibold mb-3 text-blue-800 flex items-center">
                         <FileText className="h-4 w-4 mr-2" />
-                        預訂條款
+                        預約條款
                       </h4>
                       <div className="whitespace-pre-line text-sm leading-relaxed text-gray-700">
                         {bookingTerms}
@@ -613,7 +619,7 @@ const BookingPage: React.FC = () => {
                     <div className="bg-green-50 rounded-lg p-4">
                       <h4 className="font-semibold mb-3 text-green-800 flex items-center">
                         <Shield className="h-4 w-4 mr-2" />
-                        預訂規定
+                        預約規定
                       </h4>
                       <div className="whitespace-pre-line text-sm leading-relaxed text-gray-700">
                         {bookingRules}
@@ -629,11 +635,11 @@ const BookingPage: React.FC = () => {
                         <div className="space-y-3 text-sm text-gray-700">
                           <div className="flex items-start space-x-3">
                             <span className="font-bold text-blue-600">1.</span>
-                            <span>客戶必須按預訂時間準時到達。</span>
+                            <span>客戶必須按預約時間準時到達。</span>
                           </div>
                           <div className="flex items-start space-x-3">
                             <span className="font-bold text-blue-600">2.</span>
-                            <span>不得超過預訂時間停放車輛。</span>
+                            <span>不得超過預約時間停放車輛。</span>
                           </div>
                           <div className="flex items-start space-x-3">
                             <span className="font-bold text-blue-600">3.</span>
@@ -711,7 +717,7 @@ const BookingPage: React.FC = () => {
                           <CardContent className="p-6">
                             <div className="flex items-start justify-between mb-4">
                               <div className="flex items-center space-x-3">
-                                <div className="text-3xl">{getParkingTypeIcon(type.type || 'indoor')}</div>
+                                <div className="text-3xl">{getParkingTypeIcon(type)}</div>
                                                               <div>
                                 <h3 className="font-bold text-lg text-gray-900">{type.name}</h3>
                                                               <div className="flex items-center space-x-2 mt-2">
@@ -758,7 +764,7 @@ const BookingPage: React.FC = () => {
                 {formData.parkingTypeId && (
                   <div className="space-y-6">
                     <div>
-                      <Label className="text-lg font-semibold text-gray-800 mb-4 block">選擇預訂時間</Label>
+                      <Label className="text-lg font-semibold text-gray-800 mb-4 block">選擇預約時間</Label>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <Label htmlFor="checkInTime" className="text-sm font-medium text-gray-700">進入時間 *</Label>
@@ -792,7 +798,7 @@ const BookingPage: React.FC = () => {
                             />
                           </div>
                           <p className="text-xs text-gray-500">
-                            最少預訂 {minBookingDays} 天
+                            最少預約 {minBookingDays} 天
                           </p>
                         </div>
                         <div className="space-y-2">
@@ -812,7 +818,7 @@ const BookingPage: React.FC = () => {
                                   minCheckOutDate.setDate(checkInDate.getDate() + minBookingDays);
                                   
                                   if (checkOutDate < minCheckOutDate) {
-                                    toast.error(`最少需要預訂 ${minBookingDays} 天`);
+                                    toast.error(`最少需要預約 ${minBookingDays} 天`);
                                     return;
                                   }
                                 }
@@ -986,219 +992,7 @@ const BookingPage: React.FC = () => {
       case 4:
         return (
           <div className="space-y-6">
-            <Card className="border-0 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-indigo-50 to-blue-50 border-b">
-                <CardTitle className="flex items-center space-x-3 text-indigo-900">
-                  <User className="h-6 w-6 text-indigo-600" />
-                  <span>個人資料</span>
-                  {isVIP && (
-                    <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0">
-                      👑 VIP Member 
-                    </Badge>
-                  )}
-                </CardTitle>
-                <CardDescription className="text-indigo-700">
-                  填寫個人資料以完成預訂
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                {/* VIP Code Section */}
-                {!isVIP && (
-                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-yellow-800 font-medium">👑 您是VIP會員嗎？</span>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowVIPCodeInput(!showVIPCodeInput)}
-                        className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
-                      >
-                        {showVIPCodeInput ? '隱藏' : '輸入VIP碼'}
-                      </Button>
-                    </div>
-                    
-                    {showVIPCodeInput && (
-                      <div className="space-y-3">
-                        <div className="flex space-x-2">
-                          <Input
-                            placeholder="輸入您的VIP碼"
-                            value={vipCode}
-                            onChange={(e) => setVipCode(e.target.value)}
-                            className="flex-1"
-                          />
-                          <Button
-                            type="button"
-                            onClick={handleCheckVIPByCode}
-                            disabled={vipCodeLoading}
-                            className="bg-[#39653f] hover:bg-[#2d4f33] text-white"
-                          >
-                            {vipCodeLoading ? '正在檢查...' : '檢查'}
-                          </Button>
-                        </div>
-                        <p className="text-xs text-yellow-700">
-                          💡 VIP碼格式: 年份 + 電話號碼 (例如: 1140908805805)
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Discount Code Section */}
-                <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-green-800 font-medium">🎫 您有折扣碼嗎？</span>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex space-x-2">
-                      <Input
-                        placeholder="輸入折扣碼"
-                        value={formData.discountCode}
-                        onChange={(e) => setFormData(prev => ({ ...prev, discountCode: e.target.value }))}
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        onClick={handleDiscountCodeApply}
-                        disabled={!formData.discountCode?.trim() || !formData.parkingTypeId || !formData.checkInTime || !formData.checkOutTime}
-                        className="bg-[#39653f] hover:bg-[#2d4f33] text-white"
-                      >
-                        應用
-                      </Button>
-                    </div>
-                    <p className="text-xs text-green-700">
-                      💡 輸入有效的折扣碼以獲得額外優惠
-                    </p>
-                  </div>
-                  
-                  {/* Show discount info if applied */}
-                  {discountInfo && (
-                    <div className="mt-3 p-3 bg-white rounded-lg border border-green-200">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <span className="text-green-600">✅</span>
-                        <span className="font-medium text-green-800">折扣已應用！</span>
-                      </div>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span>折扣碼:</span>
-                          <span className="font-semibold text-green-600">{discountInfo.code}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>折扣金額:</span>
-                          <span className="font-semibold text-green-600">-{formatCurrency(discountInfo.discountAmount)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>最終金額:</span>
-                          <span className="font-semibold text-green-600">{formatCurrency(discountInfo.finalAmount)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="driverName" className="text-sm font-medium text-gray-700">司機姓名 *</Label>
-                    <Input
-                      id="driverName"
-                      value={formData.driverName}
-                      onChange={(e) => setFormData(prev => ({ ...prev, driverName: e.target.value }))}
-                      placeholder="輸入司機姓名"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-sm font-medium text-gray-700">電話號碼 *</Label>
-                    <Input
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                      placeholder="輸入電話號碼"
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email *</Label>
-                    <div className="relative">
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                        placeholder="輸入電子郵件"
-                        className={isVIP ? 'border-yellow-400 bg-yellow-50' : ''}
-                      />
-                      {isVIP && currentUser && (
-                        <div className="absolute -top-2 -right-2">
-                          <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 text-xs">
-                            👑 VIP {currentUser.vipDiscount}%
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-                    {isVIP && currentUser && (
-                      <div className="text-xs text-yellow-600 bg-yellow-50 p-2 rounded">
-                        ✨ 歡迎VIP會員！您自動享有{currentUser.vipDiscount}%折扣。
-                      </div>
-                    )}
-                    {!isVIP && formData.email && !currentUser && (
-                      <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                        ℹ️ 普通客戶 - 無VIP優惠
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="licensePlate" className="text-sm font-medium text-gray-700">車牌號碼 *</Label>
-                    <Input
-                      id="licensePlate"
-                      value={formData.licensePlate}
-                      onChange={(e) => setFormData(prev => ({ ...prev, licensePlate: e.target.value.toUpperCase() }))}
-                      placeholder="輸入車牌號碼"
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="passengerCount" className="text-sm font-medium text-gray-700">乘客人數</Label>
-                    <Input
-                      id="passengerCount"
-                      type="number"
-                      min="1"
-                      value={formData.passengerCount}
-                      onChange={(e) => setFormData(prev => ({ ...prev, passengerCount: parseInt(e.target.value) }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="luggageCount" className="text-sm font-medium text-gray-700">行李數量</Label>
-                    <Input
-                      id="luggageCount"
-                      type="number"
-                      min="0"
-                      value={formData.luggageCount}
-                      onChange={(e) => setFormData(prev => ({ ...prev, luggageCount: parseInt(e.target.value) }))}
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="notes" className="text-sm font-medium text-gray-700">備註</Label>  
-                  <Textarea
-                    id="notes"
-                    placeholder="輸入備註 (如果有的話)"
-                    rows={3}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Pricing Summary */}
+            {/* Pricing Summary - Moved to top */}
             {pricing && (
               <Card className="border-0 shadow-lg">
                 <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b">
@@ -1215,7 +1009,7 @@ const BookingPage: React.FC = () => {
                         <div>
                           <span className="font-semibold text-gray-900">基本價格</span>
                           <div className="text-sm text-gray-600">
-                            {parkingTypes.find(t => t._id === formData.parkingTypeId)?.name} • {pricing.durationDays} ngày
+                            {parkingTypes.find(t => t._id === formData.parkingTypeId)?.name} • {pricing.durationDays} 天
                           </div>
                         </div>
                         <span className="font-semibold text-gray-900">{formatCurrency(pricing.totalPrice)}</span>
@@ -1231,11 +1025,15 @@ const BookingPage: React.FC = () => {
                             <div key={index} className="flex justify-between items-center text-sm bg-white p-2 rounded">
                               <div className="flex items-center space-x-2">
                                 <span className="text-gray-600">
-                                  {new Date(dayPrice.date).toLocaleDateString('vi-VN', {
-                                    weekday: 'short',
-                                    month: 'short',
-                                    day: 'numeric'
-                                  })}
+                                  {(() => {
+                                    const date = new Date(dayPrice.date);
+                                    const year = date.getFullYear();
+                                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                                    const day = String(date.getDate()).padStart(2, '0');
+                                    const weekday = date.getDay();
+                                    const weekdayMap = ['天', '一', '二', '三', '四', '五', '六'];
+                                    return `${year}/${month}/${day} (星期${weekdayMap[weekday]})`;
+                                  })()}
                                 </span>
                                 {dayPrice.isSpecialPrice && (
                                   <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-200 max-w-32 truncate" title={dayPrice.specialPriceReason}>
@@ -1430,6 +1228,220 @@ const BookingPage: React.FC = () => {
               </Card>
             )}
 
+            {/* Personal Information Form */}
+            <Card className="border-0 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-indigo-50 to-blue-50 border-b">
+                <CardTitle className="flex items-center space-x-3 text-indigo-900">
+                  <User className="h-6 w-6 text-indigo-600" />
+                  <span>個人資料</span>
+                  {isVIP && (
+                    <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0">
+                      👑 VIP Member 
+                    </Badge>
+                  )}
+                </CardTitle>
+                <CardDescription className="text-indigo-700">
+                  填寫個人資料以完成預約
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                {/* VIP Code Section */}
+                {!isVIP && (
+                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-yellow-800 font-medium">👑 您是VIP會員嗎？</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowVIPCodeInput(!showVIPCodeInput)}
+                        className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+                      >
+                        {showVIPCodeInput ? '隱藏' : '輸入VIP碼'}
+                      </Button>
+                    </div>
+                    
+                    {showVIPCodeInput && (
+                      <div className="space-y-3">
+                        <div className="flex space-x-2">
+                          <Input
+                            placeholder="輸入您的VIP碼"
+                            value={vipCode}
+                            onChange={(e) => setVipCode(e.target.value)}
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            onClick={handleCheckVIPByCode}
+                            disabled={vipCodeLoading}
+                            className="bg-[#39653f] hover:bg-[#2d4f33] text-white"
+                          >
+                            {vipCodeLoading ? '正在檢查...' : '檢查'}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-yellow-700">
+                          💡 VIP碼格式: 年份 + 電話號碼 (例如: 1140908805805)
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Discount Code Section */}
+                <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-green-800 font-medium">🎫 您有折扣碼嗎？</span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex space-x-2">
+                      <Input
+                        placeholder="輸入折扣碼"
+                        value={formData.discountCode}
+                        onChange={(e) => setFormData(prev => ({ ...prev, discountCode: e.target.value }))}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleDiscountCodeApply}
+                        disabled={!formData.discountCode?.trim() || !formData.parkingTypeId || !formData.checkInTime || !formData.checkOutTime}
+                        className="bg-[#39653f] hover:bg-[#2d4f33] text-white"
+                      >
+                        應用
+                      </Button>
+                    </div>
+                    <p className="text-xs text-green-700">
+                      💡 輸入有效的折扣碼以獲得額外優惠
+                    </p>
+                  </div>
+                  
+                  {/* Show discount info if applied */}
+                  {discountInfo && (
+                    <div className="mt-3 p-3 bg-white rounded-lg border border-green-200">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <span className="text-green-600">✅</span>
+                        <span className="font-medium text-green-800">折扣已應用！</span>
+                      </div>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span>折扣碼:</span>
+                          <span className="font-semibold text-green-600">{discountInfo.code}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>折扣金額:</span>
+                          <span className="font-semibold text-green-600">-{formatCurrency(discountInfo.discountAmount)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>最終金額:</span>
+                          <span className="font-semibold text-green-600">{formatCurrency(discountInfo.finalAmount)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="driverName" className="text-sm font-medium text-gray-700">您的姓名 *</Label>
+                    <Input
+                      id="driverName"
+                      value={formData.driverName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, driverName: e.target.value }))}
+                      placeholder="輸入您的姓名"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="text-sm font-medium text-gray-700">電話號碼 *</Label>
+                    <Input
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="輸入電話號碼"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm font-medium text-gray-700">信箱 *</Label>
+                    <div className="relative">
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="輸入電子郵件"
+                        className={isVIP ? 'border-yellow-400 bg-yellow-50' : ''}
+                      />
+                      {isVIP && currentUser && (
+                        <div className="absolute -top-2 -right-2">
+                          <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 text-xs">
+                            👑 VIP {currentUser.vipDiscount}%
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                    {isVIP && currentUser && (
+                      <div className="text-xs text-yellow-600 bg-yellow-50 p-2 rounded">
+                        ✨ 歡迎VIP會員！您自動享有{currentUser.vipDiscount}%折扣。
+                      </div>
+                    )}
+                    {!isVIP && formData.email && !currentUser && (
+                      <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                        ℹ️ 普通客戶 - 無VIP優惠
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="licensePlate" className="text-sm font-medium text-gray-700">車牌號碼 *</Label>
+                    <Input
+                      id="licensePlate"
+                      value={formData.licensePlate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, licensePlate: e.target.value.toUpperCase() }))}
+                      placeholder="輸入車牌號碼"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="passengerCount" className="text-sm font-medium text-gray-700">接駁人數</Label>
+                    <Input
+                      id="passengerCount"
+                      type="number"
+                      min="1"
+                      value={formData.passengerCount}
+                      onChange={(e) => setFormData(prev => ({ ...prev, passengerCount: parseInt(e.target.value) }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="luggageCount" className="text-sm font-medium text-gray-700">行李數量（免費1個，第2個以上每一個加100元）
+                    </Label>
+                    <Input
+                      id="luggageCount"
+                      type="number"
+                      min="0"
+                      value={formData.luggageCount}
+                      onChange={(e) => setFormData(prev => ({ ...prev, luggageCount: parseInt(e.target.value) }))}
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="notes" className="text-sm font-medium text-gray-700">備註</Label>  
+                  <Textarea
+                    id="notes"
+                    placeholder="輸入備註 (如果有的話)"
+                    rows={3}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Terms Agreement */}
             <Card className="border-0 shadow-lg">
               <CardContent className="p-6">
@@ -1440,7 +1452,7 @@ const BookingPage: React.FC = () => {
                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, termsAccepted: !!checked }))}
                   />
                   <Label htmlFor="termsAccepted" className="text-sm font-medium">
-                    我同意所有預訂條款和條件
+                    我同意所有預約條款和條件
                   </Label>
                 </div>
               </CardContent>
@@ -1528,25 +1540,31 @@ const BookingPage: React.FC = () => {
                         <h3 className="font-semibold text-blue-900">已選擇時間:</h3>
                         <div className="flex items-center space-x-4 text-sm text-blue-800">
                           <span>
-                            <strong>進入:</strong> {new Date(formData.checkInTime).toLocaleDateString('zh-TW', {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                            <strong>進入:</strong> {(() => {
+                              const date = new Date(formData.checkInTime);
+                              const year = date.getFullYear();
+                              const month = String(date.getMonth() + 1).padStart(2, '0');
+                              const day = String(date.getDate()).padStart(2, '0');
+                              const weekday = date.getDay();
+                              const weekdayMap = ['天', '一', '二', '三', '四', '五', '六'];
+                              const hours = String(date.getHours()).padStart(2, '0');
+                              const minutes = String(date.getMinutes()).padStart(2, '0');
+                              return `${year}/${month}/${day} (星期${weekdayMap[weekday]}) ${hours}:${minutes}`;
+                            })()}
                           </span>
                           <span className="text-blue-600">→</span>
                           <span>
-                            <strong>離開:</strong> {new Date(formData.checkOutTime).toLocaleDateString('zh-TW', {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                            <strong>離開:</strong> {(() => {
+                              const date = new Date(formData.checkOutTime);
+                              const year = date.getFullYear();
+                              const month = String(date.getMonth() + 1).padStart(2, '0');
+                              const day = String(date.getDate()).padStart(2, '0');
+                              const weekday = date.getDay();
+                              const weekdayMap = ['天', '一', '二', '三', '四', '五', '六'];
+                              const hours = String(date.getHours()).padStart(2, '0');
+                              const minutes = String(date.getMinutes()).padStart(2, '0');
+                              return `${year}/${month}/${day} (星期${weekdayMap[weekday]}) ${hours}:${minutes}`;
+                            })()}
                           </span>
                         </div>
                       </div>
@@ -1609,7 +1627,7 @@ const BookingPage: React.FC = () => {
                   disabled={loading || !formData.termsAccepted}
                   className="px-8 py-3 bg-[#39653f] hover:bg-[#2d4f33]"
                 >
-                  {loading ? '正在處理...' : '完成預訂'}
+                  {loading ? '正在處理...' : '完成預約'}
                 </Button>
               )}
             </div>

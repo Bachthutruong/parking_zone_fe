@@ -46,13 +46,13 @@ const ConflictNotification: React.FC<ConflictNotificationProps> = ({
   const getConflictMessage = () => {
     switch (conflictType) {
       case 'full':
-        return '所選時間範圍內的所有日期都已被預訂。請選擇其他時間範圍。';
+        return '所選時間範圍內的所有日期都已被預約。請選擇其他時間範圍。';
       case 'major':
-        return '所選時間範圍內的大部分日期已被預訂。只剩下少數空閒日期。';
+        return '所選時間範圍內的大部分日期已被預約。只剩下少數空閒日期。';
       case 'minor':
-        return '所選時間範圍內的部分日期已被預訂。';
+        return '所選時間範圍內的部分日期已被預約。';
       default:
-        return '預訂時間有衝突。';
+        return '預約時間有衝突。';
     }
   };
 
@@ -89,7 +89,7 @@ const ConflictNotification: React.FC<ConflictNotificationProps> = ({
               {availableDays} 天空閒
             </Badge>
             <Badge variant="outline" className="bg-red-100 text-red-800">
-              {conflictingDays.length} 天已預訂
+              {conflictingDays.length} 天已預約
             </Badge>
           </div>
         </div>
@@ -110,7 +110,7 @@ const ConflictNotification: React.FC<ConflictNotificationProps> = ({
 
         {/* Conflicting Days */}
         <div>
-          <h4 className="font-medium mb-2">已被預訂的日期:</h4>
+          <h4 className="font-medium mb-2">已被預約的日期:</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {conflictingDays.map((day, index) => (
               <div key={index} className="flex items-center space-x-2 text-sm">
@@ -136,7 +136,7 @@ const ConflictNotification: React.FC<ConflictNotificationProps> = ({
             )}
             {conflictType === 'minor' && (
               <>
-                <li>• 可以預訂剩餘的空閒日期</li>
+                <li>• 可以預約剩餘的空閒日期</li>
                 <li>• 或選擇其他時間範圍</li>
               </>
             )}

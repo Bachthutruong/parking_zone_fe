@@ -61,12 +61,12 @@ const LookupPage: React.FC = () => {
       setFilteredBookings(result || []);
       
       if (result?.length === 0) {
-        toast('找不到任何預訂', { icon: 'ℹ️' });
+        toast('找不到任何預約', { icon: 'ℹ️' });
       }
     } catch (error: any) {
       // Handle authentication errors gracefully for public lookup
       if (error.response?.status === 401) {
-        toast.error('請登入以查詢預訂');
+        toast.error('請登入以查詢預約');
       } else {
         toast.error(error.message || '搜尋時發生錯誤');
       }
@@ -83,9 +83,9 @@ const LookupPage: React.FC = () => {
     } catch (error: any) {
       // Handle authentication errors gracefully for public lookup
       if (error.response?.status === 401) {
-        toast.error('請登入以查看預訂詳情');
+        toast.error('請登入以查看預約詳情');
       } else {
-        toast.error(error.message || '無法載入預訂詳情');
+        toast.error(error.message || '無法載入預約詳情');
       }
     }
   };
@@ -93,7 +93,7 @@ const LookupPage: React.FC = () => {
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       pending: { label: '等待確認', variant: 'secondary' as const, color: 'bg-yellow-100 text-yellow-800' },
-      confirmed: { label: '預訂成功', variant: 'default' as const, color: 'bg-blue-100 text-blue-800' },
+      confirmed: { label: '預約成功', variant: 'default' as const, color: 'bg-blue-100 text-blue-800' },
       'checked-in': { label: '已進入停車場', variant: 'default' as const, color: 'bg-green-100 text-green-800' },
       'checked-out': { label: '已離開停車場', variant: 'secondary' as const, color: 'bg-gray-100 text-gray-800' },
       cancelled: { label: '已取消', variant: 'destructive' as const, color: 'bg-red-100 text-red-800' }
@@ -122,8 +122,14 @@ const LookupPage: React.FC = () => {
     });
   };
 
-  const getParkingTypeIcon = (type: string) => {
-    switch (type) {
+  const getParkingTypeIcon = (parkingType: any) => {
+    // Use icon from database if available, otherwise fallback to type-based icons
+    if (parkingType.icon) {
+      return parkingType.icon;
+    }
+    
+    // Fallback to type-based icons
+    switch (parkingType.type || parkingType) {
       case 'indoor': return '🏢';
       case 'outdoor': return '🌤';
       case 'disabled': return '♿️';
@@ -182,8 +188,8 @@ const LookupPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">查詢預訂</h1>
-        <p className="text-gray-600">請輸入電話號碼或車牌號碼以查詢預訂</p>
+        <h1 className="text-3xl font-bold">查詢預約</h1>
+        <p className="text-gray-600">請輸入電話號碼或車牌號碼以查詢預約</p>
       </div>
 
       {/* Search Form */}
@@ -191,7 +197,7 @@ const LookupPage: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Search className="h-5 w-5" />
-            <span>查詢預訂</span>
+            <span>查詢預約</span>
           </CardTitle>
           <CardDescription>
             選擇搜索方法並輸入信息
@@ -296,7 +302,7 @@ const LookupPage: React.FC = () => {
                     >
                       <option value="">所有狀態</option>
                       <option value="pending">等待確認</option>
-                      <option value="confirmed">預訂成功</option>
+                      <option value="confirmed">預約成功</option>
                       <option value="checked-in">已進入停車場</option>
                       <option value="checked-out">已離開停車場</option>
                       <option value="cancelled">已取消</option> 
@@ -357,7 +363,7 @@ const LookupPage: React.FC = () => {
           <CardHeader>
             <CardTitle>搜索結果</CardTitle>
             <CardDescription>
-              找到 {filteredBookings.length} 預訂 {filteredBookings.length !== bookings.length && `(總共 ${bookings.length})`}
+              找到 {filteredBookings.length} 預約 {filteredBookings.length !== bookings.length && `(總共 ${bookings.length})`}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -385,7 +391,7 @@ const LookupPage: React.FC = () => {
                             <div className="flex items-center space-x-2">
                               <MapPin className="h-4 w-4" />
                               <span>{booking.parkingType.name}</span>
-                              <span className="text-lg">{getParkingTypeIcon(booking.parkingType.type || 'indoor')}</span>
+                              <span className="text-lg">{getParkingTypeIcon(booking.parkingType)}</span>
                             </div>
                           </div>
                           
@@ -450,9 +456,9 @@ const LookupPage: React.FC = () => {
         <Card>
           <CardContent className="p-8 text-center">
             <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-600 mb-2">找不到預訂</h3>
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">找不到預約</h3>
             <p className="text-gray-500">
-              找不到任何預訂與 {searchType === 'phone' ? '電話號碼' : '車牌號碼'} 相關。
+              找不到任何預約與 {searchType === 'phone' ? '電話號碼' : '車牌號碼'} 相關。
             </p>
           </CardContent>
         </Card>
@@ -462,9 +468,9 @@ const LookupPage: React.FC = () => {
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>預訂詳細信息</DialogTitle>
+            <DialogTitle>預約詳細信息</DialogTitle>
             <DialogDescription>
-              預訂詳細信息
+              預約詳細信息
             </DialogDescription>
           </DialogHeader>
           
@@ -495,12 +501,12 @@ const LookupPage: React.FC = () => {
               <div>
                 <h4 className="font-semibold mb-3 flex items-center">
                   <Calendar className="h-4 w-4 mr-2" />
-                  預訂信息
+                  預約信息
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div className="space-y-2">
                     <div><strong>停車場:</strong> {selectedBooking.parkingType.name}</div>
-                    <div><strong>類型:</strong> {getParkingTypeIcon(selectedBooking.parkingType.type || 'indoor')} {selectedBooking.parkingType.type || 'indoor'}</div>
+                    <div><strong>類型:</strong> {getParkingTypeIcon(selectedBooking.parkingType)} {selectedBooking.parkingType.type || 'indoor'}</div>
                     <div><strong>狀態:</strong> {getStatusBadge(selectedBooking.status)}</div>
                   </div>
                   <div className="space-y-2">

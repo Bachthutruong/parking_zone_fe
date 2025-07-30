@@ -13,8 +13,8 @@ import {
   Phone, 
   Mail, 
   FileText,
-  Download,
-  Share2,
+  // Download,
+  // Share2,
   Home,
 //   ArrowLeft,
   CreditCard,
@@ -25,7 +25,7 @@ import {
   Sun,
   Accessibility
 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+// import { toast } from 'react-hot-toast';
 import { getSystemSettings } from '@/services/systemSettings';
 import type { SystemSettings } from '@/types';
 
@@ -112,8 +112,14 @@ const BookingConfirmationPage: React.FC = () => {
     });
   };
 
-  const getParkingTypeIcon = (type: string) => {
-    switch (type) {
+  const getParkingTypeIcon = (parkingType: any) => {
+    // Use icon from database if available, otherwise fallback to type-based icons
+    if (parkingType.icon) {
+      return <span className="text-lg">{parkingType.icon}</span>;
+    }
+    
+    // Fallback to type-based icons
+    switch (parkingType.type || parkingType) {
       case 'indoor':
         return <Building className="h-5 w-5 text-blue-600" />;
       case 'outdoor':
@@ -141,7 +147,7 @@ const BookingConfirmationPage: React.FC = () => {
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       pending: { label: '等待確認', variant: 'secondary' as const, color: 'bg-yellow-100 text-yellow-800' },
-      confirmed: { label: '預訂成功', variant: 'default' as const, color: 'bg-green-100 text-green-800' },
+      confirmed: { label: '預約成功', variant: 'default' as const, color: 'bg-green-100 text-green-800' },
       'checked-in': { label: '已進入停車場', variant: 'default' as const, color: 'bg-blue-100 text-blue-800' },
       'checked-out': { label: '已離開停車場', variant: 'outline' as const, color: 'bg-gray-100 text-gray-800' },
       cancelled: { label: '已取消', variant: 'destructive' as const, color: 'bg-red-100 text-red-800' }
@@ -151,31 +157,31 @@ const BookingConfirmationPage: React.FC = () => {
     return <Badge variant={config.variant} className={config.color}>{config.label}</Badge>;
   };
 
-  const handleDownloadReceipt = () => {
-    // TODO: Implement receipt download
-    toast.success('下載收據功能將很快推出！');
-  };
+  // const handleDownloadReceipt = () => {
+  //   // TODO: Implement receipt download
+  //   toast.success('下載收據功能將很快推出！');
+  // };
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: '預訂停車位成功',
-        text: `預訂成功！預訂編號：${bookingData?.bookingNumber}`,
-        url: window.location.href
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      toast.success('已複製鏈接到剪貼板！');
-    }
-  };
+  // const handleShare = () => {
+  //   if (navigator.share) {
+  //     navigator.share({
+  //       title: '預約停車位成功',
+  //       text: `預約成功！預約編號：${bookingData?.bookingNumber}`,
+  //       url: window.location.href
+  //     });
+  //   } else {
+  //     navigator.clipboard.writeText(window.location.href);
+  //     toast.success('已複製鏈接到剪貼板！');
+  //   }
+  // };
 
   const handleBackToHome = () => {
     navigate('/');
   };
 
-  const handleNewBooking = () => {
-    navigate('/booking');
-  };
+  // const handleNewBooking = () => {
+  //   navigate('/booking');
+  // };
 
   if (loading) {
     return (
@@ -193,8 +199,8 @@ const BookingConfirmationPage: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">找不到預訂信息</h1>
-          <p className="text-gray-600 mb-6">請返回預訂頁面</p>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">找不到預約信息</h1>
+          <p className="text-gray-600 mb-6">請返回預約頁面</p>
           <Button onClick={handleBackToHome} className="bg-[#39653f] hover:bg-[#2d4f33]">
             <Home className="h-4 w-4 mr-2" />
             返回主頁
@@ -206,13 +212,13 @@ const BookingConfirmationPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
-      <div className="container mx-auto px-4 max-w-4xl">
+      <div className="container mx-auto px-4 max-w-full">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
             <CheckCircle className="h-10 w-10 text-green-600" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">預訂成功！</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">預約成功！</h1>
           <p className="text-gray-600">感謝您使用我們的服務</p>
         </div>
 
@@ -225,9 +231,9 @@ const BookingConfirmationPage: React.FC = () => {
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-xl text-gray-800">預訂信息</CardTitle>
+                    <CardTitle className="text-xl text-gray-800">預約信息</CardTitle>
                     <CardDescription className="text-gray-600">
-                      預訂編號: <span className="font-mono font-bold text-blue-600">{bookingData.bookingNumber}</span>
+                      預約編號: <span className="font-mono font-bold text-blue-600">{bookingData.bookingNumber}</span>
                     </CardDescription>
                   </div>
                   {getStatusBadge(bookingData.status)}
@@ -255,7 +261,7 @@ const BookingConfirmationPage: React.FC = () => {
                   <div>
                     <p className="text-sm text-gray-600">停車場類型</p>
                     <div className="flex items-center space-x-2">
-                      {getParkingTypeIcon(bookingData.parkingType.type || 'indoor')}
+                      {getParkingTypeIcon(bookingData.parkingType)}
                       <p className="font-semibold">{bookingData.parkingType.name}</p>
                       <Badge variant="outline" className="text-xs">
                         {getParkingTypeLabel(bookingData.parkingType.type || 'indoor')}
@@ -284,7 +290,7 @@ const BookingConfirmationPage: React.FC = () => {
                   <div className="flex items-center space-x-3">
                     <User className="h-5 w-5 text-gray-500" />
                     <div>
-                      <p className="text-sm text-gray-600">司機姓名</p>
+                      <p className="text-sm text-gray-600">您的姓名</p>
                       <p className="font-semibold">{bookingData.driverName}</p>
                     </div>
                   </div>
@@ -409,7 +415,7 @@ const BookingConfirmationPage: React.FC = () => {
           {/* Right Column - Actions & Info */}
           <div className="space-y-6">
             {/* Quick Actions */}
-            <Card>
+            {/* <Card>
               <CardHeader>
                 <CardTitle className="text-lg">快速操作</CardTitle>
               </CardHeader>
@@ -435,7 +441,7 @@ const BookingConfirmationPage: React.FC = () => {
                   className="w-full justify-start bg-[#39653f] hover:bg-[#2d4f33]"
                 >
                   <Car className="h-4 w-4 mr-2" />
-                  預訂新車位
+                  預約新車位
                 </Button>
                 <Button 
                   onClick={handleBackToHome} 
@@ -446,7 +452,7 @@ const BookingConfirmationPage: React.FC = () => {
                   返回主頁
                 </Button>
               </CardContent>
-            </Card>
+            </Card> */}
 
             {/* System Information */}
             {systemSettings && (
@@ -493,10 +499,10 @@ const BookingConfirmationPage: React.FC = () => {
                 <CardTitle className="text-lg text-amber-800">重要提示</CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-amber-700 space-y-2">
-                <p>• 請按預訂時間到達</p>
+                <p>• 請按預約時間到達</p>
                 <p>• 請攜帶車輛證明文件和駕駛執照</p>
                 <p>• 如有變更，請立即聯繫</p>
-                <p>• 保留預訂編號以供查詢</p>
+                <p>• 保留預約編號以供查詢</p>
               </CardContent>
             </Card>
           </div>

@@ -305,6 +305,7 @@ export const addSpecialPrice = async (parkingTypeId: string, data: {
   price: number;
   reason?: string;
   isActive?: boolean;
+  forceOverride?: boolean;
 }) => {
   const response = await api.post(`/admin/parking-types/${parkingTypeId}/special-prices`, data);
   return response.data;

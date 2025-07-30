@@ -467,7 +467,7 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 bg-green-100 border-2 border-green-300 rounded"></div>
-              <span className="text-gray-600">已預訂</span>
+              <span className="text-gray-600">已預約</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 bg-red-50 border-2 border-red-200 rounded opacity-60"></div>
