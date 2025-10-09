@@ -405,7 +405,6 @@ const BookingConfirmationPage: React.FC = () => {
                     </>
                   )}
 
-                  {/* VIP Discount */}
                   {bookingData.vipDiscount && bookingData.vipDiscount > 0 && (
                     <>
                       <Separator />
