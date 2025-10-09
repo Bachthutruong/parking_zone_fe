@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getAllBookings, updateBookingStatus } from '@/services/admin';
+import { formatDateTime } from '@/lib/dateUtils';
 import type { Booking } from '@/types';
 
 const BookingsPage: React.FC = () => {
@@ -151,10 +152,10 @@ const BookingsPage: React.FC = () => {
                 (booking.parkingType.type || 'indoor') === 'outdoor' ? '戶外' : '無障礙'}
             </div>
             <div class="info-item">
-              <span class="label">進入時間:</span> ${new Date(booking.checkInTime).toLocaleString('zh-TW')}
+              <span class="label">進入時間:</span> ${formatDateTime(booking.checkInTime)}
             </div>
             <div class="info-item">
-              <span class="label">離開時間:</span> ${new Date(booking.checkOutTime).toLocaleString('zh-TW')}
+              <span class="label">回國時間:</span> ${formatDateTime(booking.checkOutTime)}
             </div>
             <div class="info-item">
               <span class="label">狀態:</span> 
@@ -237,15 +238,7 @@ const BookingsPage: React.FC = () => {
     return <Badge variant={config.variant} className={config.color}>{config.label}</Badge>;
   };
 
-  const formatDateTime = (dateTime: string) => {
-    return new Date(dateTime).toLocaleString('zh-TW', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  // Date formatting function is now imported from dateUtils
 
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString('zh-TW', {

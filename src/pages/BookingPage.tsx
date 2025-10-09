@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import CustomDateInput from '@/components/ui/custom-date-input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -30,6 +31,7 @@ import { toast } from 'react-hot-toast';
 import { getSystemSettings, getAllParkingTypes, getAllAddonServices as getAddonServices, createBooking, api } from '@/services';
 import { checkParkingTypeMaintenance } from '@/services/maintenance';
 import { checkVIPStatus, checkVIPByCode } from '@/services/auth';
+import { formatDate, formatDateWithWeekday, formatDateTime } from '@/lib/dateUtils';
 import type { SystemSettings, ParkingType, AddonService, BookingFormData } from '@/types';
 
 
@@ -220,34 +222,19 @@ const BookingPage: React.FC = () => {
           if (!data.success) {
             conflictingDates.push({
               date: dateStr,
-              formattedDate: currentDate.toLocaleDateString('zh-TW', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                weekday: 'long'
-              })
+              formattedDate: formatDateWithWeekday(currentDate)
             });
           } else {
             availableDates.push({
               date: dateStr,
-              formattedDate: currentDate.toLocaleDateString('zh-TW', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                weekday: 'long'
-              })
+              formattedDate: formatDateWithWeekday(currentDate)
             });
           }
         } catch (error) {
           console.error('Error checking day availability:', error);
           conflictingDates.push({
             date: dateStr,
-            formattedDate: currentDate.toLocaleDateString('zh-TW', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              weekday: 'long'
-            })
+            formattedDate: formatDateWithWeekday(currentDate)
           });
         }
         
@@ -769,13 +756,11 @@ const BookingPage: React.FC = () => {
                         <div className="space-y-2">
                           <Label htmlFor="checkInTime" className="text-sm font-medium text-gray-700">進入時間 *</Label>
                           <div className="relative">
-                            <Clock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                            <Input
+                            <CustomDateInput
                               id="checkInTime"
                               type="datetime-local"
                               value={formData.checkInTime}
-                              onChange={(e) => {
-                                const checkInTime = e.target.value;
+                              onChange={(checkInTime) => {
                                 setFormData(prev => ({ ...prev, checkInTime }));
                                 
                                 // Auto-calculate minimum checkout time
@@ -795,6 +780,7 @@ const BookingPage: React.FC = () => {
                               }}
                               min={new Date().toISOString().slice(0, 16)}
                               className="pl-10"
+                              placeholder="yyyy/mm/dd hh:mm"
                             />
                           </div>
                           <p className="text-xs text-gray-500">
@@ -802,15 +788,13 @@ const BookingPage: React.FC = () => {
                           </p>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="checkOutTime" className="text-sm font-medium text-gray-700">離開時間 *</Label>
+                          <Label htmlFor="checkOutTime" className="text-sm font-medium text-gray-700">回國時間 *</Label>
                           <div className="relative">
-                            <Clock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                            <Input
+                            <CustomDateInput
                               id="checkOutTime"
                               type="datetime-local"
                               value={formData.checkOutTime}
-                              onChange={(e) => {
-                                const checkOutTime = e.target.value;
+                              onChange={(checkOutTime) => {
                                 if (formData.checkInTime) {
                                   const checkInDate = new Date(formData.checkInTime);
                                   const checkOutDate = new Date(checkOutTime);
@@ -831,6 +815,7 @@ const BookingPage: React.FC = () => {
                                 return minCheckOutDate.toISOString().slice(0, 16);
                               })() : new Date().toISOString().slice(0, 16)}
                               className="pl-10"
+                              placeholder="yyyy/mm/dd hh:mm"
                             />
                           </div>
                           <p className="text-xs text-gray-500">
@@ -909,7 +894,7 @@ const BookingPage: React.FC = () => {
                             {maintenanceDays.map((maintenance, index) => (
                               <li key={index} className="flex items-center space-x-2">
                                 <span>•</span>
-                                <span>{new Date(maintenance.date).toLocaleDateString('vi-VN')}: {maintenance.reason}</span>
+                                <span>{formatDate(maintenance.date)}: {maintenance.reason}</span>
                               </li>
                             ))}
                           </ul>
@@ -1025,15 +1010,7 @@ const BookingPage: React.FC = () => {
                             <div key={index} className="flex justify-between items-center text-sm bg-white p-2 rounded">
                               <div className="flex items-center space-x-2">
                                 <span className="text-gray-600">
-                                  {(() => {
-                                    const date = new Date(dayPrice.date);
-                                    const year = date.getFullYear();
-                                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                                    const day = String(date.getDate()).padStart(2, '0');
-                                    const weekday = date.getDay();
-                                    const weekdayMap = ['天', '一', '二', '三', '四', '五', '六'];
-                                    return `${year}/${month}/${day} (星期${weekdayMap[weekday]})`;
-                                  })()}
+                                  {formatDateWithWeekday(dayPrice.date)}
                                 </span>
                                 {dayPrice.isSpecialPrice && (
                                   <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-200 max-w-32 truncate" title={dayPrice.specialPriceReason}>
@@ -1078,37 +1055,7 @@ const BookingPage: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Luggage Fees */}
-                    {formData.luggageCount > 0 && (
-                      <div className="bg-purple-50 p-3 rounded-lg">
-                        <div className="text-sm font-semibold text-purple-700 mb-2">🧳 行李:</div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center text-sm bg-white p-2 rounded">
-                            <div className="flex items-center space-x-2">
-                              <span className="text-lg">🧳</span>
-                              <span>{formData.luggageCount} 行李</span>
-                              {systemSettings?.luggageSettings && (
-                                <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
-                                  {formData.luggageCount <= systemSettings.luggageSettings.freeLuggageCount 
-                                    ? '免費' 
-                                    : `${systemSettings.luggageSettings.freeLuggageCount} 免費 + ${formData.luggageCount - systemSettings.luggageSettings.freeLuggageCount} 收費`
-                                  }
-                                </span>
-                              )}
-                            </div>
-                            <span className="font-semibold text-purple-600">
-                              {(() => {
-                                if (!systemSettings?.luggageSettings) return '0';
-                                const { freeLuggageCount, luggagePricePerItem } = systemSettings.luggageSettings;
-                                const additionalLuggage = Math.max(0, formData.luggageCount - freeLuggageCount);
-                                const luggageFee = additionalLuggage * luggagePricePerItem;
-                                return formatCurrency(luggageFee);
-                              })()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                    {/* Luggage (removed: no longer charges or displayed) */}
                     
                     {/* VIP Discount Preview - Always show if user is VIP */}
                     {isVIP && currentUser && (
@@ -1172,15 +1119,9 @@ const BookingPage: React.FC = () => {
                                           .reduce((sum, service) => sum + service.price, 0)
                                         );
                                       
-                                      const luggageFee = (() => {
-                                        if (!systemSettings?.luggageSettings) return 0;
-                                        const { freeLuggageCount, luggagePricePerItem } = systemSettings.luggageSettings;
-                                        const additionalLuggage = Math.max(0, formData.luggageCount - freeLuggageCount);
-                                        return additionalLuggage * luggagePricePerItem;
-                                      })();
-                                      
-                                      const totalWithLuggage = baseTotal + luggageFee;
-                                      return Math.round(totalWithLuggage * (currentUser?.vipDiscount / 100));
+                                      // Luggage is not charged; baseTotal already includes only parking and addons
+                                      const totalWithoutLuggage = baseTotal;
+                                      return Math.round(totalWithoutLuggage * (currentUser?.vipDiscount / 100));
                                     })()
                               )}
                             </span>
@@ -1199,23 +1140,16 @@ const BookingPage: React.FC = () => {
                                     .reduce((sum, service) => sum + service.price, 0)
                                   );
                                 
-                                // Calculate luggage fee
-                                const luggageFee = (() => {
-                                  if (!systemSettings?.luggageSettings) return 0;
-                                  const { freeLuggageCount, luggagePricePerItem } = systemSettings.luggageSettings;
-                                  const additionalLuggage = Math.max(0, formData.luggageCount - freeLuggageCount);
-                                  return additionalLuggage * luggagePricePerItem;
-                                })();
-                                
-                                const totalWithLuggage = baseTotal + luggageFee;
+                                // Luggage is not charged; total is baseTotal
+                                const totalWithoutLuggage = baseTotal;
                                 
                                 if (discountInfo) {
                                   return formatCurrency(discountInfo.finalAmount);
                                 } else if (isVIP && currentUser) {
-                                  const vipDiscount = totalWithLuggage * (currentUser.vipDiscount / 100);
-                                  return formatCurrency(Math.round(totalWithLuggage - vipDiscount));
+                                  const vipDiscount = totalWithoutLuggage * (currentUser.vipDiscount / 100);
+                                  return formatCurrency(Math.round(totalWithoutLuggage - vipDiscount));
                                 } else {
-                                  return formatCurrency(totalWithLuggage);
+                                  return formatCurrency(totalWithoutLuggage);
                                 }
                               })()}
                             </span>
@@ -1409,7 +1343,7 @@ const BookingPage: React.FC = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="passengerCount" className="text-sm font-medium text-gray-700">接駁人數</Label>
+                    <Label htmlFor="passengerCount" className="text-sm font-medium text-gray-700">接駁人數 (上限5人，多一個人現場收100元/人)</Label>
                     <Input
                       id="passengerCount"
                       type="number"
@@ -1419,8 +1353,7 @@ const BookingPage: React.FC = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="luggageCount" className="text-sm font-medium text-gray-700">行李數量（免費1個，第2個以上每一個加100元）
-                    </Label>
+                    <Label htmlFor="luggageCount" className="text-sm font-medium text-gray-700">行李數量（免費1個，第2個以上現場收100元/行李）</Label>
                     <Input
                       id="luggageCount"
                       type="number"
@@ -1540,31 +1473,11 @@ const BookingPage: React.FC = () => {
                         <h3 className="font-semibold text-blue-900">已選擇時間:</h3>
                         <div className="flex items-center space-x-4 text-sm text-blue-800">
                           <span>
-                            <strong>進入:</strong> {(() => {
-                              const date = new Date(formData.checkInTime);
-                              const year = date.getFullYear();
-                              const month = String(date.getMonth() + 1).padStart(2, '0');
-                              const day = String(date.getDate()).padStart(2, '0');
-                              const weekday = date.getDay();
-                              const weekdayMap = ['天', '一', '二', '三', '四', '五', '六'];
-                              const hours = String(date.getHours()).padStart(2, '0');
-                              const minutes = String(date.getMinutes()).padStart(2, '0');
-                              return `${year}/${month}/${day} (星期${weekdayMap[weekday]}) ${hours}:${minutes}`;
-                            })()}
+                            <strong>進入:</strong> {formatDateTime(formData.checkInTime)}
                           </span>
                           <span className="text-blue-600">→</span>
                           <span>
-                            <strong>離開:</strong> {(() => {
-                              const date = new Date(formData.checkOutTime);
-                              const year = date.getFullYear();
-                              const month = String(date.getMonth() + 1).padStart(2, '0');
-                              const day = String(date.getDate()).padStart(2, '0');
-                              const weekday = date.getDay();
-                              const weekdayMap = ['天', '一', '二', '三', '四', '五', '六'];
-                              const hours = String(date.getHours()).padStart(2, '0');
-                              const minutes = String(date.getMinutes()).padStart(2, '0');
-                              return `${year}/${month}/${day} (星期${weekdayMap[weekday]}) ${hours}:${minutes}`;
-                            })()}
+                            <strong>離開:</strong> {formatDateTime(formData.checkOutTime)}
                           </span>
                         </div>
                       </div>

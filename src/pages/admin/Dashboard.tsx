@@ -36,6 +36,7 @@ import {
 } from 'recharts';
 import { toast } from 'react-hot-toast';
 import { getDashboardStats, getBookingStats, getParkingTypeStats, getCurrentParkingStatus } from '@/services/admin';
+import { formatDate, formatDateTime } from '@/lib/dateUtils';
 import type { DashboardStats, BookingStats, ParkingTypeStats, CurrentParkingStatus } from '@/types';
 
 const PIE_COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F'];
@@ -144,18 +145,7 @@ const Dashboard: React.FC = () => {
     });
   };
 
-  const formatDateTime = (dateTime: string) => {
-    return new Date(dateTime).toLocaleString('zh-TW', {
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('zh-TW');
-  };
+  // Date formatting functions are now imported from dateUtils
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {

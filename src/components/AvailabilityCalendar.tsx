@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, XCircle, Car } from 'lucide-react';
 import { api } from '@/services';
+// formatDate import removed as it's not currently used
 
 interface AvailabilityCalendarProps {
   parkingTypeId: string;
@@ -246,10 +247,9 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   };
 
   const getMonthName = (date: Date) => {
-    return date.toLocaleDateString('zh-TW', {
-      year: 'numeric',
-      month: 'long'
-    });
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${year}/${month}`;
   };
 
   const goToPreviousMonth = () => {
@@ -487,7 +487,7 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
             </div>
             <div className="text-xs text-blue-700 space-y-1">
               <p>• 點擊日期可選擇進入時間</p>
-              <p>• 再次點擊其他日期可選擇離開時間</p>
+              <p>• 再次點擊其他日期可選擇回國時間</p>
               <p>• 綠色數字表示可用車位數量</p>
               <p>• 橙色價格表示特殊價格</p>
             </div>

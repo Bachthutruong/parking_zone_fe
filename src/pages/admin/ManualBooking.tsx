@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import DateInput from '@/components/ui/date-input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -32,6 +33,7 @@ import { calculatePrice } from '@/services/booking';
 import { checkParkingTypeMaintenance } from '@/services/maintenance';
 import { checkVIPStatus } from '@/services/auth';
 import { api } from '@/services';
+import { formatDate } from '@/lib/dateUtils';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import ConflictNotification from '@/components/ConflictNotification';
 
@@ -461,20 +463,22 @@ const AdminManualBooking: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="checkInTime">進入時間 *</Label>
-                <Input
+                <DateInput
                   id="checkInTime"
                   type="datetime-local"
                   value={formData.checkInTime}
-                  onChange={(e) => setFormData(prev => ({ ...prev, checkInTime: e.target.value }))}
+                  onChange={(checkInTime) => setFormData(prev => ({ ...prev, checkInTime }))}
+                  placeholder="yyyy/mm/dd hh:mm"
                 />
               </div>
               <div>
-                <Label htmlFor="checkOutTime">離開時間 *</Label>
-                <Input
+                <Label htmlFor="checkOutTime">回國時間 *</Label>
+                <DateInput
                   id="checkOutTime"
                   type="datetime-local"
                   value={formData.checkOutTime}
-                  onChange={(e) => setFormData(prev => ({ ...prev, checkOutTime: e.target.value }))}
+                  onChange={(checkOutTime) => setFormData(prev => ({ ...prev, checkOutTime }))}
+                  placeholder="yyyy/mm/dd hh:mm"
                 />
               </div>
             </div>
@@ -512,7 +516,7 @@ const AdminManualBooking: React.FC = () => {
                     {maintenanceDays.map((maintenance, index) => (
                       <li key={index} className="flex items-center space-x-2">
                         <span>•</span>
-                        <span>{new Date(maintenance.date).toLocaleDateString('zh-TW')}: {maintenance.reason}</span>
+                        <span>{formatDate(maintenance.date)}: {maintenance.reason}</span>
                       </li>
                     ))}
                   </ul>
@@ -598,7 +602,7 @@ const AdminManualBooking: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="luggageCount">行李數量（免費1個，第2個以上每一個加100元）
+                  <Label htmlFor="luggageCount">行李數量（免費1個，第2個以上現場收100元/行李））
                   </Label>
                   <Input
                     id="luggageCount"
@@ -621,11 +625,12 @@ const AdminManualBooking: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="estimatedArrivalTime">預計到達時間</Label>
-                  <Input
+                  <DateInput
                     id="estimatedArrivalTime"
                     type="datetime-local"
                     value={formData.estimatedArrivalTime}
-                    onChange={(e) => setFormData(prev => ({ ...prev, estimatedArrivalTime: e.target.value }))}
+                    onChange={(estimatedArrivalTime) => setFormData(prev => ({ ...prev, estimatedArrivalTime }))}
+                    placeholder="yyyy/mm/dd hh:mm"
                   />
                 </div>
                 <div>
@@ -913,11 +918,7 @@ const AdminManualBooking: React.FC = () => {
                           <div key={index} className="flex justify-between items-center text-sm bg-white p-2 rounded">
                             <div className="flex items-center space-x-2">
                               <span className="text-gray-600">
-                                {new Date(dayPrice.date).toLocaleDateString('zh-TW', {
-                                  weekday: 'short',
-                                  month: 'short',
-                                  day: 'numeric'
-                                })}
+                                {formatDate(dayPrice.date)}
                               </span>
                               {dayPrice.isSpecialPrice && (
                                 <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-200">

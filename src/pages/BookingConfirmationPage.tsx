@@ -17,7 +17,6 @@ import {
   // Share2,
   Home,
 //   ArrowLeft,
-  CreditCard,
   Receipt,
   User,
   Car as CarIcon,
@@ -27,6 +26,7 @@ import {
 } from 'lucide-react';
 // import { toast } from 'react-hot-toast';
 import { getSystemSettings } from '@/services/systemSettings';
+import { formatDate, formatDateWithWeekday } from '@/lib/dateUtils';
 import type { SystemSettings } from '@/types';
 
 interface BookingConfirmationData {
@@ -46,6 +46,13 @@ interface BookingConfirmationData {
   durationDays: number;
   totalAmount: number;
   finalAmount: number;
+  dailyPrices?: Array<{
+    date: string; // ISO date (YYYY-MM-DD)
+    price: number;
+    isSpecialPrice?: boolean;
+    originalPrice?: number;
+    specialPriceReason?: string;
+  }>;
   addonServices: Array<{
     name: string;
     price: number;
@@ -104,12 +111,23 @@ const BookingConfirmationPage: React.FC = () => {
 //     });
 //   };
 
-  const formatDate = (dateTime: string) => {
-    return new Date(dateTime).toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    });
+  // Date formatting function is now imported from dateUtils
+
+  const buildFallbackDailyPrices = () => {
+    if (!bookingData) return [] as Array<{ date: string; price: number }>;
+    const result: Array<{ date: string; price: number }> = [];
+    const start = new Date(bookingData.checkInTime);
+    const end = new Date(bookingData.checkOutTime);
+    const days = Math.max(1, bookingData.durationDays || 1);
+    const perDay = Math.round((bookingData.totalAmount || 0) / days);
+    const cur = new Date(start);
+    // iterate dates: include start date, stop before end (same behavior as pricing list)
+    while (cur < end) {
+      const dateStr = new Date(cur).toISOString().split('T')[0];
+      result.push({ date: dateStr, price: perDay });
+      cur.setDate(cur.getDate() + 1);
+    }
+    return result;
   };
 
   const getParkingTypeIcon = (parkingType: any) => {
@@ -131,18 +149,7 @@ const BookingConfirmationPage: React.FC = () => {
     }
   };
 
-  const getParkingTypeLabel = (type: string) => {
-    switch (type) {
-      case 'indoor':
-        return '室內';
-      case 'outdoor':
-        return '戶外';
-      case 'disabled':
-        return '殘障人士';
-      default:
-        return type;
-    }
-  };
+  // getParkingTypeLabel kept for reference; currently unused
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -263,9 +270,9 @@ const BookingConfirmationPage: React.FC = () => {
                     <div className="flex items-center space-x-2">
                       {getParkingTypeIcon(bookingData.parkingType)}
                       <p className="font-semibold">{bookingData.parkingType.name}</p>
-                      <Badge variant="outline" className="text-xs">
+                      {/* <Badge variant="outline" className="text-xs">
                         {getParkingTypeLabel(bookingData.parkingType.type || 'indoor')}
-                      </Badge>
+                      </Badge> */}
                     </div>
                   </div>
                 </div>
@@ -334,6 +341,42 @@ const BookingConfirmationPage: React.FC = () => {
                     <span className="font-semibold">{formatCurrency(bookingData.totalAmount)}</span>
                   </div>
                   
+                  {/* Daily Prices Breakdown */}
+                  {(bookingData.dailyPrices && bookingData.dailyPrices.length > 0 || true) && (
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <div className="text-sm font-semibold text-blue-700 mb-2">📅 每日價格詳細:</div>
+                      <div className="space-y-2">
+                        {(bookingData.dailyPrices && bookingData.dailyPrices.length > 0
+                          ? bookingData.dailyPrices
+                          : buildFallbackDailyPrices()
+                        ).map((day: any, index: number) => (
+                          <div key={index} className="flex justify-between items-center text-sm bg-white p-2 rounded">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-gray-600">
+                                {formatDateWithWeekday(day.date)}
+                              </span>
+                              {day.isSpecialPrice && (
+                                <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-200 max-w-32 truncate" title={day.specialPriceReason}>
+                                  💰 {day.specialPriceReason || '特殊價格'}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {day.isSpecialPrice && day.originalPrice ? (
+                                <span className="text-xs text-gray-500 line-through">
+                                  {formatCurrency(day.originalPrice)}
+                                </span>
+                              ) : null}
+                              <span className={`font-semibold ${day.isSpecialPrice ? 'text-orange-600' : 'text-blue-600'}`}>
+                                {formatCurrency(day.price)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
                   {bookingData.addonServices.length > 0 && (
                     <>
                       <Separator />
@@ -362,7 +405,6 @@ const BookingConfirmationPage: React.FC = () => {
                     </>
                   )}
 
-                  {/* VIP Discount */}
                   {bookingData.vipDiscount && bookingData.vipDiscount > 0 && (
                     <>
                       <Separator />
@@ -401,11 +443,6 @@ const BookingConfirmationPage: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2 text-sm text-gray-600">
-                    <CreditCard className="h-4 w-4" />
-                    <span>付款方式: {bookingData.paymentMethod}</span>
                   </div>
                 </div>
               </CardContent>
