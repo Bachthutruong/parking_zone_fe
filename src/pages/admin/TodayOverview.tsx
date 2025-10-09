@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getTodayBookings } from '@/services/admin';
+import { formatDateTime } from '@/lib/dateUtils';
 
 interface TodayBooking {
   _id: string;
@@ -75,15 +76,7 @@ const AdminTodayOverview: React.FC = () => {
     }
   };
 
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('zh-TW', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  // Date formatting function is now imported from dateUtils
 
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString('zh-TW', {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import DateInput from '@/components/ui/date-input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -30,6 +31,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getAllParkingTypes, addSpecialPrice, addBulkSpecialPrices, updateSpecialPrice, deleteSpecialPrice, getSpecialPrices } from '@/services/admin';
+import { formatDateRange } from '@/lib/dateUtils';
 
 interface SpecialPrice {
   _id: string;
@@ -325,25 +327,7 @@ const AdminSpecialPricing: React.FC = () => {
     setShowDeleteDialog(true);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('zh-TW', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  const formatDateRange = (startDate: string, endDate: string) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    
-    if (start.toDateString() === end.toDateString()) {
-      return formatDate(startDate);
-    }
-    
-    return `${formatDate(startDate)} - ${formatDate(endDate)}`;
-  };
+  // Date formatting functions are now imported from dateUtils
 
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString('zh-TW', {
@@ -1019,15 +1003,16 @@ const AdminSpecialPricing: React.FC = () => {
             {isSingleDayMode ? (
               <div>
                 <Label htmlFor="singleDate">選擇日期 *</Label>
-                <Input
+                <DateInput
                   id="singleDate"
                   type="date"
                   value={formData.startDate}
-                  onChange={(e) => setFormData(prev => ({ 
+                  onChange={(startDate) => setFormData(prev => ({ 
                     ...prev, 
-                    startDate: e.target.value,
-                    endDate: e.target.value // Tự động set endDate giống startDate
+                    startDate,
+                    endDate: startDate // Tự động set endDate giống startDate
                   }))}
+                  placeholder="yyyy/mm/dd"
                 />
               </div>
             ) : (

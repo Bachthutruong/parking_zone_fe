@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getAllUsers, updateUserVIP, updateUser, createUser, deleteUser, getUserStats } from '@/services/admin';
+import { formatDate } from '@/lib/dateUtils';
 import type { User, Booking } from '@/types';
 
 interface UserStats {
@@ -417,9 +418,7 @@ const AdminUsers: React.FC = () => {
     });
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('zh-TW');
-  };
+  // Date formatting function is now imported from dateUtils
 
   const formatDuration = (days: number) => {
     if (days < 1) {

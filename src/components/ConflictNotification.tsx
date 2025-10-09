@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Calendar, Clock, Info } from 'lucide-react';
+import { formatDate } from '@/lib/dateUtils';
 
 interface ConflictNotificationProps {
   checkInTime: string;
@@ -22,14 +23,7 @@ const ConflictNotification: React.FC<ConflictNotificationProps> = ({
     return null;
   }
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('zh-TW', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+  // Date formatting function is now imported from dateUtils
 
   const getConflictType = () => {
     if (conflictingDays.length === totalDays) {
