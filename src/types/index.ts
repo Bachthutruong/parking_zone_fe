@@ -44,6 +44,19 @@ export interface ParkingType {
   };
   occupancyRate?: string;
   currentBookings?: number;
+  images?: Array<{
+    _id: string;
+    url: string;
+    thumbnailUrl?: string;
+    cloudinaryId: string;
+    thumbnailCloudinaryId?: string;
+    filename: string;
+    originalName: string;
+    size: number;
+    mimeType: string;
+    uploadedAt: string;
+    isActive: boolean;
+  }>;
 }
 
 export interface AddonService {
@@ -97,6 +110,8 @@ export interface Booking {
   };
   luggageCount: number;
   passengerCount: number;
+  departureTerminal?: string;
+  returnTerminal?: string;
   estimatedArrivalTime?: string;
   flightNumber?: string;
   notes?: string;
@@ -110,6 +125,13 @@ export interface Booking {
   isManualBooking: boolean;
   durationDays?: number;
   isOverdue?: boolean;
+  dailyPrices?: Array<{
+    date: string; // ISO date (YYYY-MM-DD)
+    price: number;
+    isSpecialPrice: boolean;
+    specialPriceReason?: string;
+    isMaintenanceDay: boolean;
+  }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -216,6 +238,8 @@ export interface BookingFormData {
   passengerCount: number;
   luggageCount: number;
   termsAccepted: boolean;
+  departureTerminal?: string;
+  returnTerminal?: string;
 }
 
 export interface PriceCalculation {

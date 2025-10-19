@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Search, 
   Filter, 
@@ -18,6 +19,8 @@ import {
   // Edit,
   Eye,
   Printer,
+  Grid3X3,
+  Table as TableIcon,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getAllBookings, updateBookingStatus } from '@/services/admin';
@@ -38,10 +41,24 @@ const BookingsPage: React.FC = () => {
   });
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
+  const [calendarData, setCalendarData] = useState<any[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedParkingType, setSelectedParkingType] = useState<string>('');
+  const [showBookingsDialog, setShowBookingsDialog] = useState(false);
+  const [dateBookings, setDateBookings] = useState<Booking[]>([]);
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
     loadBookings();
   }, [page, filters]);
+
+  useEffect(() => {
+    if (viewMode === 'calendar') {
+      loadCalendarData();
+    }
+  }, [viewMode, selectedParkingType, currentMonth, currentYear]);
 
   const loadBookings = async () => {
     try {
@@ -63,6 +80,48 @@ const BookingsPage: React.FC = () => {
     }
   };
 
+  const loadCalendarData = async () => {
+    try {
+      setLoading(true);
+      // This will be implemented with a new API endpoint
+      // For now, we'll use the existing bookings data
+      const response = await getAllBookings({
+        ...filters,
+        status: filters.status === 'all' ? '' : filters.status,
+        page: 1,
+        limit: 1000 // Get all bookings for calendar view
+      });
+      
+      // Group bookings by date and parking type
+      const groupedData = response.bookings.reduce((acc: any, booking: Booking) => {
+        const date = new Date(booking.checkInTime).toISOString().split('T')[0];
+        const parkingTypeId = booking.parkingType._id;
+        
+        if (!acc[date]) {
+          acc[date] = {};
+        }
+        if (!acc[date][parkingTypeId]) {
+          acc[date][parkingTypeId] = {
+            parkingType: booking.parkingType,
+            bookings: [],
+            totalBookings: 0
+          };
+        }
+        
+        acc[date][parkingTypeId].bookings.push(booking);
+        acc[date][parkingTypeId].totalBookings++;
+        
+        return acc;
+      }, {});
+      
+      setCalendarData(groupedData);
+    } catch (error) {
+      toast.error('無法載入日曆數據');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleStatusUpdate = async (bookingId: string, newStatus: string) => {
     try {
       await updateBookingStatus(bookingId, newStatus);
@@ -77,6 +136,40 @@ const BookingsPage: React.FC = () => {
 
   const createStatusUpdateHandler = (bookingId: string, newStatus: string) => {
     return () => handleStatusUpdate(bookingId, newStatus);
+  };
+
+  const handleDateBookingClick = (date: string, parkingTypeId: string) => {
+    const dateData = calendarData[date as keyof typeof calendarData];
+    if (dateData && dateData[parkingTypeId as keyof typeof dateData]) {
+      setDateBookings((dateData as any)[parkingTypeId].bookings);
+      setSelectedDate(date);
+      setSelectedParkingType(parkingTypeId);
+      setShowBookingsDialog(true);
+    }
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      if (currentMonth === 0) {
+        setCurrentMonth(11);
+        setCurrentYear(currentYear - 1);
+      } else {
+        setCurrentMonth(currentMonth - 1);
+      }
+    } else {
+      if (currentMonth === 11) {
+        setCurrentMonth(0);
+        setCurrentYear(currentYear + 1);
+      } else {
+        setCurrentMonth(currentMonth + 1);
+      }
+    }
+  };
+
+  const goToToday = () => {
+    const today = new Date();
+    setCurrentMonth(today.getMonth());
+    setCurrentYear(today.getFullYear());
   };
 
   const printBooking = (booking: Booking) => {
@@ -114,7 +207,7 @@ const BookingsPage: React.FC = () => {
       <body>
         <div class="header">
           <h1>預約詳細資訊</h1>
-          <p>預約編號: ${booking._id}</p>
+          <p>預約編號: ${booking.bookingNumber || booking._id}</p>
         </div>
 
         <div class="section">
@@ -140,6 +233,22 @@ const BookingsPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        ${booking.passengerCount > 0 ? `
+        <div class="section">
+          <h3>接駁服務信息</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">出發航廈:</span> ${booking.departureTerminal === 'terminal1' ? '第一航廈' : 
+                booking.departureTerminal === 'terminal2' ? '第二航廈' : '未選擇'}
+            </div>
+            <div class="info-item">
+              <span class="label">回程航廈:</span> ${booking.returnTerminal === 'terminal1' ? '第一航廈' : 
+                booking.returnTerminal === 'terminal2' ? '第二航廈' : '未選擇'}
+            </div>
+          </div>
+        </div>
+        ` : ''}
 
         <div class="section">
           <h3>預約資訊</h3>
@@ -182,6 +291,36 @@ const BookingsPage: React.FC = () => {
           </div>
         </div>
         ` : ''}
+
+        <div class="section">
+          <h3>每日價格明細</h3>
+          <div class="info-grid">
+            ${booking.dailyPrices && booking.dailyPrices.length > 0 ? 
+              booking.dailyPrices.map(dayPrice => `
+                <div class="info-item">
+                  <span class="label">${new Date(dayPrice.date).toLocaleDateString('zh-TW')}:</span> 
+                  ${dayPrice.price.toLocaleString('zh-TW')} TWD
+                  ${dayPrice.isSpecialPrice ? ` (特殊價格: ${dayPrice.specialPriceReason || '特殊定價'})` : ''}
+                  ${dayPrice.isMaintenanceDay ? ' 🔧 保養日' : ''}
+                </div>
+              `).join('') :
+              `
+              <div class="info-item">
+                <span class="label">總金額:</span> 
+                ${booking.totalAmount.toLocaleString('zh-TW')} TWD
+              </div>
+              <div class="info-item">
+                <span class="label">天數:</span> 
+                ${booking.durationDays || '未知'} 天
+              </div>
+              <div class="info-item">
+                <span class="label">每日平均:</span> 
+                ${booking.durationDays ? Math.round(booking.totalAmount / booking.durationDays).toLocaleString('zh-TW') : '未知'} TWD
+              </div>
+              `
+            }
+          </div>
+        </div>
 
         <div class="section">
           <h3>付款資訊</h3>
@@ -252,6 +391,189 @@ const BookingsPage: React.FC = () => {
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     setPage(1);
+  };
+
+  const renderCalendar = () => {
+    const today = new Date();
+    
+    // Get first day of month and number of days
+    const firstDay = new Date(currentYear, currentMonth, 1);
+    const lastDay = new Date(currentYear, currentMonth + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    // Get unique parking types from calendar data
+    const allParkingTypes = new Set();
+    Object.values(calendarData).forEach((dateData: any) => {
+      Object.keys(dateData).forEach(parkingTypeId => {
+        allParkingTypes.add(parkingTypeId);
+      });
+    });
+    
+    const days = [];
+    
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+    
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dayData = (calendarData as any)[dateStr] || {};
+      
+      days.push({
+        day,
+        date: dateStr,
+        data: dayData
+      });
+    }
+    
+    const monthNames = [
+      '一月', '二月', '三月', '四月', '五月', '六月',
+      '七月', '八月', '九月', '十月', '十一月', '十二月'
+    ];
+
+    return (
+      <div className="space-y-4">
+        {/* Month/Year Navigation */}
+        <div className="flex items-center justify-between bg-white p-4 rounded-lg border">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigateMonth('prev')}
+            className="flex items-center space-x-1"
+          >
+            <span>‹</span>
+            <span>上月</span>
+          </Button>
+          
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Select
+                value={currentMonth.toString()}
+                onValueChange={(value) => setCurrentMonth(parseInt(value))}
+              >
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {monthNames.map((month, index) => (
+                    <SelectItem key={index} value={index.toString()}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select
+                value={currentYear.toString()}
+                onValueChange={(value) => setCurrentYear(parseInt(value))}
+              >
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 10 }, (_, i) => {
+                    const year = new Date().getFullYear() - 5 + i;
+                    return (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={goToToday}
+              className="text-blue-600 hover:text-blue-700"
+            >
+              今天
+            </Button>
+          </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigateMonth('next')}
+            className="flex items-center space-x-1"
+          >
+            <span>下月</span>
+            <span>›</span>
+          </Button>
+        </div>
+
+        {/* Calendar Grid */}
+        <div className="grid grid-cols-7 gap-1">
+          {/* Header */}
+          {['日', '一', '二', '三', '四', '五', '六'].map(day => (
+            <div key={day} className="p-2 text-center font-semibold bg-gray-100">
+              {day}
+            </div>
+          ))}
+        
+        {/* Days */}
+        {days.map((dayData, index) => {
+          if (!dayData) {
+            return <div key={index} className="p-2 min-h-[100px]"></div>;
+          }
+          
+          const { day, date, data } = dayData;
+          const isToday = date === today.toISOString().split('T')[0];
+          const isCurrentMonth = new Date(date).getMonth() === currentMonth;
+          
+          return (
+            <div 
+              key={day} 
+              className={`p-2 min-h-[100px] border border-gray-200 ${
+                isToday ? 'bg-blue-50 border-blue-300' : 
+                isCurrentMonth ? 'bg-white' : 'bg-gray-50 text-gray-400'
+              }`}
+            >
+              <div className={`text-sm font-medium mb-1 ${
+                isToday ? 'bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center' : ''
+              }`}>
+                {day}
+              </div>
+              
+              {/* Show parking type statistics */}
+              {Object.keys(data).map(parkingTypeId => {
+                const parkingData = data[parkingTypeId];
+                const parkingType = parkingData.parkingType;
+                const totalBookings = parkingData.totalBookings;
+                
+                // Assume max capacity is 50 for now (this should come from parking type data)
+                const maxCapacity = 50;
+                const availableSlots = maxCapacity - totalBookings;
+                
+                return (
+                  <div 
+                    key={parkingTypeId}
+                    className="mb-1 p-1 rounded text-xs cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleDateBookingClick(date, parkingTypeId)}
+                  >
+                    <div className="font-medium text-blue-600">
+                      {parkingType.name}
+                    </div>
+                    <div className="text-green-600">
+                      空位: {availableSlots}
+                    </div>
+                    <div className="text-red-600">
+                      已訂: {totalBookings}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+        </div>
+      </div>
+    );
   };
 
   // Ensure filters.status is always a valid value
@@ -349,12 +671,33 @@ const BookingsPage: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* View Mode Tabs */}
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'table' | 'calendar')}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="table" className="flex items-center space-x-2">
+                <TableIcon className="h-4 w-4" />
+                <span>列表視圖</span>
+              </TabsTrigger>
+              <TabsTrigger value="calendar" className="flex items-center space-x-2">
+                <Grid3X3 className="h-4 w-4" />
+                <span>日曆視圖</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </CardContent>
+      </Card>
+
       {/* Bookings Table */}
       <Card>
         <CardHeader>
           <CardTitle>預約清單</CardTitle>
           <CardDescription>
-            共 {total} 筆預約 • 第 {page} 頁，共 {totalPages} 頁
+            {viewMode === 'table' 
+              ? `共 ${total} 筆預約 • 第 ${page} 頁，共 ${totalPages} 頁`
+              : '日曆視圖 - 點擊數字查看詳細預約'
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -362,7 +705,7 @@ const BookingsPage: React.FC = () => {
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
             </div>
-          ) : (
+          ) : viewMode === 'table' ? (
             <>
               <Table>
                 <TableHeader>
@@ -515,9 +858,117 @@ const BookingsPage: React.FC = () => {
                 </div>
               )}
             </>
+          ) : (
+            <div className="space-y-4">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-2">停車場使用情況日曆</h3>
+                <p className="text-gray-600">點擊數字查看該日期的詳細預約</p>
+              </div>
+              {renderCalendar()}
+            </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Date Bookings Dialog */}
+      <Dialog open={showBookingsDialog} onOpenChange={setShowBookingsDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>預約詳細列表</DialogTitle>
+            <DialogDescription>
+              {selectedDate} - {dateBookings.length > 0 ? dateBookings[0].parkingType.name : '停車場'} 的預約
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {dateBookings.map((booking) => (
+              <Card key={booking._id} className="p-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <h4 className="font-semibold text-sm text-gray-600">客戶信息</h4>
+                    <div className="space-y-1 text-sm">
+                      <div><strong>姓名:</strong> {booking.driverName}</div>
+                      <div><strong>電話:</strong> {booking.phone}</div>
+                      <div><strong>車牌:</strong> {booking.licensePlate}</div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold text-sm text-gray-600">時間信息</h4>
+                    <div className="space-y-1 text-sm">
+                      <div><strong>進入:</strong> {formatDateTime(booking.checkInTime)}</div>
+                      <div><strong>離開:</strong> {formatDateTime(booking.checkOutTime)}</div>
+                      <div><strong>狀態:</strong> {getStatusBadge(booking.status)}</div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold text-sm text-gray-600">服務信息</h4>
+                    <div className="space-y-1 text-sm">
+                      <div><strong>乘客:</strong> {booking.passengerCount} 人</div>
+                      <div><strong>行李:</strong> {booking.luggageCount} 件</div>
+                      {booking.passengerCount > 0 && (
+                        <>
+                          <div><strong>出發航廈:</strong> {booking.departureTerminal === 'terminal1' ? '第一航廈' : booking.departureTerminal === 'terminal2' ? '第二航廈' : '未選擇'}</div>
+                          <div><strong>回程航廈:</strong> {booking.returnTerminal === 'terminal1' ? '第一航廈' : booking.returnTerminal === 'terminal2' ? '第二航廈' : '未選擇'}</div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold text-sm text-gray-600">金額信息</h4>
+                    <div className="space-y-1 text-sm">
+                      <div><strong>總金額:</strong> {formatCurrency(booking.totalAmount)}</div>
+                      {booking.discountAmount > 0 && (
+                        <div><strong>折扣:</strong> -{formatCurrency(booking.discountAmount)}</div>
+                      )}
+                      <div><strong>應付:</strong> {formatCurrency(booking.finalAmount)}</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end space-x-2 mt-4">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedBooking(booking);
+                      setShowBookingsDialog(false);
+                      setShowDetailsDialog(true);
+                    }}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    查看詳情
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => printBooking(booking)}
+                  >
+                    <Printer className="h-4 w-4 mr-1" />
+                    列印
+                  </Button>
+                </div>
+              </Card>
+            ))}
+            
+            {dateBookings.length === 0 && (
+              <div className="text-center py-8">
+                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-600 mb-2">沒有預約</h3>
+                <p className="text-gray-500">該日期沒有預約記錄</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBookingsDialog(false)}>
+              關閉
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Booking Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
@@ -541,6 +992,12 @@ const BookingsPage: React.FC = () => {
                     <div><strong>車牌號碼:</strong> {selectedBooking.licensePlate}</div>
                     <div><strong>乘客:</strong> {selectedBooking.passengerCount} 人</div>
                     <div><strong>行李:</strong> {selectedBooking.luggageCount} 件</div>
+                    {selectedBooking.passengerCount > 0 && (
+                      <>
+                        <div><strong>出發航廈:</strong> {selectedBooking.departureTerminal === 'terminal1' ? '第一航廈' : selectedBooking.departureTerminal === 'terminal2' ? '第二航廈' : '未選擇'}</div>
+                        <div><strong>回程航廈:</strong> {selectedBooking.returnTerminal === 'terminal1' ? '第一航廈' : selectedBooking.returnTerminal === 'terminal2' ? '第二航廈' : '未選擇'}</div>
+                      </>
+                    )}
                   </div>
                 </div>
                 

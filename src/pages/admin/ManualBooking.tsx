@@ -79,7 +79,9 @@ const AdminManualBooking: React.FC = () => {
     notes: '',
     paymentStatus: 'pending',
     paymentMethod: 'cash',
-    status: 'confirmed'
+    status: 'confirmed',
+    departureTerminal: '',
+    returnTerminal: ''
   });
 
   useEffect(() => {
@@ -357,7 +359,9 @@ const AdminManualBooking: React.FC = () => {
       notes: '',
       paymentStatus: 'pending',
       paymentMethod: 'cash',
-      status: 'confirmed'
+      status: 'confirmed',
+      departureTerminal: '',
+      returnTerminal: ''
     });
     setPricing(null);
     setDiscountInfo(null);
@@ -597,6 +601,7 @@ const AdminManualBooking: React.FC = () => {
                     id="passengerCount"
                     type="number"
                     min="1"
+                    max="5"
                     value={formData.passengerCount}
                     onChange={(e) => setFormData(prev => ({ ...prev, passengerCount: parseInt(e.target.value) }))}
                   />
@@ -613,6 +618,54 @@ const AdminManualBooking: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {/* Terminal Selection - Only show if passengerCount > 0 */}
+              {formData.passengerCount > 0 && (
+                <div className="space-y-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-blue-800 font-medium">✈️ 航廈選擇</span>
+                    <span className="text-xs text-blue-600">(接駁服務需要)</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="departureTerminal" className="text-sm font-medium text-gray-700">
+                        出發航廈（前往機場）
+                      </Label>
+                      <select
+                        id="departureTerminal"
+                        value={formData.departureTerminal || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, departureTerminal: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">請選擇出發航廈</option>
+                        <option value="terminal1">第一航廈</option>
+                        <option value="terminal2">第二航廈</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="returnTerminal" className="text-sm font-medium text-gray-700">
+                        回程航廈（接回停車場）
+                      </Label>
+                      <select
+                        id="returnTerminal"
+                        value={formData.returnTerminal || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, returnTerminal: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">請選擇回程航廈</option>
+                        <option value="terminal1">第一航廈</option>
+                        <option value="terminal2">第二航廈</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
+                    💡 請確認航廈選擇正確，以確保接駁服務順利進行
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Additional Information */}

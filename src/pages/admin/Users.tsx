@@ -37,7 +37,8 @@ import {
   TrendingDown,
   // Clock,
   // CreditCard,
-  Percent
+  Percent,
+  Key
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getAllUsers, updateUserVIP, updateUser, createUser, deleteUser, getUserStats } from '@/services/admin';
@@ -93,6 +94,7 @@ const AdminUsers: React.FC = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showVIPDialog, setShowVIPDialog] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -121,6 +123,10 @@ const AdminUsers: React.FC = () => {
   const [vipFormData, setVipFormData] = useState({
     isVIP: false,
     vipDiscount: 10
+  });
+  const [passwordFormData, setPasswordFormData] = useState({
+    newPassword: '',
+    confirmPassword: ''
   });
 
   useEffect(() => {
@@ -314,6 +320,37 @@ const AdminUsers: React.FC = () => {
     }
   };
 
+  const handlePasswordChange = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      // Validate passwords
+      if (!passwordFormData.newPassword || !passwordFormData.confirmPassword) {
+        toast.error('請填寫所有密碼欄位');
+        return;
+      }
+      
+      if (passwordFormData.newPassword !== passwordFormData.confirmPassword) {
+        toast.error('新密碼和確認密碼不匹配');
+        return;
+      }
+      
+      if (passwordFormData.newPassword.length < 6) {
+        toast.error('密碼至少需要6個字符');
+        return;
+      }
+      
+      // Call API to change password
+      await updateUser(selectedUser._id, { password: passwordFormData.newPassword } as any);
+      toast.success('密碼更新成功');
+      setShowPasswordDialog(false);
+      setPasswordFormData({ newPassword: '', confirmPassword: '' });
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || '無法更新密碼');
+      console.error('Error changing password:', error);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -371,6 +408,12 @@ const AdminUsers: React.FC = () => {
   const openUserDetails = (user: UserWithStats) => {
     setSelectedUser(user);
     setShowUserDetails(true);
+  };
+
+  const openPasswordDialog = (user: UserWithStats) => {
+    setSelectedUser(user);
+    setPasswordFormData({ newPassword: '', confirmPassword: '' });
+    setShowPasswordDialog(true);
   };
 
   const getRoleBadge = (role: string) => {
@@ -803,6 +846,15 @@ const AdminUsers: React.FC = () => {
                           >
                             <Crown className="h-4 w-4" />
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openPasswordDialog(user)}
+                            title="更改密碼"
+                            className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                          >
+                            <Key className="h-4 w-4" />
+                          </Button>
                           {user.isVIP && !user.vipCode && (
                             <Button
                               size="sm"
@@ -996,6 +1048,15 @@ const AdminUsers: React.FC = () => {
                             title="管理VIP"
                           >
                             <Crown className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openPasswordDialog(user)}
+                            title="更改密碼"
+                            className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                          >
+                            <Key className="h-4 w-4" />
                           </Button>
                           {user.isVIP && !user.vipCode && (
                             <Button
@@ -1653,6 +1714,80 @@ const AdminUsers: React.FC = () => {
             </Button>
             <Button variant="destructive" onClick={handleDeleteUser}>
               刪除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Password Dialog */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Key className="h-5 w-5 mr-2" />
+              更改密碼
+            </DialogTitle>
+            <DialogDescription>
+              為用戶 "{selectedUser?.name}" 更改密碼
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="newPassword">新密碼 *</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={passwordFormData.newPassword}
+                onChange={(e) => setPasswordFormData(prev => ({ ...prev, newPassword: e.target.value }))}
+                placeholder="輸入新密碼"
+                minLength={6}
+              />
+              <p className="text-xs text-gray-500 mt-1">密碼至少需要6個字符</p>
+            </div>
+            
+            <div>
+              <Label htmlFor="confirmPassword">確認新密碼 *</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={passwordFormData.confirmPassword}
+                onChange={(e) => setPasswordFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                placeholder="再次輸入新密碼"
+                minLength={6}
+              />
+            </div>
+            
+            {passwordFormData.newPassword && passwordFormData.confirmPassword && 
+             passwordFormData.newPassword !== passwordFormData.confirmPassword && (
+              <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                ⚠️ 密碼不匹配
+              </div>
+            )}
+            
+            {passwordFormData.newPassword && passwordFormData.newPassword.length < 6 && (
+              <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                ⚠️ 密碼至少需要6個字符
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowPasswordDialog(false);
+              setPasswordFormData({ newPassword: '', confirmPassword: '' });
+            }}>
+              取消
+            </Button>
+            <Button 
+              onClick={handlePasswordChange}
+              disabled={!passwordFormData.newPassword || 
+                       !passwordFormData.confirmPassword || 
+                       passwordFormData.newPassword !== passwordFormData.confirmPassword ||
+                       passwordFormData.newPassword.length < 6}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              更改密碼
             </Button>
           </DialogFooter>
         </DialogContent>

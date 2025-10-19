@@ -42,6 +42,17 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
     }
   }, [value, type]);
 
+  // Update display value when tempValue changes
+  useEffect(() => {
+    if (tempValue && isOpen) {
+      if (type === 'datetime-local') {
+        setDisplayValue(formatDateTime(tempValue));
+      } else {
+        setDisplayValue(formatDate(tempValue));
+      }
+    }
+  }, [tempValue, isOpen, type]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (popupRef.current && !popupRef.current.contains(event.target as Node) &&
@@ -108,23 +119,28 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
   const handleNativeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const nativeValue = e.target.value;
     
+    
     if (type === 'datetime-local') {
       const isoValue = fromDateTimeLocal(nativeValue);
+      setTempValue(isoValue);
+      // Also call onChange immediately for datetime-local
       onChange(isoValue);
     } else {
       const isoValue = fromDateInput(nativeValue);
       onChange(isoValue);
+      setIsOpen(false);
     }
-    setIsOpen(false);
   };
 
   const getNativeValue = () => {
-    if (!tempValue) return '';
+    // Use tempValue if available, otherwise use the current value
+    const valueToUse = tempValue || value;
+    if (!valueToUse) return '';
     
     if (type === 'datetime-local') {
-      return toDateTimeLocal(tempValue);
+      return toDateTimeLocal(valueToUse);
     } else {
-      return toDateInput(tempValue);
+      return toDateInput(valueToUse);
     }
   };
 
@@ -158,7 +174,7 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
           value={displayValue}
           onChange={handleInputChange}
           onClick={handleInputClick}
-          placeholder={placeholder || (type === 'datetime-local' ? 'yyyy/mm/dd hh:mm' : 'yyyy/mm/dd')}
+          placeholder={placeholder || (type === 'datetime-local' ? '年/月/日 00:00' : '年/月/日')}
           className={className}
           style={{
             fontFamily: 'monospace',
@@ -196,6 +212,11 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
                 max={getNativeMax()}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              {tempValue && (
+                <div className="text-xs text-gray-500">
+                  當前選擇: {type === 'datetime-local' ? formatDateTime(tempValue) : formatDate(tempValue)}
+                </div>
+              )}
             </div>
             
             <div className="space-y-2">
@@ -204,9 +225,9 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
               </label>
               <input
                 type="text"
-                value={displayValue}
+                value={tempValue ? (type === 'datetime-local' ? formatDateTime(tempValue) : formatDate(tempValue)) : displayValue}
                 onChange={handleInputChange}
-                placeholder={type === 'datetime-local' ? 'yyyy/mm/dd hh:mm' : 'yyyy/mm/dd'}
+                placeholder={type === 'datetime-local' ? '年/月/日 00:00' : '年/月/日'}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
               />
             </div>
@@ -214,14 +235,23 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
             <div className="flex justify-end space-x-2 pt-2">
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
+                onClick={() => {
+                  setTempValue(''); // Clear temp value
+                  setIsOpen(false);
+                }}
                 className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
               >
                 取消
               </button>
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
+                onClick={() => {
+                  if (tempValue) {
+                    onChange(tempValue);
+                  }
+                  setTempValue(''); // Clear temp value
+                  setIsOpen(false);
+                }}
                 className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
               >
                 完成

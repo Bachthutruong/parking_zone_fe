@@ -33,6 +33,7 @@ import { checkParkingTypeMaintenance } from '@/services/maintenance';
 import { checkVIPStatus, checkVIPByCode } from '@/services/auth';
 import { formatDate, formatDateWithWeekday, formatDateTime } from '@/lib/dateUtils';
 import type { SystemSettings, ParkingType, AddonService, BookingFormData } from '@/types';
+import ImageGallery from '@/components/ImageGallery';
 
 
 const BookingPage: React.FC = () => {
@@ -93,7 +94,7 @@ const BookingPage: React.FC = () => {
         getAddonServices()
       ]);
       setSystemSettings(settings);
-      console.log(settings , 'types');
+      console.log(settings , 'settings');
       // Ensure parkingTypes is always an array
       setParkingTypes(Array.isArray(types) ? types : []);
       // Ensure addonServices is always an array
@@ -443,6 +444,8 @@ const BookingPage: React.FC = () => {
       return;
     }
 
+    // Terminal selection is optional - no validation needed
+
     try {
       setLoading(true);
       const bookingData = {
@@ -457,7 +460,9 @@ const BookingPage: React.FC = () => {
         luggageCount: formData.luggageCount,
         addonServices: formData.selectedAddonServices,
         discountCode: formData.discountCode,
-        termsAccepted: formData.termsAccepted
+        termsAccepted: formData.termsAccepted,
+        departureTerminal: formData.departureTerminal,
+        returnTerminal: formData.returnTerminal
       };
 
       const result = await createBooking(bookingData);
@@ -490,7 +495,10 @@ const BookingPage: React.FC = () => {
         })) || [],
         discountAmount: result.booking.discountAmount || 0,
         paymentMethod: result.booking.paymentMethod || 'cash',
-        status: result.booking.status
+        status: result.booking.status,
+        passengerCount: result.booking.passengerCount,
+        departureTerminal: result.booking.departureTerminal,
+        returnTerminal: result.booking.returnTerminal
       };
       
       // Navigate to confirmation page with booking details
@@ -697,11 +705,37 @@ const BookingPage: React.FC = () => {
                           onClick={() => {
                             if (!isUnderMaintenance) {
                               setFormData(prev => ({ ...prev, parkingTypeId: type._id }));
-                              toast.success(`已選擇停車場: ${type.name}`);
                             }
                           }}
                         >
                           <CardContent className="p-6">
+                            {/* Image Carousel */}
+                            {type.images && type.images.length > 0 ? (
+                              <div className="mb-4">
+                                <div className="text-sm text-gray-600 mb-2 flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    <span className="mr-2">📷</span>
+                                    {type.images.length} 張圖片
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    點擊圖片查看 • 使用箭頭或縮圖切換
+                                  </div>
+                                </div>
+                                <ImageGallery 
+                                  images={type.images}
+                                  showFullscreen={true}
+                                  className="w-full"
+                                />
+                              </div>
+                            ) : (
+                              <div className="mb-4 flex items-center justify-center bg-gray-100 rounded-lg h-48">
+                                <div className="text-center text-gray-500">
+                                  <div className="text-4xl mb-2">📷</div>
+                                  <p className="text-sm">暫無圖片</p>
+                                </div>
+                              </div>
+                            )}
+
                             <div className="flex items-start justify-between mb-4">
                               <div className="flex items-center space-x-3">
                                 <div className="text-3xl">{getParkingTypeIcon(type)}</div>
@@ -780,7 +814,7 @@ const BookingPage: React.FC = () => {
                               }}
                               min={new Date().toISOString().slice(0, 16)}
                               className="pl-10"
-                              placeholder="yyyy/mm/dd hh:mm"
+                              placeholder="年/月/日 00:00"
                             />
                           </div>
                           <p className="text-xs text-gray-500">
@@ -815,7 +849,7 @@ const BookingPage: React.FC = () => {
                                 return minCheckOutDate.toISOString().slice(0, 16);
                               })() : new Date().toISOString().slice(0, 16)}
                               className="pl-10"
-                              placeholder="yyyy/mm/dd hh:mm"
+                              placeholder="年/月/日 00:00"
                             />
                           </div>
                           <p className="text-xs text-gray-500">
@@ -1363,6 +1397,54 @@ const BookingPage: React.FC = () => {
                     />
                   </div>
                 </div>
+
+                {/* Terminal Selection - Only show if passengerCount > 0 */}
+                {formData.passengerCount > 0 && (
+                  <div className="space-y-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-blue-800 font-medium">✈️ 航廈選擇</span>
+                      <span className="text-xs text-blue-600">(接駁服務需要)</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="departureTerminal" className="text-sm font-medium text-gray-700">
+                          出發航廈（前往機場）
+                        </Label>
+                        <select
+                          id="departureTerminal"
+                          value={formData.departureTerminal || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, departureTerminal: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">請選擇出發航廈</option>
+                          <option value="terminal1">第一航廈</option>
+                          <option value="terminal2">第二航廈</option>
+                        </select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="returnTerminal" className="text-sm font-medium text-gray-700">
+                          回程航廈（接回停車場）
+                        </Label>
+                        <select
+                          id="returnTerminal"
+                          value={formData.returnTerminal || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, returnTerminal: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">請選擇回程航廈</option>
+                          <option value="terminal1">第一航廈</option>
+                          <option value="terminal2">第二航廈</option>
+                        </select>
+                      </div>
+                    </div>
+                    
+                    <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
+                      💡 請確認航廈選擇正確，以確保接駁服務順利進行
+                    </div>
+                  </div>
+                )}
                 
                 <div className="space-y-2">
                   <Label htmlFor="notes" className="text-sm font-medium text-gray-700">備註</Label>  
@@ -1523,12 +1605,15 @@ const BookingPage: React.FC = () => {
               {currentStep < steps.length ? (
                             <Button
               onClick={() => setCurrentStep(prev => prev + 1)}
-              disabled={
-                (currentStep === 1 && !formData.agreedToTerms) ||
-                (currentStep === 2 && !formData.parkingTypeId) ||
-                (currentStep === 2 && (!formData.checkInTime || !formData.checkOutTime)) ||
-                (currentStep === 2 && maintenanceDays.length > 0)
-              }
+              disabled={(() => {
+                const disabled = (currentStep === 1 && !formData.agreedToTerms) ||
+                  (currentStep === 2 && !formData.parkingTypeId) ||
+                  (currentStep === 2 && (!formData.checkInTime || !formData.checkOutTime)) ||
+                  (currentStep === 2 && maintenanceDays.length > 0);
+              
+                
+                return disabled;
+              })()}
               className="px-8 py-3 bg-[#39653f] hover:bg-[#2d4f33]"
             >
                   下一步
