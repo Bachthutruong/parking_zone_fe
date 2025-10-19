@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { X, Upload, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -36,6 +37,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [imageToDelete, setImageToDelete] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,12 +140,17 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     }
   };
 
-  const handleDeleteImage = async (imageId: string) => {
-    if (!confirm('確定要刪除這張圖片嗎？')) return;
+  const openDeleteDialog = (imageId: string) => {
+    setImageToDelete(imageId);
+    setShowDeleteDialog(true);
+  };
 
-    setDeleting(imageId);
+  const handleDeleteImage = async () => {
+    if (!imageToDelete) return;
+
+    setDeleting(imageToDelete);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/parking/${parkingTypeId}/images/${imageId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/parking/${parkingTypeId}/images/${imageToDelete}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -165,6 +173,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       toast.error(error instanceof Error ? error.message : '刪除失敗');
     } finally {
       setDeleting(null);
+      setShowDeleteDialog(false);
+      setImageToDelete(null);
     }
   };
 
@@ -299,7 +309,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleDeleteImage(image._id)}
+                      onClick={() => openDeleteDialog(image._id)}
                       disabled={deleting === image._id}
                       className="opacity-0 group-hover:opacity-100 transition-all duration-200"
                     >
@@ -319,6 +329,33 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           </CardContent>
         </Card>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>確認刪除圖片</AlertDialogTitle>
+            <AlertDialogDescription>
+              您確定要刪除這張圖片嗎？此操作無法撤銷。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowDeleteDialog(false);
+              setImageToDelete(null);
+            }}>
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteImage}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleting !== null}
+            >
+              {deleting ? '刪除中...' : '刪除'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
