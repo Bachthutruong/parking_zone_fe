@@ -105,7 +105,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         formData.append('images', file);
       });
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/parking/${parkingTypeId}/images`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://parking-zone-be.onrender.com'}/api/parking/${parkingTypeId}/images`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -150,7 +150,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
     setDeleting(imageToDelete);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/parking/${parkingTypeId}/images/${imageToDelete}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://parking-zone-be.onrender.com'}/api/parking/${parkingTypeId}/images/${imageToDelete}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
