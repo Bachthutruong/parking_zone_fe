@@ -20,10 +20,13 @@ import {
 //   Sun,
   Search,
   Filter,
-  RefreshCw
+  RefreshCw,
+  Image
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getAllParkingTypes, createParkingType, updateParkingType, deleteParkingType } from '@/services/admin';
+import ImageUpload from '@/components/ImageUpload';
+import ImageGallery from '@/components/ImageGallery';
 
 interface ParkingType {
   _id: string;
@@ -37,6 +40,19 @@ interface ParkingType {
   pricePerDay: number;
   totalSpaces: number;
   features?: string[];
+  images?: Array<{
+    _id: string;
+    url: string;
+    thumbnailUrl?: string;
+    cloudinaryId: string;
+    thumbnailCloudinaryId?: string;
+    filename: string;
+    originalName: string;
+    size: number;
+    mimeType: string;
+    uploadedAt: string;
+    isActive: boolean;
+  }>;
 }
 
 const AdminParkingTypes: React.FC = () => {
@@ -46,6 +62,7 @@ const AdminParkingTypes: React.FC = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showImageDialog, setShowImageDialog] = useState(false);
   const [selectedType, setSelectedType] = useState<ParkingType | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -146,6 +163,44 @@ const AdminParkingTypes: React.FC = () => {
       loadParkingTypes();
     } catch (error: any) {
       toast.error('Không thể xóa bãi đậu xe');
+    }
+  };
+
+  const handleImageUploadSuccess = () => {
+    loadParkingTypes();
+    if (selectedType) {
+      const updated = parkingTypes.find(p => p._id === selectedType._id);
+      if (updated) {
+        setSelectedType(updated);
+      }
+    }
+  };
+
+  const handleImageDeleteSuccess = () => {
+    loadParkingTypes();
+    if (selectedType) {
+      const updated = parkingTypes.find(p => p._id === selectedType._id);
+      if (updated) {
+        setSelectedType(updated);
+      }
+    }
+  };
+
+  const openImageDialog = (parkingType: ParkingType) => {
+    setSelectedType(parkingType);
+    setShowImageDialog(true);
+  };
+
+  const getParkingTypeIcon = (type: string) => {
+    switch (type) {
+      case 'indoor':
+        return '🏢';
+      case 'outdoor':
+        return '🌤️';
+      case 'disabled':
+        return '♿️';
+      default:
+        return '🏢';
     }
   };
 
@@ -329,6 +384,7 @@ const AdminParkingTypes: React.FC = () => {
                 <TableHead>價格</TableHead>
                 <TableHead>容量</TableHead>
                 <TableHead>功能</TableHead>
+                <TableHead>圖片</TableHead>
                 <TableHead>狀態</TableHead>
                 <TableHead>操作</TableHead>
               </TableRow>
@@ -378,6 +434,36 @@ const AdminParkingTypes: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-600">
+                          {type.images?.length || 0} 張
+                        </span>
+                        {type.images && type.images.length > 0 && (
+                          <div className="flex -space-x-1">
+                            {type.images.slice(0, 3).map((image, index) => (
+                              console.log('🔍 Image:', index),
+                              <div key={image._id} className="w-6 h-6 rounded-full border-2 border-white overflow-hidden bg-gray-100">
+                                <img
+                                  src={image.thumbnailUrl || image.url}
+                                  alt={image.originalName}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = '/logo.png';
+                                  }}
+                                />
+                              </div>
+                            ))}
+                            {type.images.length > 3 && (
+                              <div className="w-6 h-6 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-xs text-gray-500">
+                                +{type.images.length - 3}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       <Badge variant={type.isActive ? 'default' : 'secondary'}>
                         {type.isActive ? (
                           <>
@@ -400,6 +486,14 @@ const AdminParkingTypes: React.FC = () => {
                           onClick={() => openEditDialog(type)}
                         >
                           <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openImageDialog(type)}
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          <Image className="h-4 w-4" />
                         </Button>
                         <Button
                           size="sm"
@@ -566,6 +660,84 @@ const AdminParkingTypes: React.FC = () => {
             </Button>
             <Button onClick={isEditing ? handleEdit : handleCreate}>
               {isEditing ? '更新' : '創建停車場'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Management Dialog */}
+      <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>管理停車場圖片 - {selectedType?.name}</DialogTitle>
+            <DialogDescription>
+              上傳和管理停車場的展示圖片
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedType && (
+            <div className="space-y-6">
+              {/* Parking Type Info */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center space-x-3">
+                  <span className="text-2xl">{getParkingTypeIcon(selectedType.type || 'indoor')}</span>
+                  <div>
+                    <h4 className="font-semibold">{selectedType.name}</h4>
+                    <p className="text-sm text-gray-600">{selectedType.description}</p>
+                    <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                      <span>容量: {selectedType.totalSpaces} 位</span>
+                      <span>價格: ${selectedType.pricePerDay}/天</span>
+                      <span>圖片: {selectedType.images?.length || 0} 張</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Image Upload Component */}
+              <div className="border-t pt-6">
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold mb-2">上傳圖片</h3>
+                  <p className="text-sm text-gray-600">支援 JPG, PNG, GIF 格式，單個文件最大 10MB</p>
+                </div>
+                <ImageUpload
+                  parkingTypeId={selectedType._id}
+                  onUploadSuccess={handleImageUploadSuccess}
+                  onDeleteSuccess={handleImageDeleteSuccess}
+                  existingImages={selectedType.images || []}
+                  maxFiles={10}
+                  maxFileSize={10}
+                />
+              </div>
+
+              {/* Image Preview */}
+              <div className="border-t pt-6">
+                {selectedType.images && selectedType.images.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">圖片預覽</h3>
+                      <span className="text-sm text-gray-500">
+                        {selectedType.images.length} 張圖片
+                      </span>
+                    </div>
+                    <ImageGallery
+                      images={selectedType.images}
+                      showFullscreen={true}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <div className="text-4xl mb-2">📷</div>
+                    <p className="text-gray-500">暫無圖片</p>
+                    <p className="text-sm text-gray-400 mt-1">上傳圖片後將在此顯示</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowImageDialog(false)}>
+              關閉
             </Button>
           </DialogFooter>
         </DialogContent>

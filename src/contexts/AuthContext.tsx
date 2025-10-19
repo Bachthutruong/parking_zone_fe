@@ -58,9 +58,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('token', newToken);
       localStorage.setItem('user', JSON.stringify(userData));
 
-      toast.success('Đăng nhập thành công!');
+      toast.success('登入成功！' + userData.email);
     } catch (error: any) {
-      const message = error.response?.data?.error || 'Đăng nhập thất bại';
+      const message = error.response?.data?.error || '登入失敗';
       toast.error(message);
       throw error;
     }
@@ -76,9 +76,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('token', newToken);
       localStorage.setItem('user', JSON.stringify(newUser));
 
-      toast.success('Đăng ký thành công!');
+      toast.success('註冊成功！');
     } catch (error: any) {
-      const message = error.response?.data?.error || 'Đăng ký thất bại';
+      const message = error.response?.data?.error || '註冊失敗';
       toast.error(message);
       throw error;
     }
@@ -89,7 +89,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    toast.success('Đăng xuất thành công!');
+    toast.success('登出成功！');
   };
 
   const value: AuthContextType = {

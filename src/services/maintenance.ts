@@ -89,7 +89,19 @@ export const checkParkingTypeMaintenance = async (parkingTypeId: string, startDa
     const affectingMaintenance = maintenanceDays.filter((maintenance: MaintenanceDay) => {
       const isActive = maintenance.isActive;
       const affectsThisParkingType = maintenance.affectedParkingTypes.some((type: any) => type._id === parkingTypeId);
-      const isInDateRange = new Date(maintenance.date) >= new Date(startDate) && new Date(maintenance.date) <= new Date(endDate);
+      
+      // Normalize dates for comparison (ignore time)
+      const maintenanceDate = new Date(maintenance.date);
+      maintenanceDate.setHours(0, 0, 0, 0);
+      
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      
+      const isInDateRange = maintenanceDate >= start && maintenanceDate <= end;
+      
       
       return isActive && affectsThisParkingType && isInDateRange;
     });

@@ -19,7 +19,8 @@ import {
   Wrench,
   TrendingUp,
   Plus,
-  Clock
+  Clock,
+  // Image
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'react-hot-toast';

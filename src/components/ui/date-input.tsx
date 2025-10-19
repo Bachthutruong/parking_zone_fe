@@ -73,7 +73,7 @@ const DateInput: React.FC<DateInputProps> = ({
       onChange={handleChange}
       min={getNativeMin()}
       max={getNativeMax()}
-      placeholder={placeholder || (type === 'datetime-local' ? 'yyyy/mm/dd hh:mm' : 'yyyy/mm/dd')}
+      placeholder={placeholder || (type === 'datetime-local' ? '年/月/日 00:00' : '年/月/日')}
       className={className}
       style={{
         fontFamily: 'monospace'
