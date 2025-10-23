@@ -66,6 +66,16 @@ interface BookingConfirmationData {
   isVIP?: boolean;
   paymentMethod: string;
   status: string;
+  // Auto discount fields
+  autoDiscountInfo?: {
+    _id: string;
+    name: string;
+    description: string;
+    discountType: string;
+    discountValue: number;
+    applyToSpecialPrices: boolean;
+  };
+  autoDiscountAmount?: number;
 }
 
 const BookingConfirmationPage: React.FC = () => {
@@ -76,6 +86,14 @@ const BookingConfirmationPage: React.FC = () => {
   
   // Get booking data from location state
   const bookingData: BookingConfirmationData | null = location.state?.bookingData;
+  
+  // Debug logs
+  console.log('🔍 BOOKING CONFIRMATION DEBUG:');
+  console.log('   - bookingData:', bookingData);
+  console.log('   - autoDiscountInfo:', bookingData?.autoDiscountInfo);
+  console.log('   - autoDiscountAmount:', bookingData?.autoDiscountAmount);
+  console.log('   - dailyPrices:', bookingData?.dailyPrices);
+  console.log('   - location.state:', location.state);
 
   useEffect(() => {
     loadSystemSettings();
@@ -122,6 +140,7 @@ const BookingConfirmationPage: React.FC = () => {
     const start = new Date(bookingData.checkInTime);
     const end = new Date(bookingData.checkOutTime);
     const days = Math.max(1, bookingData.durationDays || 1);
+    // Use individual day price instead of total divided by days
     const perDay = Math.round((bookingData.totalAmount || 0) / days);
     const cur = new Date(start);
     // iterate dates: include start date, stop before end (same behavior as pricing list)
@@ -388,15 +407,11 @@ const BookingConfirmationPage: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Receipt className="h-5 w-5 text-blue-600" />
-                  <span>付款詳情</span>
+                  <span>付款明細</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">基本費用 ({bookingData.durationDays} 天)</span>
-                    <span className="font-semibold">{formatCurrency(bookingData.totalAmount)}</span>
-                  </div>
                   
                   {/* Daily Prices Breakdown */}
                   {(bookingData.dailyPrices && bookingData.dailyPrices.length > 0 || true) && (
@@ -406,30 +421,58 @@ const BookingConfirmationPage: React.FC = () => {
                         {(bookingData.dailyPrices && bookingData.dailyPrices.length > 0
                           ? bookingData.dailyPrices
                           : buildFallbackDailyPrices()
-                        ).map((day: any, index: number) => (
-                          <div key={index} className="flex justify-between items-center text-sm bg-white p-2 rounded">
-                            <div className="flex items-center space-x-2">
-                              <span className="text-gray-600">
-                                {formatDateWithWeekday(day.date)}
-                              </span>
-                              {day.isSpecialPrice && (
-                                <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-200 max-w-32 truncate" title={day.specialPriceReason}>
-                                  💰 {day.specialPriceReason || '特殊價格'}
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              {day.isSpecialPrice && day.originalPrice ? (
-                                <span className="text-xs text-gray-500 line-through">
-                                  {formatCurrency(day.originalPrice)}
+                        ).map((day: any, index: number) => {
+                          // Calculate daily discount if auto discount applies
+                          const dailyDiscount = bookingData?.autoDiscountInfo && bookingData?.autoDiscountAmount && bookingData?.autoDiscountAmount > 0 
+                            ? bookingData.autoDiscountAmount / (bookingData.dailyPrices?.length || bookingData.durationDays || 1)
+                            : 0;
+                          
+                          return (
+                            <div key={index} className="flex justify-between items-center text-sm bg-white p-2 rounded">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-gray-600">
+                                  {formatDateWithWeekday(day.date)}
                                 </span>
-                              ) : null}
-                              <span className={`font-semibold ${day.isSpecialPrice ? 'text-orange-600' : 'text-blue-600'}`}>
-                                {formatCurrency(day.price)}
-                              </span>
+                                {day.isSpecialPrice && (
+                                  <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-200 max-w-32 truncate" title={day.specialPriceReason}>
+                                    💰 {day.specialPriceReason || '特殊價格'}
+                                  </Badge>
+                                )}
+                                {/* Auto Discount Badge for each day */}
+                                {bookingData?.autoDiscountInfo && dailyDiscount > 0 && (
+                                  <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-200 max-w-32 truncate" title={bookingData.autoDiscountInfo.description}>
+                                    🎯 {bookingData.autoDiscountInfo.name}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                {day.isSpecialPrice && day.originalPrice ? (
+                                  <span className="text-xs text-gray-500 line-through">
+                                    {formatCurrency(day.originalPrice)}
+                                  </span>
+                                ) : null}
+                                {/* Show original price with line-through if auto discount applies */}
+                                {dailyDiscount > 0 && (
+                                  <span className="text-xs text-gray-500 line-through">
+                                    {formatCurrency(day.price)}
+                                  </span>
+                                )}
+                                <span className={`font-semibold ${
+                                  day.isSpecialPrice ? 'text-orange-600' : 
+                                  dailyDiscount > 0 ? 'text-purple-600' : 'text-blue-600'
+                                }`}>
+                                  {formatCurrency(day.price - dailyDiscount)}
+                                </span>
+                                {/* Show discount amount for this day */}
+                                {dailyDiscount > 0 && (
+                                  <span className="text-xs text-purple-600 font-medium">
+                                    -{formatCurrency(dailyDiscount)}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -449,27 +492,56 @@ const BookingConfirmationPage: React.FC = () => {
                     </>
                   )}
                   
-                  {/* Voucher Discount */}
+                  {/* Auto Discount */}
+                  {bookingData.autoDiscountInfo && bookingData.autoDiscountAmount && bookingData.autoDiscountAmount > 0 && (
+                    <>
+                      <Separator />
+                      <div className="flex justify-between items-center py-2 bg-purple-50 rounded-lg px-3">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-purple-600">🎯 自動折扣:</span>
+                          <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
+                            {bookingData.autoDiscountInfo.name}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold text-purple-600">-{formatCurrency(bookingData.autoDiscountAmount)}</div>
+                          <div className="text-xs text-purple-500">{bookingData.autoDiscountInfo.description}</div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* VIP Discount */}
+                  {bookingData.vipDiscount && bookingData.vipDiscount > 0 && (
+                    <>
+                      <Separator />
+                      <div className="flex justify-between items-center py-2 bg-yellow-50 rounded-lg px-3">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-yellow-600">👑 VIP 折扣:</span>
+                          <span className="text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded">
+                            VIP 會員
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold text-yellow-600">-{formatCurrency(bookingData.vipDiscount)}</div>
+                          <div className="text-xs text-yellow-500">VIP會員享有折扣優惠</div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Discount Code */}
                   {bookingData.discountAmount > 0 && (
                     <>
                       <Separator />
                       <div className="flex justify-between items-center py-2 bg-green-50 rounded-lg px-3">
                         <div className="flex items-center space-x-2">
-                          <span className="text-green-600">🎫 折扣:</span>
+                          <span className="text-green-600">🎫 折扣碼:</span>
                         </div>
-                        <span className="font-semibold text-green-600">-{formatCurrency(bookingData.discountAmount)}</span>
-                      </div>
-                    </>
-                  )}
-
-                  {bookingData.vipDiscount && bookingData.vipDiscount > 0 && (
-                    <>
-                      <Separator />
-                      <div className="flex justify-between items-center py-2 bg-blue-50 rounded-lg px-3">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-blue-600">👑 VIP 折扣:</span>
+                        <div className="text-right">
+                          <div className="font-semibold text-green-600">-{formatCurrency(bookingData.discountAmount)}</div>
+                          <div className="text-xs text-green-500">折扣碼已應用</div>
                         </div>
-                        <span className="font-semibold text-blue-600">-{formatCurrency(bookingData.vipDiscount)}</span>
                       </div>
                     </>
                   )}
@@ -482,11 +554,15 @@ const BookingConfirmationPage: React.FC = () => {
                         <span className="font-semibold">{formatCurrency(bookingData.totalAmount)}</span>
                       </div>
                       
-                      {(bookingData.discountAmount > 0 || (bookingData.vipDiscount && bookingData.vipDiscount > 0)) && (
+                      {(bookingData.discountAmount > 0 || (bookingData.vipDiscount && bookingData.vipDiscount > 0) || (bookingData.autoDiscountAmount && bookingData.autoDiscountAmount > 0)) && (
                         <div className="flex justify-between items-center">
                           <span className="font-semibold text-green-700">總折扣:</span>
                           <span className="font-bold text-green-700 text-lg">
-                            -{formatCurrency((bookingData.discountAmount || 0) + (bookingData.vipDiscount || 0))}
+                            -{formatCurrency(
+                              (bookingData.discountAmount || 0) + 
+                              (bookingData.vipDiscount || 0) + 
+                              (bookingData.autoDiscountAmount || 0)
+                            )}
                           </span>
                         </div>
                       )}
@@ -497,6 +573,9 @@ const BookingConfirmationPage: React.FC = () => {
                           <span className="font-bold text-emerald-800 text-xl">
                             {formatCurrency(bookingData.finalAmount)}
                           </span>
+                        </div>
+                        <div className="mt-2 text-xs text-gray-600 bg-yellow-50 p-2 rounded border border-yellow-200">
+                          💡 目前的金額為預估金額，最終費用將依您實際離場時間為準。若因航班延誤或臨時狀況延後離場，實際收費將依停車天數補收費用。
                         </div>
                       </div>
                     </div>
@@ -548,57 +627,64 @@ const BookingConfirmationPage: React.FC = () => {
               </CardContent>
             </Card> */}
 
-            {/* System Information */}
-            {systemSettings && (
+            {/* System Information - Configurable Contact Content */}
+            {systemSettings?.contactContent?.isActive && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center space-x-2">
                     <FileText className="h-5 w-5 text-blue-600" />
-                    <span>聯繫信息</span>
+                    <span>{systemSettings.contactContent.title}</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
-                  <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4 text-gray-500" />
-                    <span>{systemSettings.contactInfo?.phone || 'N/A'}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Mail className="h-4 w-4 text-gray-500" />
-                    <span>{systemSettings.contactInfo?.email || 'N/A'}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <MapPin className="h-4 w-4 text-gray-500" />
-                    <span>{systemSettings.contactInfo?.address || 'N/A'}</span>
-                  </div>
-                  {systemSettings.contactInfo?.website && (
-                    <div className="flex items-center space-x-2">
-                      <FileText className="h-4 w-4 text-gray-500" />
-                      <a 
-                        href={systemSettings.contactInfo.website} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
-                      >
-                        {systemSettings.contactInfo.website}
-                      </a>
+                  <div 
+                    className="text-gray-700 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: systemSettings.contactContent.content }}
+                  />
+                  
+                  {systemSettings.contactContent.imageUrl && (
+                    <div className="mt-3">
+                      <img
+                        src={systemSettings.contactContent.imageUrl}
+                        alt="Contact information"
+                        className="w-full h-32 object-cover rounded-lg border"
+                      />
+                    </div>
+                  )}
+                  
+                  {systemSettings.contactContent.showContactInfo && (
+                    <div className="space-y-2 pt-3 border-t">
+                      <div className="flex items-center space-x-2">
+                        <Phone className="h-4 w-4 text-gray-500" />
+                        <span>{systemSettings.contactInfo?.phone || 'N/A'}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Mail className="h-4 w-4 text-gray-500" />
+                        <span>{systemSettings.contactInfo?.email || 'N/A'}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <MapPin className="h-4 w-4 text-gray-500" />
+                        <span>{systemSettings.contactInfo?.address || 'N/A'}</span>
+                      </div>
+                      {systemSettings.contactInfo?.website && (
+                        <div className="flex items-center space-x-2">
+                          <FileText className="h-4 w-4 text-gray-500" />
+                          <a 
+                            href={systemSettings.contactInfo.website} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            {systemSettings.contactInfo.website}
+                          </a>
+                        </div>
+                      )}
                     </div>
                   )}
                 </CardContent>
               </Card>
             )}
 
-            {/* Important Notes */}
-            <Card className="border-amber-200 bg-amber-50/50">
-              <CardHeader>
-                <CardTitle className="text-lg text-amber-800">重要提示</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-amber-700 space-y-2">
-                <p>• 請按預約時間到達</p>
-                <p>• 請攜帶車輛證明文件和駕駛執照</p>
-                <p>• 如有變更，請立即聯繫</p>
-                <p>• 保留預約編號以供查詢</p>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>

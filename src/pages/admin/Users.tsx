@@ -846,15 +846,17 @@ const AdminUsers: React.FC = () => {
                           >
                             <Crown className="h-4 w-4" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openPasswordDialog(user)}
-                            title="更改密碼"
-                            className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                          >
-                            <Key className="h-4 w-4" />
-                          </Button>
+                          {(user.role === 'admin' || user.role === 'staff') && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openPasswordDialog(user)}
+                              title="更改密碼"
+                              className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                            >
+                              <Key className="h-4 w-4" />
+                            </Button>
+                          )}
                           {user.isVIP && !user.vipCode && (
                             <Button
                               size="sm"
@@ -1049,15 +1051,17 @@ const AdminUsers: React.FC = () => {
                           >
                             <Crown className="h-4 w-4" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openPasswordDialog(user)}
-                            title="更改密碼"
-                            className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                          >
-                            <Key className="h-4 w-4" />
-                          </Button>
+                          {(user.role === 'admin' || user.role === 'staff') && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openPasswordDialog(user)}
+                              title="更改密碼"
+                              className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                            >
+                              <Key className="h-4 w-4" />
+                            </Button>
+                          )}
                           {user.isVIP && !user.vipCode && (
                             <Button
                               size="sm"

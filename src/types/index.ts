@@ -117,6 +117,17 @@ export interface Booking {
   notes?: string;
   isVIP: boolean;
   vipDiscount: number;
+  // Auto discount fields
+  autoDiscount?: {
+    _id: string;
+    name: string;
+    description: string;
+    discountAmount: number;
+    discountType: string;
+    discountValue: number;
+    applyToSpecialPrices: boolean;
+  };
+  autoDiscountAmount?: number;
   paymentStatus: 'pending' | 'paid' | 'refunded';
   paymentMethod: 'cash' | 'credit_card' | 'online';
   actualCheckInTime?: string;
@@ -166,11 +177,27 @@ export interface SystemSettings {
     address: string;
     website: string;
   };
+  contactContent: {
+    title: string;
+    content: string;
+    imageUrl: string;
+    isActive: boolean;
+    showContactInfo: boolean;
+  };
   businessHours: {
     open: string;
     close: string;
     is24Hours: boolean;
   };
+  termsCheckboxes: {
+    id: string;
+    title: string;
+    content: string;
+    isRequired: boolean;
+    isActive: boolean;
+    order: number;
+  }[];
+  contractTerms: string;
   defaultVIPDiscount: number;
   bookingAdvanceHours: number;
   maxBookingDays: number;
@@ -194,6 +221,11 @@ export interface SystemSettings {
   luggageSettings: {
     freeLuggageCount: number;
     luggagePricePerItem: number;
+    luggageContent: {
+      title: string;
+      description: string;
+      isActive: boolean;
+    };
   };
   maintenanceMode: {
     enabled: boolean;
@@ -237,7 +269,6 @@ export interface BookingFormData {
   licensePlate: string;
   passengerCount: number;
   luggageCount: number;
-  termsAccepted: boolean;
   departureTerminal?: string;
   returnTerminal?: string;
 }

@@ -51,6 +51,7 @@ const AdminLayout: React.FC = () => {
       { path: '/admin/notifications', icon: MessageSquare, label: '通知', exact: false, roles: ['admin'] },
       { path: '/admin/maintenance', icon: Wrench, label: '維護日期', exact: false, roles: ['admin'] },
       { path: '/admin/special-pricing', icon: TrendingUp, label: '特殊價格', exact: false, roles: ['admin'] },
+      { path: '/admin/auto-discounts', icon: Tag, label: '自動折扣', exact: false, roles: ['admin'] },
       { path: '/admin/manual-booking', icon: Plus, label: '手動預約', exact: false, roles: ['admin', 'staff'] },
       { path: '/admin/today-overview', icon: Clock, label: '今日概覽', exact: false, roles: ['admin', 'staff'] },
       { path: '/admin/settings', icon: Settings, label: '系統設定', exact: false, roles: ['admin'] },

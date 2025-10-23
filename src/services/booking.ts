@@ -28,7 +28,6 @@ export interface CreateBookingParams {
   estimatedArrivalTime?: string;
   flightNumber?: string;
   notes?: string;
-  termsAccepted: boolean;
 }
 
 export interface CalculatePriceParams {

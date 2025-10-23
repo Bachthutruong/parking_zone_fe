@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,6 +47,7 @@ const BookingPage: React.FC = () => {
   const [availableSlots, setAvailableSlots] = useState<any[]>([]);
   console.log(availableSlots, 'availableSlots');
   const [pricing, setPricing] = useState<any>(null);
+
   const [discountInfo, setDiscountInfo] = useState<any>(null);
   const [isVIP, setIsVIP] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -70,10 +71,44 @@ const BookingPage: React.FC = () => {
     phone: '',
     email: '',
     licensePlate: '',
-    passengerCount: 1,
-    luggageCount: 0,
-    termsAccepted: false
+    passengerCount: 0,
+    luggageCount: 0
   });
+
+  // State for individual terms checkboxes
+  const [acceptedTerms, setAcceptedTerms] = useState<Record<string, boolean>>({});
+
+  // Memoized function to check if all required terms are accepted
+  const isAllTermsAccepted = useMemo(() => {
+    // If systemSettings is not loaded yet, return false
+    if (!systemSettings) {
+      return false;
+    }
+    
+    const activeTerms = systemSettings?.termsCheckboxes?.filter(term => term.isActive) || [];
+    const requiredTerms = activeTerms.filter(term => term.isRequired);
+    const allRequiredTermsAccepted = requiredTerms.every(term => acceptedTerms[term.id]);
+    
+    return allRequiredTermsAccepted;
+  }, [systemSettings, acceptedTerms]);
+
+  // Memoized button disabled state
+  const isButtonDisabled = useMemo(() => {
+    // If systemSettings is not loaded yet, disable button
+    if (!systemSettings) {
+      return true;
+    }
+    
+    const activeTerms = systemSettings?.termsCheckboxes?.filter(term => term.isActive) || [];
+    
+    // If no terms checkboxes configured, button is enabled
+    if (activeTerms.length === 0) {
+      return loading;
+    }
+    
+    // If terms checkboxes are configured, check all required terms
+    return loading || !isAllTermsAccepted;
+  }, [loading, systemSettings, systemSettings?.termsCheckboxes, isAllTermsAccepted]);
 
   const [showConflictMessage, setShowConflictMessage] = useState(false);
   const [conflictDetails, setConflictDetails] = useState<any>(null);
@@ -94,7 +129,6 @@ const BookingPage: React.FC = () => {
         getAddonServices()
       ]);
       setSystemSettings(settings);
-      console.log(settings , 'settings');
       // Ensure parkingTypes is always an array
       setParkingTypes(Array.isArray(types) ? types : []);
       // Ensure addonServices is always an array
@@ -149,6 +183,11 @@ const BookingPage: React.FC = () => {
     return () => clearTimeout(timeoutId);
   }, [formData.email]);
 
+  // Scroll to top when step changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentStep]);
+
   const checkAvailability = async () => {
     try {
       const response = await api.post('/bookings/check-availability', {
@@ -160,8 +199,10 @@ const BookingPage: React.FC = () => {
       const data = response.data;
       if (data.success) {
         setAvailableSlots(data.availableSlots);
-        setPricing(data.pricing);
         setConflictingDays([]); // No conflicts if available
+        
+        // Now calculate pricing with auto discount
+        await calculatePricing();
       } else {
         setAvailableSlots([]);
         setPricing(null);
@@ -173,6 +214,47 @@ const BookingPage: React.FC = () => {
     } catch (error) {
       console.error('Error checking availability:', error);
       toast.error('檢查可用性時發生錯誤');
+    }
+  };
+
+  const calculatePricing = async () => {
+    if (!formData.parkingTypeId || !formData.checkInTime || !formData.checkOutTime) {
+      return;
+    }
+
+    try {
+      const response = await api.post('/bookings/calculate-price', {
+        parkingTypeId: formData.parkingTypeId,
+        checkInTime: formData.checkInTime,
+        checkOutTime: formData.checkOutTime,
+        addonServices: formData.selectedAddonServices,
+        discountCode: formData.discountCode,
+        isVIP: isVIP,
+        userEmail: formData.email
+      });
+
+      if (response.data.success) {
+        setPricing({
+          ...response.data.pricing,
+          autoDiscountInfo: response.data.autoDiscountInfo
+        });
+        setDiscountInfo({
+          discountAmount: response.data.pricing.discountAmount,
+          vipDiscount: response.data.pricing.vipDiscount,
+          finalAmount: response.data.pricing.finalAmount,
+          autoDiscountInfo: response.data.autoDiscountInfo,
+          autoDiscountAmount: response.data.pricing.autoDiscountAmount,
+          // Calculate total discount including auto discount
+          totalDiscount: (response.data.pricing.autoDiscountAmount || 0) + (response.data.pricing.discountAmount || 0) + (response.data.pricing.vipDiscount || 0)
+        });
+          
+      }
+    } catch (error: any) {
+      console.error('❌ calculatePricing: Error calculating pricing:', error);
+      if (error.response) {
+        console.error('   - Status:', error.response.status);
+        console.error('   - Data:', error.response.data);
+      }
     }
   };
 
@@ -314,9 +396,13 @@ const BookingPage: React.FC = () => {
         setCurrentUser(response.user);
         setIsVIP(true);
         toast.success(`🎉 歡迎VIP會員！您享有${response.user.vipDiscount || 0}%折扣！`);
+        // Recalculate pricing with VIP discount
+        await calculatePricing();
       } else {
         setCurrentUser(null);
         setIsVIP(false);
+        // Recalculate pricing without VIP discount
+        await calculatePricing();
       }
     } catch (error) {
       console.error('Error checking VIP status:', error);
@@ -351,10 +437,14 @@ const BookingPage: React.FC = () => {
         }));
         
         toast.success(`🎉 歡迎VIP會員！您享有${response.user.vipDiscount || 0}%折扣！`);
+        // Recalculate pricing with VIP discount
+        await calculatePricing();
       } else {
         toast.error(response.message || 'VIP碼無效');
         setCurrentUser(null);
         setIsVIP(false);
+        // Recalculate pricing without VIP discount
+        await calculatePricing();
       }
     } catch (error) {
       console.error('Error checking VIP code:', error);
@@ -378,43 +468,28 @@ const BookingPage: React.FC = () => {
     }
 
     try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const response = await api.post('/bookings/apply-discount', {
-        discountCode: formData.discountCode,
-        parkingTypeId: formData.parkingTypeId,
-        checkInTime: formData.checkInTime,
-        checkOutTime: formData.checkOutTime,
-        addonServices: formData.selectedAddonServices,
-        isVIP: isVIP,
-        userEmail: formData.email || user.email
-      });
-
-      const data = response.data;
-      if (data.success) {
-        setDiscountInfo(data.discountInfo);
-        toast.success('折扣碼應用成功！');
-      } else {
-        toast.error(data.message || '折扣碼無效');
-        setDiscountInfo(null);
-      }
+      // Recalculate pricing with discount code
+      await calculatePricing();
+      toast.success('折扣碼應用成功！');
     } catch (error: any) {
       console.error('Error applying discount:', error);
-      // Don't show authentication errors for public booking
-      if (error.response?.status === 401) {
-        toast.error('請登入以使用折扣碼');
-      } else {
-        const errorMessage = error.response?.data?.message || error.message || '無法應用折扣碼';
-        toast.error(errorMessage);
-      }
+      toast.error('應用折扣碼時發生錯誤');
       setDiscountInfo(null);
     }
   };
 
   const handleSubmit = async () => {
-    if (!formData.termsAccepted) {
-      toast.error('您必須同意條款');
+    // Check if all required terms are accepted
+    const activeTerms = systemSettings?.termsCheckboxes?.filter(term => term.isActive) || [];
+    
+    // If terms checkboxes are configured, check all required terms
+    if (activeTerms.length > 0 && !isAllTermsAccepted) {
+      const requiredTerms = activeTerms.filter(term => term.isRequired);
+      const missingTerms = requiredTerms.filter(term => !acceptedTerms[term.id]);
+      toast.error(`您必須同意所有必填條款：${missingTerms.map(term => term.title).join('、')}`);
       return;
     }
+    
 
     if (!formData.parkingTypeId) {
       toast.error('請選擇停車場類型');
@@ -460,13 +535,11 @@ const BookingPage: React.FC = () => {
         luggageCount: formData.luggageCount,
         addonServices: formData.selectedAddonServices,
         discountCode: formData.discountCode,
-        termsAccepted: formData.termsAccepted,
         departureTerminal: formData.departureTerminal,
         returnTerminal: formData.returnTerminal
       };
 
       const result = await createBooking(bookingData);
-      console.log('Booking result:', result);
       
       // Transform booking data for confirmation page
       const confirmationData = {
@@ -498,7 +571,12 @@ const BookingPage: React.FC = () => {
         status: result.booking.status,
         passengerCount: result.booking.passengerCount,
         departureTerminal: result.booking.departureTerminal,
-        returnTerminal: result.booking.returnTerminal
+        returnTerminal: result.booking.returnTerminal,
+        // Add auto discount data from pricing
+        autoDiscountInfo: pricing?.autoDiscountInfo || null,
+        autoDiscountAmount: pricing?.autoDiscountAmount || 0,
+        // Add daily prices from pricing
+        dailyPrices: pricing?.dailyPrices || []
       };
       
       // Navigate to confirmation page with booking details
@@ -788,7 +866,7 @@ const BookingPage: React.FC = () => {
                       <Label className="text-lg font-semibold text-gray-800 mb-4 block">選擇預約時間</Label>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <Label htmlFor="checkInTime" className="text-sm font-medium text-gray-700">進入時間 *</Label>
+                          <Label htmlFor="checkInTime" className="text-sm font-medium text-gray-700">進場停車時間 *</Label>
                           <div className="relative">
                             <CustomDateInput
                               id="checkInTime"
@@ -1031,7 +1109,7 @@ const BookingPage: React.FC = () => {
                             {parkingTypes.find(t => t._id === formData.parkingTypeId)?.name} • {pricing.durationDays} 天
                           </div>
                         </div>
-                        <span className="font-semibold text-gray-900">{formatCurrency(pricing.totalPrice)}</span>
+                        <span className="font-semibold text-gray-900">{formatCurrency(pricing.basePrice || pricing.totalPrice || 0)}</span>
                       </div>
                     </div>
 
@@ -1040,30 +1118,55 @@ const BookingPage: React.FC = () => {
                       <div className="bg-blue-50 p-3 rounded-lg">
                         <div className="text-sm font-semibold text-blue-700 mb-2">📅 每日價格詳細:</div>
                         <div className="space-y-2">
-                          {pricing.dailyPrices.map((dayPrice: any, index: number) => (
-                            <div key={index} className="flex justify-between items-center text-sm bg-white p-2 rounded">
-                              <div className="flex items-center space-x-2">
-                                <span className="text-gray-600">
-                                  {formatDateWithWeekday(dayPrice.date)}
-                                </span>
-                                {dayPrice.isSpecialPrice && (
-                                  <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-200 max-w-32 truncate" title={dayPrice.specialPriceReason}>
-                                    💰 {dayPrice.specialPriceReason || '特殊價格'}
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                {dayPrice.isSpecialPrice && (
-                                  <span className="text-xs text-gray-500 line-through">
-                                    {formatCurrency(dayPrice.originalPrice)}
+                          {pricing.dailyPrices.map((dayPrice: any, index: number) => {
+                            // Calculate daily discount if auto discount applies
+                            const dailyDiscount = pricing?.autoDiscountInfo && pricing?.autoDiscountAmount > 0 
+                              ? pricing.autoDiscountAmount / pricing.dailyPrices.length 
+                              : 0;
+                            
+                            return (
+                              <div key={index} className="flex justify-between items-center text-sm bg-white p-2 rounded">
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-gray-600">
+                                    {formatDateWithWeekday(dayPrice.date)}
                                   </span>
-                                )}
-                                <span className={`font-semibold ${dayPrice.isSpecialPrice ? 'text-orange-600' : 'text-blue-600'}`}>
-                                  {formatCurrency(dayPrice.price)}
-                                </span>
+                                  {dayPrice.isSpecialPrice && (
+                                    <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-200 max-w-32 truncate" title={dayPrice.specialPriceReason}>
+                                      💰 {dayPrice.specialPriceReason || '特殊價格'}
+                                    </Badge>
+                                  )}
+                                  {/* Auto Discount Badge for each day */}
+                                  {pricing?.autoDiscountInfo && dailyDiscount > 0 && (
+                                    <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-200 max-w-32 truncate" title={pricing.autoDiscountInfo.description}>
+                                      🎯 {pricing.autoDiscountInfo.name}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  {dayPrice.isSpecialPrice && (
+                                    <span className="text-xs text-gray-500 line-through">
+                                      {formatCurrency(dayPrice.originalPrice)}
+                                    </span>
+                                  )}
+                                  {/* Show original price with line-through if discount applies */}
+                                  {dailyDiscount > 0 && (
+                                    <span className="text-xs text-gray-500 line-through">
+                                      {formatCurrency(dayPrice.price)}
+                                    </span>
+                                  )}
+                                  <span className={`font-semibold ${dayPrice.isSpecialPrice ? 'text-orange-600' : dailyDiscount > 0 ? 'text-purple-600' : 'text-blue-600'}`}>
+                                    {formatCurrency(dayPrice.price - dailyDiscount)}
+                                  </span>
+                                  {/* Show discount amount for this day */}
+                                  {dailyDiscount > 0 && (
+                                    <span className="text-xs text-purple-600 font-medium">
+                                      -{formatCurrency(dailyDiscount)}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -1090,7 +1193,8 @@ const BookingPage: React.FC = () => {
                     )}
 
                     {/* Luggage (removed: no longer charges or displayed) */}
-                    
+                  
+
                     {/* VIP Discount Preview - Always show if user is VIP */}
                     {isVIP && currentUser && (
                       <div className="flex justify-between items-center py-2 bg-blue-50 rounded-lg px-3">
@@ -1104,7 +1208,7 @@ const BookingPage: React.FC = () => {
                           <span className="font-semibold text-blue-600">-{formatCurrency(discountInfo.vipDiscount || 0)}</span>
                         ) : (
                           <span className="text-sm text-blue-600">
-                            ~{formatCurrency(Math.round((pricing?.totalPrice || 0) * (currentUser.vipDiscount / 100)))}
+                            ~{formatCurrency(Math.round((pricing?.basePrice || pricing?.totalPrice || 0) * (currentUser.vipDiscount / 100)))}
                           </span>
                         )}
                       </div>
@@ -1131,36 +1235,78 @@ const BookingPage: React.FC = () => {
                         <div className="flex justify-between items-center">
                           <span className="font-semibold text-gray-700">總原價:</span>
                           <span className="font-semibold text-gray-900">
-                            {formatCurrency(pricing.totalPrice + ((addonServices || [])
+                            {formatCurrency((pricing.basePrice || pricing.totalPrice || 0) + ((addonServices || [])
                               .filter(service => formData.selectedAddonServices.includes(service._id))
                               .reduce((sum, service) => sum + service.price, 0)
                             ))}
                           </span>
                         </div>
                         
-                        {/* Show total discount if there's any discount */}
-                        {(discountInfo && (discountInfo.discountAmount > 0 || discountInfo.vipDiscount > 0)) || (isVIP && currentUser) ? (
-                          <div className="flex justify-between items-center">
-                            <span className="font-semibold text-green-700">總折扣:</span>
-                            <span className="font-bold text-green-700 text-lg">
-                              -{formatCurrency(
-                                discountInfo 
-                                  ? (discountInfo.totalDiscount || discountInfo.discountAmount) || 0
-                                  : (() => {
-                                      const baseTotal = (pricing?.totalPrice || 0) + 
-                                        (addonServices
-                                          .filter(service => formData.selectedAddonServices.includes(service._id))
-                                          .reduce((sum, service) => sum + service.price, 0)
-                                        );
-                                      
-                                      // Luggage is not charged; baseTotal already includes only parking and addons
-                                      const totalWithoutLuggage = baseTotal;
-                                      return Math.round(totalWithoutLuggage * (currentUser?.vipDiscount / 100));
-                                    })()
-                              )}
-                            </span>
+                        {/* Auto Discount */}
+                        {pricing?.autoDiscountInfo && pricing?.autoDiscountAmount > 0 && (
+                          <div className="flex justify-between items-center bg-purple-50 p-2 rounded border border-purple-200">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-purple-700 font-medium">🎯 自動折扣:</span>
+                              <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
+                                {pricing.autoDiscountInfo.name}
+                              </span>
+                              <div className="text-xs text-purple-600">
+                            {pricing.autoDiscountInfo.discountType === 'percentage' 
+                              ? `每天節省 ${pricing.autoDiscountInfo.discountValue}%`
+                              : `每天節省 ${formatCurrency(pricing.autoDiscountInfo.discountValue)}`
+                            }
                           </div>
-                        ) : null}
+                            </div>
+                            <div className="text-right">
+                              <div className="font-bold text-purple-700">-{formatCurrency(pricing.autoDiscountAmount)}</div>
+                              <div className="text-xs text-purple-600">{pricing.autoDiscountInfo.description}</div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* VIP Discount */}
+                        {isVIP && currentUser && (
+                          <div className="flex justify-between items-center bg-yellow-50 p-2 rounded border border-yellow-200">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-yellow-700 font-medium">👑 VIP折扣:</span>
+                              <span className="text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded">
+                                {currentUser.vipDiscount}% 折扣
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-bold text-yellow-700">
+                                -{formatCurrency(
+                                  (() => {
+                                    const baseTotal = (pricing?.basePrice || pricing?.totalPrice || 0) + 
+                                      (addonServices
+                                        .filter(service => formData.selectedAddonServices.includes(service._id))
+                                        .reduce((sum, service) => sum + service.price, 0)
+                                      );
+                                    const afterAutoDiscount = baseTotal - (pricing?.autoDiscountAmount || 0);
+                                    return Math.round(afterAutoDiscount * (currentUser.vipDiscount / 100));
+                                  })()
+                                )}
+                              </div>
+                              <div className="text-xs text-yellow-600">VIP會員享有{currentUser.vipDiscount}%折扣優惠</div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Discount Code */}
+                        {discountInfo?.discountAmount > 0 && (
+                          <div className="flex justify-between items-center bg-green-50 p-2 rounded border border-green-200">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-green-700 font-medium">🎫 折扣碼:</span>
+                              <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                                {discountInfo.code}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-bold text-green-700">-{formatCurrency(discountInfo.discountAmount)}</div>
+                              <div className="text-xs text-green-600">折扣碼 {discountInfo.code} 已應用</div>
+                            </div>
+                          </div>
+                        )}
                         
                         <div className="border-t pt-2">
                           <div className="flex justify-between items-center">
@@ -1168,7 +1314,7 @@ const BookingPage: React.FC = () => {
                             <span className="text-2xl font-bold text-emerald-600">
                               {(() => {
                                 // Calculate base total
-                                const baseTotal = (pricing?.totalPrice || 0) + 
+                                const baseTotal = (pricing?.basePrice || pricing?.totalPrice || 0) + 
                                   (addonServices
                                     .filter(service => formData.selectedAddonServices.includes(service._id))
                                     .reduce((sum, service) => sum + service.price, 0)
@@ -1179,15 +1325,28 @@ const BookingPage: React.FC = () => {
                                 
                                 if (discountInfo) {
                                   return formatCurrency(discountInfo.finalAmount);
-                                } else if (isVIP && currentUser) {
-                                  const vipDiscount = totalWithoutLuggage * (currentUser.vipDiscount / 100);
-                                  return formatCurrency(Math.round(totalWithoutLuggage - vipDiscount));
                                 } else {
-                                  return formatCurrency(totalWithoutLuggage);
+                                  let finalAmount = totalWithoutLuggage;
+                                  
+                                  // Apply auto discount
+                                  if (pricing?.autoDiscountAmount) {
+                                    finalAmount -= pricing.autoDiscountAmount;
+                                  }
+                                  
+                                  // Apply VIP discount
+                                  if (isVIP && currentUser) {
+                                    const vipDiscount = (totalWithoutLuggage - (pricing?.autoDiscountAmount || 0)) * (currentUser.vipDiscount / 100);
+                                    finalAmount -= vipDiscount;
+                                  }
+                                  
+                                  return formatCurrency(Math.round(finalAmount));
                                 }
                               })()}
                             </span>
                           </div>
+                        </div>
+                        <div className="mt-2 text-xs text-gray-600 bg-yellow-50 p-2 rounded border border-yellow-200">
+                          💡 目前的金額為預估金額，最終費用將依您實際離場時間為準。若因航班延誤或臨時狀況延後離場，實際收費將依停車天數補收費用。
                         </div>
                       </div>
                     </div>
@@ -1287,29 +1446,6 @@ const BookingPage: React.FC = () => {
                     </p>
                   </div>
                   
-                  {/* Show discount info if applied */}
-                  {discountInfo && (
-                    <div className="mt-3 p-3 bg-white rounded-lg border border-green-200">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <span className="text-green-600">✅</span>
-                        <span className="font-medium text-green-800">折扣已應用！</span>
-                      </div>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span>折扣碼:</span>
-                          <span className="font-semibold text-green-600">{discountInfo.code}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>折扣金額:</span>
-                          <span className="font-semibold text-green-600">-{formatCurrency(discountInfo.discountAmount)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>最終金額:</span>
-                          <span className="font-semibold text-green-600">{formatCurrency(discountInfo.finalAmount)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1381,13 +1517,13 @@ const BookingPage: React.FC = () => {
                     <Input
                       id="passengerCount"
                       type="number"
-                      min="1"
+                      min="0"
                       value={formData.passengerCount}
                       onChange={(e) => setFormData(prev => ({ ...prev, passengerCount: parseInt(e.target.value) }))}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="luggageCount" className="text-sm font-medium text-gray-700">行李數量（免費1個，第2個以上現場收100元/行李）</Label>
+                    <Label htmlFor="luggageCount" className="text-sm font-medium text-gray-700">行李數量 (1個人免費1個行李，第2個以上現場收100元/行李)</Label>
                     <Input
                       id="luggageCount"
                       type="number"
@@ -1397,6 +1533,21 @@ const BookingPage: React.FC = () => {
                     />
                   </div>
                 </div>
+
+                {/* Luggage Content Box - Only show if luggageCount > 0 and content is active */}
+                {formData.luggageCount > 0 && systemSettings?.luggageSettings?.luggageContent?.isActive && (
+                  <div className="space-y-6 bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-yellow-600">💡</span>
+                      <span className="text-yellow-800 font-medium">
+                        {systemSettings.luggageSettings.luggageContent.title}
+                      </span>
+                    </div>
+                    <div className="text-sm text-yellow-700 leading-relaxed">
+                      {systemSettings.luggageSettings.luggageContent.description}
+                    </div>
+                  </div>
+                )}
 
                 {/* Terminal Selection - Only show if passengerCount > 0 */}
                 {formData.passengerCount > 0 && (
@@ -1440,8 +1591,8 @@ const BookingPage: React.FC = () => {
                       </div>
                     </div>
                     
-                    <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
-                      💡 請確認航廈選擇正確，以確保接駁服務順利進行
+                    <div className="text-lg text-blue-600 bg-blue-100 p-2 rounded">
+                      💡 上限5人，多一個人現場收100元/人。回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
                     </div>
                   </div>
                 )}
@@ -1460,15 +1611,49 @@ const BookingPage: React.FC = () => {
             {/* Terms Agreement */}
             <Card className="border-0 shadow-lg">
               <CardContent className="p-6">
-                <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
-                  <Checkbox
-                    id="termsAccepted"
-                    checked={formData.termsAccepted}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, termsAccepted: !!checked }))}
-                  />
-                  <Label htmlFor="termsAccepted" className="text-sm font-medium">
-                    我同意所有預約條款和條件
-                  </Label>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">預約條款確認</h3>
+                  {systemSettings && systemSettings?.termsCheckboxes?.filter(term => term.isActive).sort((a, b) => a.order - b.order).map((term) => (
+                    <div key={term.id} className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
+                      <Checkbox
+                        id={`term-${term.id}`}
+                        checked={acceptedTerms[term.id] || false}
+                        onCheckedChange={(checked) => {
+                          setAcceptedTerms(prev => {
+                            const newState = {
+                              ...prev,
+                              [term.id]: !!checked
+                            };
+                            return newState;
+                          });
+                        }}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <Label htmlFor={`term-${term.id}`} className="text-sm font-medium cursor-pointer">
+                          {term.title}
+                        </Label>
+                        {term.content && (
+                          <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                            {term.content}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {(!systemSettings || !systemSettings?.termsCheckboxes || systemSettings.termsCheckboxes.length === 0) && (
+                    <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
+                      <Checkbox
+                        id="termsAccepted"
+                        checked={true}
+                        disabled={true}
+                      />
+                      <Label htmlFor="termsAccepted" className="text-sm font-medium">
+                        我同意所有預約條款和條件
+                      </Label>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1622,7 +1807,9 @@ const BookingPage: React.FC = () => {
               ) : (
                 <Button
                   onClick={handleSubmit}
-                  disabled={loading || !formData.termsAccepted}
+                  disabled={(() => {
+                    return isButtonDisabled;
+                  })()}
                   className="px-8 py-3 bg-[#39653f] hover:bg-[#2d4f33]"
                 >
                   {loading ? '正在處理...' : '完成預約'}

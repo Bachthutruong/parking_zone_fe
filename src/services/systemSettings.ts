@@ -20,7 +20,11 @@ export const getBookingTerms = async () => {
 };
 
 // Update booking terms and rules (admin only)
-export const updateBookingTerms = async (terms: { bookingTerms: string; bookingRules: string }) => {
+export const updateBookingTerms = async (terms: { 
+  bookingTerms: string; 
+  bookingRules: string; 
+  termsCheckboxes?: any[] 
+}) => {
   const response = await api.put('/admin/settings', terms);
   return response.data;
 };

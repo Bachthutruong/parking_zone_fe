@@ -21,6 +21,7 @@ import AdminMaintenance from './pages/admin/Maintenance'
 import AdminSpecialPricing from './pages/admin/SpecialPricing'
 import AdminManualBooking from './pages/admin/ManualBooking'
 import AdminTodayOverview from './pages/admin/TodayOverview'
+import AdminAutoDiscounts from './pages/admin/AutoDiscounts'
 import StaffDashboard from './pages/staff/Dashboard'
 import StaffBookings from './pages/staff/Bookings'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -54,6 +55,7 @@ function App() {
               <Route path="settings" element={<AdminSettings />} />
               <Route path="maintenance" element={<AdminMaintenance />} />
               <Route path="special-pricing" element={<AdminSpecialPricing />} />
+              <Route path="auto-discounts" element={<AdminAutoDiscounts />} />
               <Route path="manual-booking" element={<AdminManualBooking />} />
               <Route path="today-overview" element={<AdminTodayOverview />} />
             </Route>
