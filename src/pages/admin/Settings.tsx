@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,11 +25,14 @@ import {
   // AlertTriangle,
   Info,
   Phone,
+  Mail,
+  MapPin,
   ShoppingCart
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getSystemSettings, updateSystemSettings, updateBookingTerms } from '@/services/systemSettings';
 import { getAllTerms, updateTermsSection, saveAllTerms } from '@/services/admin';
+import ContactImageUpload from '@/components/ContactImageUpload';
 
 interface SettingsFormData {
   // General settings
@@ -36,6 +41,13 @@ interface SettingsFormData {
     email: string;
     address: string;
     website: string;
+  };
+  contactContent: {
+    title: string;
+    content: string;
+    imageUrl: string;
+    isActive: boolean;
+    showContactInfo: boolean;
   };
   businessHours: {
     open: string;
@@ -75,6 +87,11 @@ interface SettingsFormData {
   luggageSettings: {
     freeLuggageCount: number;
     luggagePricePerItem: number;
+    luggageContent: {
+      title: string;
+      description: string;
+      isActive: boolean;
+    };
   };
   
   // System settings
@@ -83,6 +100,18 @@ interface SettingsFormData {
     message: string;
   };
   
+  // Terms checkboxes
+  termsCheckboxes: {
+    id: string;
+    title: string;
+    content: string;
+    isRequired: boolean;
+    isActive: boolean;
+    order: number;
+  }[];
+  
+  // Contract terms
+  contractTerms: string;
 
 }
 
@@ -252,6 +281,13 @@ const AdminSettings: React.FC = () => {
       address: '',
       website: ''
     },
+    contactContent: {
+      title: '聯繫信息',
+      content: '如有任何問題，請隨時聯繫我們。我們將竭誠為您服務。',
+      imageUrl: '',
+      isActive: true,
+      showContactInfo: true
+    },
     businessHours: {
       open: '06:00',
       close: '22:00',
@@ -281,12 +317,44 @@ const AdminSettings: React.FC = () => {
     },
     luggageSettings: {
       freeLuggageCount: 1,
-      luggagePricePerItem: 100
+      luggagePricePerItem: 100,
+      luggageContent: {
+        title: '行李注意事項',
+        description: '請注意您的行李安全，建議將貴重物品隨身攜帶。',
+        isActive: true
+      }
     },
     maintenanceMode: {
       enabled: false,
       message: ''
-    }
+    },
+    termsCheckboxes: [
+      {
+        id: 'terms-1',
+        title: '我同意所有預約條款和條件',
+        content: '我已經閱讀並同意所有預約條款和條件，包括取消政策、退款政策等相關規定。',
+        isRequired: true,
+        isActive: true,
+        order: 1
+      },
+      {
+        id: 'terms-2',
+        title: '我同意隱私政策',
+        content: '我同意系統收集、處理和使用我的個人資料，並了解隱私政策內容。',
+        isRequired: true,
+        isActive: true,
+        order: 2
+      },
+      {
+        id: 'terms-3',
+        title: '我了解停車場規定',
+        content: '我了解並同意遵守停車場的所有規定，包括安全規定、使用時間限制等。',
+        isRequired: true,
+        isActive: true,
+        order: 3
+      }
+    ],
+    contractTerms: '<h2>停車場使用合約條款</h2><p>1. 本合約適用於所有使用本停車場服務的客戶。</p><p>2. 客戶應遵守停車場的所有規定和安全措施。</p><p>3. 停車場管理方保留在緊急情況下移動車輛的權利。</p><p>4. 客戶應確保車輛保險有效，並承擔車輛安全責任。</p><p>5. 本合約受當地法律管轄。</p>'
   });
 
   // Terms management state
@@ -385,11 +453,13 @@ const AdminSettings: React.FC = () => {
       setSaving(true);
       console.log('🔍 Saving booking terms:', {
         bookingTerms: formData.bookingTerms,
-        bookingRules: formData.bookingRules
+        bookingRules: formData.bookingRules,
+        termsCheckboxes: formData.termsCheckboxes
       });
       await updateBookingTerms({
         bookingTerms: formData.bookingTerms,
-        bookingRules: formData.bookingRules
+        bookingRules: formData.bookingRules,
+        termsCheckboxes: formData.termsCheckboxes
       });
       toast.success('預約條款儲存成功！');
     } catch (error: any) {
@@ -401,7 +471,22 @@ const AdminSettings: React.FC = () => {
     }
   };
 
-
+  const handleSaveContractTerms = async () => {
+    try {
+      setSaving(true);
+      console.log('🔍 Saving contract terms:', formData.contractTerms);
+      await updateSystemSettings({
+        contractTerms: formData.contractTerms
+      });
+      toast.success('合約條款儲存成功！');
+    } catch (error: any) {
+      console.error('Error saving contract terms:', error);
+      const errorMessage = error.response?.data?.message || error.message || '無法儲存合約條款';
+      toast.error(errorMessage);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleSaveTerms = async () => {
     try {
@@ -550,7 +635,7 @@ const AdminSettings: React.FC = () => {
           <TabsTrigger value="notifications">通知</TabsTrigger>
           <TabsTrigger value="payment">付款</TabsTrigger>
           <TabsTrigger value="luggage">行李</TabsTrigger>
-          {/* <TabsTrigger value="terms">Điều khoản</TabsTrigger> */}
+          <TabsTrigger value="contract">合約條款</TabsTrigger>
         </TabsList>
 
         {/* General Settings */}
@@ -663,6 +748,155 @@ const AdminSettings: React.FC = () => {
                   <li>• 維護模式將暫停整個系統</li>
                 </ul>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Contact Content Configuration */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <FileText className="h-5 w-5 text-blue-600" />
+                <span>預約確認頁面聯繫內容</span>
+              </CardTitle>
+              <CardDescription>
+                配置預約確認頁面右上角的聯繫信息框
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="contactContentActive"
+                  checked={formData.contactContent.isActive}
+                  onCheckedChange={(checked) => setFormData(prev => ({ 
+                    ...prev, 
+                    contactContent: { 
+                      ...prev.contactContent, 
+                      isActive: checked 
+                    }
+                  }))}
+                />
+                <Label htmlFor="contactContentActive">啟用聯繫內容框</Label>
+              </div>
+
+              {formData.contactContent.isActive && (
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="contactContentTitle">聯繫內容標題</Label>
+                    <Input
+                      id="contactContentTitle"
+                      value={formData.contactContent.title}
+                      onChange={(e) => setFormData(prev => ({ 
+                        ...prev, 
+                        contactContent: { 
+                          ...prev.contactContent, 
+                          title: e.target.value 
+                        }
+                      }))}
+                      placeholder="聯繫信息"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="contactContentDescription">聯繫內容描述</Label>
+                    <Textarea
+                      id="contactContentDescription"
+                      value={formData.contactContent.content}
+                      onChange={(e) => setFormData(prev => ({ 
+                        ...prev, 
+                        contactContent: { 
+                          ...prev.contactContent, 
+                          content: e.target.value 
+                        }
+                      }))}
+                      rows={4}
+                      placeholder="如有任何問題，請隨時聯繫我們。我們將竭誠為您服務。"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      支援 HTML 標籤和連結，例如：&lt;a href="https://example.com"&gt;連結文字&lt;/a&gt;
+                    </p>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="showContactInfo"
+                      checked={formData.contactContent.showContactInfo}
+                      onCheckedChange={(checked) => setFormData(prev => ({ 
+                        ...prev, 
+                        contactContent: { 
+                          ...prev.contactContent, 
+                          showContactInfo: checked 
+                        }
+                      }))}
+                    />
+                    <Label htmlFor="showContactInfo">顯示聯繫信息（電話、郵件、地址等）</Label>
+                  </div>
+
+                  {/* Image Upload */}
+                  <div>
+                    <Label className="block text-sm font-medium text-gray-700 mb-2">
+                      聯繫內容圖片
+                    </Label>
+                    <ContactImageUpload
+                      existingImageUrl={formData.contactContent.imageUrl}
+                      onUploadSuccess={(imageUrl) => setFormData(prev => ({ 
+                        ...prev, 
+                        contactContent: { 
+                          ...prev.contactContent, 
+                          imageUrl 
+                        }
+                      }))}
+                      onDeleteSuccess={() => setFormData(prev => ({ 
+                        ...prev, 
+                        contactContent: { 
+                          ...prev.contactContent, 
+                          imageUrl: '' 
+                        }
+                      }))}
+                    />
+                  </div>
+
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h5 className="font-semibold text-blue-900 mb-2">預覽效果：</h5>
+                    <div className="bg-white p-3 rounded border border-blue-300">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <FileText className="h-4 w-4 text-blue-600" />
+                        <span className="font-medium text-blue-800">
+                          {formData.contactContent.title}
+                        </span>
+                      </div>
+                      <div 
+                        className="text-sm text-blue-700 leading-relaxed"
+                        dangerouslySetInnerHTML={{ __html: formData.contactContent.content }}
+                      />
+                      {formData.contactContent.imageUrl && (
+                        <div className="mt-3">
+                          <img
+                            src={formData.contactContent.imageUrl}
+                            alt="Contact content image"
+                            className="w-full h-24 object-cover rounded border"
+                          />
+                        </div>
+                      )}
+                      {formData.contactContent.showContactInfo && (
+                        <div className="mt-3 space-y-2 text-xs">
+                          <div className="flex items-center space-x-2">
+                            <Phone className="h-3 w-3 text-gray-500" />
+                            <span>{formData.contactInfo.phone}</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Mail className="h-3 w-3 text-gray-500" />
+                            <span>{formData.contactInfo.email}</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <MapPin className="h-3 w-3 text-gray-500" />
+                            <span>{formData.contactInfo.address}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -812,6 +1046,145 @@ const AdminSettings: React.FC = () => {
                 <Save className="h-4 w-4 mr-2" />
                 儲存條款
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* Terms Checkboxes Management */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <FileText className="h-5 w-5 text-green-600" />
+                <span>預約確認條款設定</span>
+              </CardTitle>
+              <CardDescription>
+                設定用戶在預約時需要同意的條款選項
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+                {formData.termsCheckboxes.map((term, index) => (
+                  <div key={term.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-gray-900">條款 {index + 1}</h4>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id={`term-active-${term.id}`}
+                          checked={term.isActive}
+                          onCheckedChange={(checked) => {
+                            const newTerms = [...formData.termsCheckboxes];
+                            newTerms[index].isActive = checked;
+                            setFormData(prev => ({ ...prev, termsCheckboxes: newTerms }));
+                          }}
+                        />
+                        <Label htmlFor={`term-active-${term.id}`}>啟用</Label>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor={`term-title-${term.id}`}>標題</Label>
+                      <Input
+                        id={`term-title-${term.id}`}
+                        value={term.title}
+                        onChange={(e) => {
+                          const newTerms = [...formData.termsCheckboxes];
+                          newTerms[index].title = e.target.value;
+                          setFormData(prev => ({ ...prev, termsCheckboxes: newTerms }));
+                        }}
+                        placeholder="例如：我同意所有預約條款和條件"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor={`term-content-${term.id}`}>內容描述</Label>
+                      <Textarea
+                        id={`term-content-${term.id}`}
+                        value={term.content}
+                        onChange={(e) => {
+                          const newTerms = [...formData.termsCheckboxes];
+                          newTerms[index].content = e.target.value;
+                          setFormData(prev => ({ ...prev, termsCheckboxes: newTerms }));
+                        }}
+                        rows={3}
+                        placeholder="詳細說明此條款的內容..."
+                      />
+                    </div>
+                    
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id={`term-required-${term.id}`}
+                          checked={term.isRequired}
+                          onCheckedChange={(checked) => {
+                            const newTerms = [...formData.termsCheckboxes];
+                            newTerms[index].isRequired = checked;
+                            setFormData(prev => ({ ...prev, termsCheckboxes: newTerms }));
+                          }}
+                        />
+                        <Label htmlFor={`term-required-${term.id}`}>必填</Label>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor={`term-order-${term.id}`}>排序</Label>
+                        <Input
+                          id={`term-order-${term.id}`}
+                          type="number"
+                          min="0"
+                          value={term.order}
+                          onChange={(e) => {
+                            const newTerms = [...formData.termsCheckboxes];
+                            newTerms[index].order = parseInt(e.target.value) || 0;
+                            setFormData(prev => ({ ...prev, termsCheckboxes: newTerms }));
+                          }}
+                          className="w-20"
+                        />
+                      </div>
+                      
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          const newTerms = formData.termsCheckboxes.filter((_, i) => i !== index);
+                          setFormData(prev => ({ ...prev, termsCheckboxes: newTerms }));
+                        }}
+                      >
+                        刪除
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const newTerm = {
+                        id: `terms-${Date.now()}`,
+                        title: '新條款',
+                        content: '請輸入條款內容...',
+                        isRequired: true,
+                        isActive: true,
+                        order: formData.termsCheckboxes.length + 1
+                      };
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        termsCheckboxes: [...prev.termsCheckboxes, newTerm] 
+                      }));
+                    }}
+                    className="flex-1"
+                  >
+                    + 新增條款
+                  </Button>
+                  
+                  <Button
+                    onClick={handleSaveBookingTerms}
+                    disabled={saving}
+                    className="flex-1"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    儲存條款設定
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1011,6 +1384,143 @@ const AdminSettings: React.FC = () => {
                   <p>• 如果客戶選擇3件行李：額外費用 {formData.luggageSettings.luggagePricePerItem * 2} NT$</p>
                 </div>
               </div>
+
+              {/* Luggage Content Configuration */}
+              <div className="border-t pt-6 mt-6">
+                <h4 className="font-semibold text-gray-900 mb-4">行李內容配置</h4>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="luggageContentActive"
+                      checked={formData.luggageSettings.luggageContent.isActive}
+                      onCheckedChange={(checked) => setFormData(prev => ({ 
+                        ...prev, 
+                        luggageSettings: { 
+                          ...prev.luggageSettings, 
+                          luggageContent: { 
+                            ...prev.luggageSettings.luggageContent, 
+                            isActive: checked 
+                          }
+                        }
+                      }))}
+                    />
+                    <Label htmlFor="luggageContentActive">啟用行李內容提示</Label>
+                  </div>
+
+                  {formData.luggageSettings.luggageContent.isActive && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="luggageContentTitle">行李內容標題</Label>
+                        <Input
+                          id="luggageContentTitle"
+                          value={formData.luggageSettings.luggageContent.title}
+                          onChange={(e) => setFormData(prev => ({ 
+                            ...prev, 
+                            luggageSettings: { 
+                              ...prev.luggageSettings, 
+                              luggageContent: { 
+                                ...prev.luggageSettings.luggageContent, 
+                                title: e.target.value 
+                              }
+                            }
+                          }))}
+                          placeholder="行李注意事項"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="luggageContentDescription">行李內容描述</Label>
+                        <Textarea
+                          id="luggageContentDescription"
+                          value={formData.luggageSettings.luggageContent.description}
+                          onChange={(e) => setFormData(prev => ({ 
+                            ...prev, 
+                            luggageSettings: { 
+                              ...prev.luggageSettings, 
+                              luggageContent: { 
+                                ...prev.luggageSettings.luggageContent, 
+                                description: e.target.value 
+                              }
+                            }
+                          }))}
+                          rows={4}
+                          placeholder="請注意您的行李安全，建議將貴重物品隨身攜帶。"
+                        />
+                      </div>
+
+                      <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                        <h5 className="font-semibold text-yellow-900 mb-2">預覽效果：</h5>
+                        <div className="bg-white p-3 rounded border border-yellow-300">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <span className="text-yellow-600">💡</span>
+                            <span className="font-medium text-yellow-800">
+                              {formData.luggageSettings.luggageContent.title}
+                            </span>
+                          </div>
+                          <p className="text-sm text-yellow-700">
+                            {formData.luggageSettings.luggageContent.description}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Contract Terms */}
+        <TabsContent value="contract" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <FileText className="h-5 w-5 text-blue-600" />
+                <span>合約條款設定</span>
+              </CardTitle>
+              <CardDescription>
+                配置列印預約單時顯示的合約條款內容
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="contractTerms">合約條款內容</Label>
+                <div className="mt-2 border rounded-lg">
+                  <ReactQuill
+                    theme="snow"
+                    value={formData.contractTerms}
+                    onChange={(value) => setFormData(prev => ({ ...prev, contractTerms: value }))}
+                    modules={{
+                      toolbar: [
+                        [{ 'header': [1, 2, 3, false] }],
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        [{ 'indent': '-1'}, { 'indent': '+1' }],
+                        [{ 'align': [] }],
+                        ['link'],
+                        ['clean']
+                      ]
+                    }}
+                    style={{ minHeight: '300px' }}
+                  />
+                </div>
+                <p className="text-sm text-gray-500 mt-2">
+                  此內容將在列印預約單時顯示。支持HTML格式。
+                </p>
+              </div>
+
+              <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                <h4 className="font-semibold text-yellow-900 mb-2 flex items-center">
+                  <Info className="h-4 w-4 mr-2" />
+                  預覽效果
+                </h4>
+                <div className="text-sm prose max-w-none" dangerouslySetInnerHTML={{ __html: formData.contractTerms }} />
+              </div>
+
+              <Button onClick={handleSaveContractTerms} disabled={saving}>
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? '保存中...' : '保存合約條款'}
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

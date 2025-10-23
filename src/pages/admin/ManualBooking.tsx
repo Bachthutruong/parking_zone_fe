@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getAllParkingTypes, getAllAddonServices, createManualBooking } from '@/services/admin';
-import { calculatePrice } from '@/services/booking';
+// import { calculatePrice } from '@/services/booking';
 // import { validateDiscountCode } from '@/services/discountCodes';
 import { checkParkingTypeMaintenance } from '@/services/maintenance';
 import { checkVIPStatus } from '@/services/auth';
@@ -175,7 +175,7 @@ const AdminManualBooking: React.FC = () => {
     }
 
     try {
-      const pricingData = await calculatePrice({
+      const response = await api.post('/bookings/calculate-price', {
         parkingTypeId: formData.parkingTypeId,
         checkInTime: formData.checkInTime,
         checkOutTime: formData.checkOutTime,
@@ -184,9 +184,22 @@ const AdminManualBooking: React.FC = () => {
         isVIP: isVIP,
         userEmail: formData.email
       });
-      
-      // The backend returns pricing data under a 'pricing' property
-      setPricing(pricingData.pricing);
+
+      if (response.data.success) {
+        setPricing({
+          ...response.data.pricing,
+          autoDiscountInfo: response.data.autoDiscountInfo
+        });
+        setDiscountInfo({
+          discountAmount: response.data.pricing.discountAmount,
+          vipDiscount: response.data.pricing.vipDiscount,
+          finalAmount: response.data.pricing.finalAmount,
+          autoDiscountInfo: response.data.autoDiscountInfo,
+          autoDiscountAmount: response.data.pricing.autoDiscountAmount,
+          // Calculate total discount including auto discount
+          totalDiscount: (response.data.pricing.autoDiscountAmount || 0) + (response.data.pricing.discountAmount || 0) + (response.data.pricing.vipDiscount || 0)
+        });
+      }
     } catch (error) {
       console.error('Error calculating pricing:', error);
     }
@@ -466,7 +479,7 @@ const AdminManualBooking: React.FC = () => {
             {/* Date and Time */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="checkInTime">進入時間 *</Label>
+                <Label htmlFor="checkInTime">進場停車時間 *</Label>
                 <DateInput
                   id="checkInTime"
                   type="datetime-local"
@@ -607,7 +620,7 @@ const AdminManualBooking: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="luggageCount">行李數量（免費1個，第2個以上現場收100元/行李））
+                  <Label htmlFor="luggageCount">行李數量 (1個人免費1個行李，第2個以上現場收100元/行李)
                   </Label>
                   <Input
                     id="luggageCount"
@@ -661,8 +674,8 @@ const AdminManualBooking: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
-                    💡 請確認航廈選擇正確，以確保接駁服務順利進行
+                  <div className="text-lg text-blue-600 bg-blue-100 p-2 rounded">
+                    💡 上限5人，多一個人現場收100元/人。回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
                   </div>
                 </div>
               )}
@@ -967,30 +980,58 @@ const AdminManualBooking: React.FC = () => {
                     <div className="bg-blue-50 p-3 rounded-lg">
                       <div className="text-sm font-semibold text-blue-700 mb-2">📅 每日價格詳情：</div>
                       <div className="space-y-2">
-                        {pricing.dailyPrices.map((dayPrice: any, index: number) => (
-                          <div key={index} className="flex justify-between items-center text-sm bg-white p-2 rounded">
-                            <div className="flex items-center space-x-2">
-                              <span className="text-gray-600">
-                                {formatDate(dayPrice.date)}
-                              </span>
-                              {dayPrice.isSpecialPrice && (
-                                <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-200">
-                                  💰 {dayPrice.specialPriceReason}
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              {dayPrice.isSpecialPrice && (
-                                <span className="text-xs text-gray-500 line-through">
-                                  {formatCurrency(dayPrice.originalPrice)}
+                        {pricing.dailyPrices.map((dayPrice: any, index: number) => {
+                          // Calculate daily discount if auto discount applies
+                          const dailyDiscount = pricing?.autoDiscountInfo && pricing?.autoDiscountAmount > 0 
+                            ? pricing.autoDiscountAmount / pricing.dailyPrices.length 
+                            : 0;
+                          
+                          return (
+                            <div key={index} className="flex justify-between items-center text-sm bg-white p-2 rounded">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-gray-600">
+                                  {formatDate(dayPrice.date)}
                                 </span>
-                              )}
-                              <span className={`font-semibold ${dayPrice.isSpecialPrice ? 'text-orange-600' : 'text-blue-600'}`}>
-                                {formatCurrency(dayPrice.price)}
-                              </span>
+                                {dayPrice.isSpecialPrice && (
+                                  <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-200 max-w-32 truncate" title={dayPrice.specialPriceReason}>
+                                    💰 {dayPrice.specialPriceReason || '特殊價格'}
+                                  </Badge>
+                                )}
+                                {/* Auto Discount Badge for each day */}
+                                {pricing?.autoDiscountInfo && dailyDiscount > 0 && (
+                                  <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-200 max-w-32 truncate" title={pricing.autoDiscountInfo.description}>
+                                    🎯 {pricing.autoDiscountInfo.name}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                {dayPrice.isSpecialPrice && dayPrice.originalPrice && (
+                                  <span className="text-xs text-gray-500 line-through">
+                                    {formatCurrency(dayPrice.originalPrice)}
+                                  </span>
+                                )}
+                                {/* Show original price with line-through if auto discount applies */}
+                                {dailyDiscount > 0 && (
+                                  <span className="text-xs text-gray-500 line-through">
+                                    {formatCurrency(dayPrice.price)}
+                                  </span>
+                                )}
+                                <span className={`font-semibold ${
+                                  dayPrice.isSpecialPrice ? 'text-orange-600' : 
+                                  dailyDiscount > 0 ? 'text-purple-600' : 'text-blue-600'
+                                }`}>
+                                  {formatCurrency(dayPrice.price - dailyDiscount)}
+                                </span>
+                                {/* Show discount amount for this day */}
+                                {dailyDiscount > 0 && (
+                                  <span className="text-xs text-purple-600 font-medium">
+                                    -{formatCurrency(dailyDiscount)}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -1053,40 +1094,105 @@ const AdminManualBooking: React.FC = () => {
                   {/* Total Summary */}
                   <div className="bg-gradient-to-r from-emerald-100 to-teal-100 p-4 rounded-lg border-2 border-emerald-300">
                     <div className="space-y-2">
-                                              <div className="flex justify-between items-center">
-                          <span className="font-semibold text-gray-700">原始總額：</span>
-                          <span className="font-semibold text-gray-900">
-                            {formatCurrency(pricing?.totalAmount || 0)}
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-gray-700">原始總額：</span>
+                        <span className="font-semibold text-gray-900">
+                          {formatCurrency(pricing?.totalAmount || 0)}
+                        </span>
+                      </div>
+                      
+                      {/* Auto Discount */}
+                      {pricing?.autoDiscountInfo && pricing?.autoDiscountAmount > 0 && (
+                        <div className="flex justify-between items-center bg-purple-50 p-2 rounded border border-purple-200">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-purple-700 font-medium">🎯 自動折扣：</span>
+                            <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
+                              {pricing.autoDiscountInfo.name}
+                            </span>
+                            <div className="text-xs text-purple-600">
+                              {pricing.autoDiscountInfo.discountType === 'percentage' 
+                                ? `每天節省 ${pricing.autoDiscountInfo.discountValue}%`
+                                : `每天節省 ${formatCurrency(pricing.autoDiscountInfo.discountValue)}`
+                              }
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-purple-700">-{formatCurrency(pricing.autoDiscountAmount)}</div>
+                            <div className="text-xs text-purple-600">{pricing.autoDiscountInfo.description}</div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* VIP Discount */}
+                      {isVIP && currentUser && (
+                        <div className="flex justify-between items-center bg-yellow-50 p-2 rounded border border-yellow-200">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-yellow-700 font-medium">👑 VIP折扣：</span>
+                            <span className="text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded">
+                              {currentUser.vipDiscount}% 折扣
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-yellow-700">
+                              -{formatCurrency(
+                                (() => {
+                                  const baseTotal = (pricing?.totalAmount || 0);
+                                  const afterAutoDiscount = baseTotal - (pricing?.autoDiscountAmount || 0);
+                                  return Math.round(afterAutoDiscount * (currentUser.vipDiscount / 100));
+                                })()
+                              )}
+                            </div>
+                            <div className="text-xs text-yellow-600">VIP會員享有{currentUser.vipDiscount}%折扣優惠</div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Discount Code */}
+                      {discountInfo?.discountAmount > 0 && (
+                        <div className="flex justify-between items-center bg-green-50 p-2 rounded border border-green-200">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-green-700 font-medium">🎫 折扣碼：</span>
+                            <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                              {discountInfo.code}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-green-700">-{formatCurrency(discountInfo.discountAmount)}</div>
+                            <div className="text-xs text-green-600">折扣碼 {discountInfo.code} 已應用</div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="border-t pt-2">
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-lg text-gray-900">總付款：</span>
+                          <span className="text-2xl font-bold text-emerald-600">
+                            {(() => {
+                              // Calculate base total
+                              const baseTotal = (pricing?.totalAmount || 0);
+                              
+                              if (discountInfo) {
+                                return formatCurrency(discountInfo.finalAmount);
+                              } else {
+                                let finalAmount = baseTotal;
+                                
+                                // Apply auto discount
+                                if (pricing?.autoDiscountAmount) {
+                                  finalAmount -= pricing.autoDiscountAmount;
+                                }
+                                
+                                // Apply VIP discount
+                                if (isVIP && currentUser) {
+                                  const vipDiscount = (baseTotal - (pricing?.autoDiscountAmount || 0)) * (currentUser.vipDiscount / 100);
+                                  finalAmount -= vipDiscount;
+                                }
+                                
+                                return formatCurrency(Math.round(finalAmount));
+                              }
+                            })()}
                           </span>
                         </div>
-                        
-                        {/* Show total discount if there's any discount */}
-                        {(discountInfo && (discountInfo.discountAmount > 0 || discountInfo.vipDiscount > 0)) || (isVIP && currentUser) ? (
-                          <div className="flex justify-between items-center">
-                            <span className="font-semibold text-green-700">總折扣：</span>
-                            <span className="font-bold text-green-700 text-lg">
-                              -{formatCurrency(
-                                discountInfo 
-                                  ? (discountInfo.totalDiscount || discountInfo.discountAmount) || 0
-                                  : Math.round((pricing?.totalAmount || 0) * (currentUser?.vipDiscount / 100))
-                              )}
-                            </span>
-                          </div>
-                        ) : null}
-                        
-                        <div className="border-t pt-2">
-                          <div className="flex justify-between items-center">
-                            <span className="font-bold text-lg text-gray-900">總付款：</span>
-                            <span className="text-2xl font-bold text-emerald-600">
-                              {discountInfo 
-                                ? formatCurrency(discountInfo.finalAmount) 
-                                : isVIP && currentUser 
-                                  ? formatCurrency(Math.round((pricing?.totalAmount || 0) * (1 - currentUser.vipDiscount / 100)))
-                                  : formatCurrency(pricing?.finalAmount || pricing?.totalAmount || 0)
-                              }
-                            </span>
-                          </div>
-                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

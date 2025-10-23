@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getAllBookings, updateBookingStatus } from '@/services/admin';
+import { getSystemSettings } from '@/services/systemSettings';
 import { formatDateTime } from '@/lib/dateUtils';
 import type { Booking } from '@/types';
 
@@ -49,9 +50,11 @@ const BookingsPage: React.FC = () => {
   const [dateBookings, setDateBookings] = useState<Booking[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [systemSettings, setSystemSettings] = useState<any>(null);
 
   useEffect(() => {
     loadBookings();
+    loadSettings();
   }, [page, filters]);
 
   useEffect(() => {
@@ -59,6 +62,15 @@ const BookingsPage: React.FC = () => {
       loadCalendarData();
     }
   }, [viewMode, selectedParkingType, currentMonth, currentYear]);
+
+  const loadSettings = async () => {
+    try {
+      const settings = await getSystemSettings();
+      setSystemSettings(settings);
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  };
 
   const loadBookings = async () => {
     try {
@@ -94,22 +106,32 @@ const BookingsPage: React.FC = () => {
       
       // Group bookings by date and parking type
       const groupedData = response.bookings.reduce((acc: any, booking: Booking) => {
-        const date = new Date(booking.checkInTime).toISOString().split('T')[0];
         const parkingTypeId = booking.parkingType._id;
+        const startDate = new Date(booking.checkInTime);
+        const endDate = new Date(booking.checkOutTime);
         
-        if (!acc[date]) {
-          acc[date] = {};
+        // Add booking to all dates in the range
+        const currentDate = new Date(startDate);
+        while (currentDate < endDate) {
+          const dateStr = currentDate.toISOString().split('T')[0];
+          
+          if (!acc[dateStr]) {
+            acc[dateStr] = {};
+          }
+          if (!acc[dateStr][parkingTypeId]) {
+            acc[dateStr][parkingTypeId] = {
+              parkingType: booking.parkingType,
+              bookings: [],
+              totalBookings: 0
+            };
+          }
+          
+          acc[dateStr][parkingTypeId].bookings.push(booking);
+          acc[dateStr][parkingTypeId].totalBookings++;
+          
+          // Move to next day
+          currentDate.setDate(currentDate.getDate() + 1);
         }
-        if (!acc[date][parkingTypeId]) {
-          acc[date][parkingTypeId] = {
-            parkingType: booking.parkingType,
-            bookings: [],
-            totalBookings: 0
-          };
-        }
-        
-        acc[date][parkingTypeId].bookings.push(booking);
-        acc[date][parkingTypeId].totalBookings++;
         
         return acc;
       }, {});
@@ -172,9 +194,52 @@ const BookingsPage: React.FC = () => {
     setCurrentYear(today.getFullYear());
   };
 
-  const printBooking = (booking: Booking) => {
+  const printBooking = async (booking: Booking) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
+
+    // Ensure systemSettings is loaded
+    let settings = systemSettings;
+    if (!settings) {
+      try {
+        settings = await getSystemSettings();
+      } catch (error) {
+        console.error('Error loading settings for print:', error);
+        settings = null;
+      }
+    }
+    
+    console.log('🔍 Print debug - systemSettings:', systemSettings);
+    console.log('🔍 Print debug - settings:', settings);
+    console.log('🔍 Print debug - contractTerms:', settings?.contractTerms);
+    console.log('🔍 Print debug - contractTerms length:', settings?.contractTerms?.length);
+    console.log('🔍 Print debug - contractTerms preview:', settings?.contractTerms?.substring(0, 100));
+
+    // Create a backup text version of contract terms for better print compatibility
+    const contractTermsText = settings?.contractTerms ? 
+      settings.contractTerms
+        .replace(/<h2[^>]*>/g, '\n\n')
+        .replace(/<\/h2>/g, '\n')
+        .replace(/<p[^>]*>/g, '')
+        .replace(/<\/p>/g, '\n')
+        .replace(/<strong[^>]*>/g, '【')
+        .replace(/<\/strong>/g, '】')
+        .replace(/<[^>]*>/g, '')
+        .replace(/\n\s*\n/g, '\n')
+        .trim() : '';
+
+    // Create a simple HTML version without complex styling
+    const contractTermsSimple = settings?.contractTerms ? 
+      settings.contractTerms
+        .replace(/<h2[^>]*>/g, '<div style="font-weight: bold; font-size: 14px; margin: 10px 0;">')
+        .replace(/<\/h2>/g, '</div>')
+        .replace(/<p[^>]*>/g, '<div style="margin: 5px 0; line-height: 1.4;">')
+        .replace(/<\/p>/g, '</div>')
+        .replace(/<strong[^>]*>/g, '<span style="font-weight: bold;">')
+        .replace(/<\/strong>/g, '</span>') : '';
+
+    console.log('🔍 Print debug - contractTermsSimple:', contractTermsSimple?.substring(0, 100));
+    console.log('🔍 Print debug - contractTermsText:', contractTermsText?.substring(0, 100));
 
     const printContent = `
       <!DOCTYPE html>
@@ -198,9 +263,95 @@ const BookingsPage: React.FC = () => {
           .services { display: flex; flex-wrap: wrap; gap: 5px; }
           .service-badge { background-color: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
           .total { font-size: 18px; font-weight: bold; color: #333; }
+          .contract-terms { 
+            border-top: 2px solid #333; 
+            padding-top: 20px; 
+            margin-top: 30px; 
+            font-size: 12px; 
+            line-height: 1.6; 
+            color: #000; 
+            font-family: Arial, sans-serif; 
+            white-space: normal; 
+            word-wrap: break-word; 
+          }
+          .contract-terms h2 { 
+            font-size: 16px; 
+            font-weight: bold; 
+            margin-bottom: 10px; 
+            color: #333; 
+          }
+          .contract-terms p { 
+            margin-bottom: 8px; 
+            color: #000; 
+            font-size: 12px; 
+          }
+          .contract-terms strong { 
+            font-weight: bold; 
+            color: #000; 
+          }
           @media print {
             body { margin: 0; }
             .no-print { display: none; }
+            .contract-terms { 
+              -webkit-print-color-adjust: exact !important;
+              color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            .contract-terms h2 { 
+              -webkit-print-color-adjust: exact !important;
+              color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            .contract-terms p { 
+              -webkit-print-color-adjust: exact !important;
+              color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            .contract-terms strong { 
+              -webkit-print-color-adjust: exact !important;
+              color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            /* Ensure contract terms display properly when printing */
+            .contract-terms table {
+              -webkit-print-color-adjust: exact !important;
+              color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              border-collapse: collapse !important;
+              width: 100% !important;
+            }
+            .contract-terms td {
+              -webkit-print-color-adjust: exact !important;
+              color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              border: 1px solid #000 !important;
+              padding: 10px !important;
+              font-family: Arial, sans-serif !important;
+              color: #000 !important;
+              vertical-align: top !important;
+            }
+            .contract-terms div {
+              -webkit-print-color-adjust: exact !important;
+              color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              font-family: Arial, sans-serif !important;
+              color: #000 !important;
+            }
+            .contract-terms pre {
+              -webkit-print-color-adjust: exact !important;
+              color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              font-family: Arial, sans-serif !important;
+              color: #000 !important;
+              white-space: pre-wrap !important;
+              word-wrap: break-word !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
           }
         </style>
       </head>
@@ -261,7 +412,7 @@ const BookingsPage: React.FC = () => {
                 (booking.parkingType.type || 'indoor') === 'outdoor' ? '戶外' : '無障礙'}
             </div>
             <div class="info-item">
-              <span class="label">進入時間:</span> ${formatDateTime(booking.checkInTime)}
+              <span class="label">進場停車時間:</span> ${formatDateTime(booking.checkInTime)}
             </div>
             <div class="info-item">
               <span class="label">回國時間:</span> ${formatDateTime(booking.checkOutTime)}
@@ -328,9 +479,22 @@ const BookingsPage: React.FC = () => {
             <div class="info-item">
               <span class="label">總金額:</span> ${booking.totalAmount.toLocaleString('zh-TW')} TWD
             </div>
+            ${booking.autoDiscount && booking.autoDiscountAmount && booking.autoDiscountAmount > 0 ? `
+            <div class="info-item">
+              <span class="label">自動折扣 (${booking.autoDiscount.name}):</span> -${booking.autoDiscountAmount.toLocaleString('zh-TW')} TWD
+            </div>
+            <div class="info-item">
+              <span class="label">自動折扣說明:</span> ${booking.autoDiscount.description}
+            </div>
+            ` : ''}
+            ${booking.vipDiscount > 0 ? `
+            <div class="info-item">
+              <span class="label">VIP 折扣:</span> -${booking.vipDiscount.toLocaleString('zh-TW')} TWD
+            </div>
+            ` : ''}
             ${booking.discountAmount > 0 ? `
             <div class="info-item">
-              <span class="label">折扣:</span> -${booking.discountAmount.toLocaleString('zh-TW')} TWD
+              <span class="label">折扣碼:</span> -${booking.discountAmount.toLocaleString('zh-TW')} TWD
             </div>
             ` : ''}
             <div class="info-item total">
@@ -349,6 +513,33 @@ const BookingsPage: React.FC = () => {
         <div class="section">
           <h3>備註</h3>
           <p>${booking.notes}</p>
+        </div>
+        ` : ''}
+
+        ${settings?.contractTerms ? `
+        <div class="section contract-terms">
+          <h3>合約條款</h3>
+          <table style="width: 100%; border-collapse: collapse; margin: 10px 0; font-family: Arial, sans-serif; font-size: 12px;">
+            <tr>
+              <td style="padding: 10px; border: 1px solid #000; background: #f9f9f9; vertical-align: top;">
+                <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px;">停車場使用合約條款</div>
+                <div style="line-height: 1.6; color: #000;">
+                  ${contractTermsSimple}
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border: 1px solid #000; background: #fff; vertical-align: top;">
+                <div style="font-size: 11px; line-height: 1.4; color: #000; white-space: pre-line;">
+                  ${contractTermsText}
+                </div>
+              </td>
+            </tr>
+          </table>
+          <!-- Additional backup using pre tag -->
+          <pre style="font-family: Arial, sans-serif; font-size: 11px; line-height: 1.4; color: #000; margin: 10px 0; padding: 10px; border: 1px solid #ccc; background: #fff; white-space: pre-wrap; word-wrap: break-word;">
+${contractTermsText}
+          </pre>
         </div>
         ` : ''}
 
@@ -766,6 +957,16 @@ const BookingsPage: React.FC = () => {
                               -{formatCurrency(booking.discountAmount)}
                             </div>
                           )}
+                          {booking.autoDiscountAmount && booking.autoDiscountAmount > 0 && (
+                            <div className="text-sm text-purple-600">
+                              🎯 自動折扣: -{formatCurrency(booking.autoDiscountAmount)}
+                            </div>
+                          )}
+                          {booking.vipDiscount > 0 && (
+                            <div className="text-sm text-yellow-600">
+                              👑 VIP: -{formatCurrency(booking.vipDiscount)}
+                            </div>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -920,8 +1121,20 @@ const BookingsPage: React.FC = () => {
                     <h4 className="font-semibold text-sm text-gray-600">金額信息</h4>
                     <div className="space-y-1 text-sm">
                       <div><strong>總金額:</strong> {formatCurrency(booking.totalAmount)}</div>
+                      {booking.autoDiscountAmount && booking.autoDiscountAmount > 0 && (
+                        <div className="text-purple-600">
+                          <strong>🎯 自動折扣:</strong> -{formatCurrency(booking.autoDiscountAmount)}
+                        </div>
+                      )}
+                      {booking.vipDiscount > 0 && (
+                        <div className="text-yellow-600">
+                          <strong>👑 VIP:</strong> -{formatCurrency(booking.vipDiscount)}
+                        </div>
+                      )}
                       {booking.discountAmount > 0 && (
-                        <div><strong>折扣:</strong> -{formatCurrency(booking.discountAmount)}</div>
+                        <div className="text-green-600">
+                          <strong>🎫 折扣碼:</strong> -{formatCurrency(booking.discountAmount)}
+                        </div>
                       )}
                       <div><strong>應付:</strong> {formatCurrency(booking.finalAmount)}</div>
                     </div>
@@ -1031,12 +1244,49 @@ const BookingsPage: React.FC = () => {
                 <h4 className="font-semibold mb-2">付款資訊</h4>
                 <div className="space-y-2 text-sm">
                   <div><strong>總金額:</strong> {formatCurrency(selectedBooking.totalAmount)}</div>
-                  {selectedBooking.discountAmount > 0 && (
-                    <div><strong>折扣:</strong> -{formatCurrency(selectedBooking.discountAmount)}</div>
+                  
+                  {/* Auto Discount */}
+                  {selectedBooking.autoDiscount && selectedBooking.autoDiscountAmount && selectedBooking.autoDiscountAmount > 0 && (
+                    <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="text-purple-600 font-medium">🎯 自動折扣:</span>
+                        <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
+                          {selectedBooking.autoDiscount.name}
+                        </span>
+                      </div>
+                      <div className="text-purple-600 font-semibold">-{formatCurrency(selectedBooking.autoDiscountAmount)}</div>
+                      <div className="text-xs text-purple-500">{selectedBooking.autoDiscount.description}</div>
+                    </div>
                   )}
-                  <div><strong>應付金額:</strong> {formatCurrency(selectedBooking.finalAmount)}</div>
-                  <div><strong>付款方式:</strong> {selectedBooking.paymentMethod}</div>
-                  <div><strong>付款狀態:</strong> {selectedBooking.paymentStatus}</div>
+                  
+                  {/* VIP Discount */}
+                  {selectedBooking.vipDiscount > 0 && (
+                    <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="text-yellow-600 font-medium">👑 VIP 折扣:</span>
+                        <span className="text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded">VIP 會員</span>
+                      </div>
+                      <div className="text-yellow-600 font-semibold">-{formatCurrency(selectedBooking.vipDiscount)}</div>
+                      <div className="text-xs text-yellow-500">VIP會員享有折扣優惠</div>
+                    </div>
+                  )}
+                  
+                  {/* Discount Code */}
+                  {selectedBooking.discountAmount > 0 && (
+                    <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="text-green-600 font-medium">🎫 折扣碼:</span>
+                      </div>
+                      <div className="text-green-600 font-semibold">-{formatCurrency(selectedBooking.discountAmount)}</div>
+                      <div className="text-xs text-green-500">折扣碼已應用</div>
+                    </div>
+                  )}
+                  
+                  <div className="border-t pt-2">
+                    <div><strong>應付金額:</strong> {formatCurrency(selectedBooking.finalAmount)}</div>
+                    <div><strong>付款方式:</strong> {selectedBooking.paymentMethod}</div>
+                    <div><strong>付款狀態:</strong> {selectedBooking.paymentStatus}</div>
+                  </div>
                 </div>
               </div>
 
