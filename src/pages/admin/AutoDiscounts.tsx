@@ -12,7 +12,7 @@ import { toast } from 'react-hot-toast';
 import AutoDiscountList from './components/AutoDiscountList';
 import AutoDiscountForm from './components/AutoDiscountForm';
 import AutoDiscountStats from './components/AutoDiscountStats';
-import { getAllAutoDiscounts, getAutoDiscountStats } from '@/services/autoDiscounts';
+import { getAllAutoDiscounts, getAutoDiscountStats, deleteAutoDiscount } from '@/services/autoDiscounts';
 
 interface AutoDiscount {
   _id: string;
@@ -146,6 +146,18 @@ const AutoDiscounts: React.FC = () => {
     handleFormClose();
   };
 
+  const handleDeleteDiscount = async (discount: AutoDiscount) => {
+    try {
+      await deleteAutoDiscount(discount._id);
+      toast.success('折扣規則刪除成功');
+      loadAutoDiscounts();
+      loadStats();
+    } catch (error: any) {
+      console.error('Error deleting auto discount:', error);
+      toast.error(error.response?.data?.message || '刪除失敗');
+    }
+  };
+
 
   return (
     <div className="space-y-6">
@@ -202,6 +214,7 @@ const AutoDiscounts: React.FC = () => {
             filterStatus={filterStatus}
             setFilterStatus={setFilterStatus}
             onEdit={handleEditDiscount}
+            onDelete={handleDeleteDiscount}
             onRefresh={loadAutoDiscounts}
           />
         </TabsContent>

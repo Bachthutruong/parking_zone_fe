@@ -5,13 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { 
   Search,
   Edit,
   Percent,
   DollarSign,
   Calendar,
-  RefreshCw
+  RefreshCw,
+  Trash2
 } from 'lucide-react';
 import { formatDate } from '@/lib/dateUtils';
 
@@ -72,6 +74,7 @@ interface AutoDiscountListProps {
   filterStatus: 'all' | 'active' | 'inactive';
   setFilterStatus: (status: 'all' | 'active' | 'inactive') => void;
   onEdit: (discount: AutoDiscount) => void;
+  onDelete: (discount: AutoDiscount) => void;
   onRefresh: () => void;
 }
 
@@ -83,6 +86,7 @@ const AutoDiscountList: React.FC<AutoDiscountListProps> = ({
   filterStatus,
   setFilterStatus,
   onEdit,
+  onDelete,
   onRefresh
 }) => {
   const getStatusBadge = (discount: AutoDiscount) => {
@@ -287,6 +291,35 @@ const AutoDiscountList: React.FC<AutoDiscountListProps> = ({
                           <Edit className="h-3 w-3" />
                           <span>編輯</span>
                         </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center space-x-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              <span>刪除</span>
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>確認刪除</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                您確定要刪除折扣規則「{discount.name}」嗎？此操作無法復原。
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>取消</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => onDelete(discount)}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                刪除
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </TableCell>
                   </TableRow>

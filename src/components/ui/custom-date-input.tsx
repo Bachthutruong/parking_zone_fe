@@ -174,11 +174,13 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
           value={displayValue}
           onChange={handleInputChange}
           onClick={handleInputClick}
-          placeholder={placeholder || (type === 'datetime-local' ? '年/月/日 00:00' : '年/月/日')}
-          className={className}
+          placeholder={placeholder || '年/月/日 00:00'}
+          className={`${className} pr-10`}
           style={{
             fontFamily: 'monospace',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            paddingLeft: '12px',
+            paddingRight: '40px'
           }}
         />
         <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
@@ -210,6 +212,7 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
                 onChange={handleNativeChange}
                 min={getNativeMin()}
                 max={getNativeMax()}
+                placeholder={type === 'datetime-local' ? '年/月/日 00:00' : '年/月/日'}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               {tempValue && (
@@ -227,7 +230,7 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
                 type="text"
                 value={tempValue ? (type === 'datetime-local' ? formatDateTime(tempValue) : formatDate(tempValue)) : displayValue}
                 onChange={handleInputChange}
-                placeholder={type === 'datetime-local' ? '年/月/日 00:00' : '年/月/日'}
+                placeholder="年/月/日 00:00"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
               />
             </div> */}

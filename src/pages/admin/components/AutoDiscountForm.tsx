@@ -67,7 +67,7 @@ const AutoDiscountForm: React.FC<AutoDiscountFormProps> = ({ discount, onSubmit,
     discountValue: 0,
     maxDiscountAmount: '',
     applyToSpecialPrices: false,
-    validFrom: new Date().toISOString().split('T')[0],
+    validFrom: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Tomorrow
     validTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     isActive: true,
     priority: 0,
@@ -163,6 +163,13 @@ const AutoDiscountForm: React.FC<AutoDiscountFormProps> = ({ discount, onSubmit,
 
     if (!formData.validFrom) {
       newErrors.validFrom = '請選擇開始日期';
+    } else {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const selectedDate = new Date(formData.validFrom);
+      if (selectedDate < today) {
+        newErrors.validFrom = '開始日期不能早於今天';
+      }
     }
 
     if (!formData.validTo) {
@@ -442,6 +449,7 @@ const AutoDiscountForm: React.FC<AutoDiscountFormProps> = ({ discount, onSubmit,
                     <Input
                       id="validFrom"
                       type="date"
+                      min={new Date().toISOString().split('T')[0]}
                       value={formData.validFrom}
                       onChange={(e) => setFormData(prev => ({ ...prev, validFrom: e.target.value }))}
                       className={errors.validFrom ? 'border-red-500' : ''}

@@ -937,7 +937,102 @@ const BookingPage: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* Passenger and Luggage Selection */}
+                    <div className="space-y-6">
+                      <div>
+                        <Label className="text-lg font-semibold text-gray-800 mb-4 block">接駁和行李資訊</Label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label htmlFor="passengerCount" className="text-sm font-medium text-gray-700">接駁人數 (上限5人，多一個人現場收100元/人)</Label>
+                            <Input
+                              id="passengerCount"
+                              type="number"
+                              min="0"
+                              max="5"
+                              value={formData.passengerCount}
+                              onChange={(e) => setFormData(prev => ({ ...prev, passengerCount: parseInt(e.target.value) || 0 }))}
+                              placeholder="0"
+                            />
+                            <p className="text-xs text-gray-500">上限5人，多一個人現場收100元/人</p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="luggageCount" className="text-sm font-medium text-gray-700">行李數量 (1個人免費1個行李，第2個以上現場收100元/行李)</Label>
+                            <Input
+                              id="luggageCount"
+                              type="number"
+                              min="0"
+                              value={formData.luggageCount}
+                              onChange={(e) => setFormData(prev => ({ ...prev, luggageCount: parseInt(e.target.value) || 0 }))}
+                              placeholder="0"
+                            />
+                            <p className="text-xs text-gray-500">1個人免費1個行李，第2個以上現場收100元/行李</p>
+                          </div>
+                        </div>
+                      </div>
 
+                      {/* Terminal Selection - Only show if passengerCount > 0 */}
+                      {formData.passengerCount > 0 && (
+                        <div className="space-y-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-blue-800 font-medium">✈️ 航廈選擇</span>
+                            <span className="text-xs text-blue-600">(接駁服務需要)</span>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                              <Label htmlFor="departureTerminal" className="text-sm font-medium text-gray-700">
+                                出發航廈（前往機場）
+                              </Label>
+                              <select
+                                id="departureTerminal"
+                                value={formData.departureTerminal || ''}
+                                onChange={(e) => setFormData(prev => ({ ...prev, departureTerminal: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="">請選擇出發航廈</option>
+                                <option value="terminal1">第一航廈</option>
+                                <option value="terminal2">第二航廈</option>
+                              </select>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label htmlFor="returnTerminal" className="text-sm font-medium text-gray-700">
+                                回程航廈（接回停車場）
+                              </Label>
+                              <select
+                                id="returnTerminal"
+                                value={formData.returnTerminal || ''}
+                                onChange={(e) => setFormData(prev => ({ ...prev, returnTerminal: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="">請選擇回程航廈</option>
+                                <option value="terminal1">第一航廈</option>
+                                <option value="terminal2">第二航廈</option>
+                              </select>
+                            </div>
+                          </div>
+                          
+                          <div className="text-lg text-blue-600 bg-blue-100 p-2 rounded">
+                            💡 上限5人，多一個人現場收100元/人。回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Luggage Content Box - Only show if luggageCount > 0 and content is active */}
+                      {formData.luggageCount > 0 && systemSettings?.luggageSettings?.luggageContent?.isActive && (
+                        <div className="space-y-6 bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-yellow-600">💡</span>
+                            <span className="text-yellow-800 font-medium">
+                              {systemSettings.luggageSettings.luggageContent.title}
+                            </span>
+                          </div>
+                          <div className="text-sm text-yellow-700 leading-relaxed">
+                            {systemSettings.luggageSettings.luggageContent.description}
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
                     {/* Conflict Message */}
                     {showConflictMessage && conflictDetails && (
@@ -1511,91 +1606,6 @@ const BookingPage: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="passengerCount" className="text-sm font-medium text-gray-700">接駁人數 (上限5人，多一個人現場收100元/人)</Label>
-                    <Input
-                      id="passengerCount"
-                      type="number"
-                      min="0"
-                      value={formData.passengerCount}
-                      onChange={(e) => setFormData(prev => ({ ...prev, passengerCount: parseInt(e.target.value) }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="luggageCount" className="text-sm font-medium text-gray-700">行李數量 (1個人免費1個行李，第2個以上現場收100元/行李)</Label>
-                    <Input
-                      id="luggageCount"
-                      type="number"
-                      min="0"
-                      value={formData.luggageCount}
-                      onChange={(e) => setFormData(prev => ({ ...prev, luggageCount: parseInt(e.target.value) }))}
-                    />
-                  </div>
-                </div>
-
-                {/* Luggage Content Box - Only show if luggageCount > 0 and content is active */}
-                {formData.luggageCount > 0 && systemSettings?.luggageSettings?.luggageContent?.isActive && (
-                  <div className="space-y-6 bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-yellow-600">💡</span>
-                      <span className="text-yellow-800 font-medium">
-                        {systemSettings.luggageSettings.luggageContent.title}
-                      </span>
-                    </div>
-                    <div className="text-sm text-yellow-700 leading-relaxed">
-                      {systemSettings.luggageSettings.luggageContent.description}
-                    </div>
-                  </div>
-                )}
-
-                {/* Terminal Selection - Only show if passengerCount > 0 */}
-                {formData.passengerCount > 0 && (
-                  <div className="space-y-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-blue-800 font-medium">✈️ 航廈選擇</span>
-                      <span className="text-xs text-blue-600">(接駁服務需要)</span>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="departureTerminal" className="text-sm font-medium text-gray-700">
-                          出發航廈（前往機場）
-                        </Label>
-                        <select
-                          id="departureTerminal"
-                          value={formData.departureTerminal || ''}
-                          onChange={(e) => setFormData(prev => ({ ...prev, departureTerminal: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">請選擇出發航廈</option>
-                          <option value="terminal1">第一航廈</option>
-                          <option value="terminal2">第二航廈</option>
-                        </select>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="returnTerminal" className="text-sm font-medium text-gray-700">
-                          回程航廈（接回停車場）
-                        </Label>
-                        <select
-                          id="returnTerminal"
-                          value={formData.returnTerminal || ''}
-                          onChange={(e) => setFormData(prev => ({ ...prev, returnTerminal: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">請選擇回程航廈</option>
-                          <option value="terminal1">第一航廈</option>
-                          <option value="terminal2">第二航廈</option>
-                        </select>
-                      </div>
-                    </div>
-                    
-                    <div className="text-lg text-blue-600 bg-blue-100 p-2 rounded">
-                      💡 上限5人，多一個人現場收100元/人。回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
-                    </div>
-                  </div>
-                )}
                 
                 <div className="space-y-2">
                   <Label htmlFor="notes" className="text-sm font-medium text-gray-700">備註</Label>  
