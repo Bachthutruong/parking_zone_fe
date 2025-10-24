@@ -519,27 +519,12 @@ const BookingsPage: React.FC = () => {
         ${settings?.contractTerms ? `
         <div class="section contract-terms">
           <h3>合約條款</h3>
-          <table style="width: 100%; border-collapse: collapse; margin: 10px 0; font-family: Arial, sans-serif; font-size: 12px;">
-            <tr>
-              <td style="padding: 10px; border: 1px solid #000; background: #f9f9f9; vertical-align: top;">
-                <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px;">停車場使用合約條款</div>
-                <div style="line-height: 1.6; color: #000;">
-                  ${contractTermsSimple}
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding: 10px; border: 1px solid #000; background: #fff; vertical-align: top;">
-                <div style="font-size: 11px; line-height: 1.4; color: #000; white-space: pre-line;">
-                  ${contractTermsText}
-                </div>
-              </td>
-            </tr>
-          </table>
-          <!-- Additional backup using pre tag -->
-          <pre style="font-family: Arial, sans-serif; font-size: 11px; line-height: 1.4; color: #000; margin: 10px 0; padding: 10px; border: 1px solid #ccc; background: #fff; white-space: pre-wrap; word-wrap: break-word;">
-${contractTermsText}
-          </pre>
+          <div style="padding: 15px; border: 1px solid #000; background: #f9f9f9; font-family: Arial, sans-serif; font-size: 12px; line-height: 1.6; color: #000;">
+            <div style="font-weight: bold; font-size: 14px; margin-bottom: 15px; text-align: center;">停車場使用合約條款</div>
+            <div style="white-space: pre-line; font-size: 11px;">
+              ${contractTermsText}
+            </div>
+          </div>
         </div>
         ` : ''}
 
