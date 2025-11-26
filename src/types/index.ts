@@ -224,6 +224,7 @@ export interface SystemSettings {
     luggageContent: {
       title: string;
       description: string;
+      imageUrl: string;
       isActive: boolean;
     };
   };

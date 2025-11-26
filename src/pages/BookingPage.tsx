@@ -31,7 +31,7 @@ import { toast } from 'react-hot-toast';
 import { getSystemSettings, getAllParkingTypes, getAllAddonServices as getAddonServices, createBooking, api } from '@/services';
 import { checkParkingTypeMaintenance } from '@/services/maintenance';
 import { checkVIPStatus, checkVIPByCode } from '@/services/auth';
-import { formatDate, formatDateWithWeekday, formatDateTime } from '@/lib/dateUtils';
+import { formatDate, formatDateWithWeekday, formatDateTime, startOfDayISO, endOfDayISO } from '@/lib/dateUtils';
 import type { SystemSettings, ParkingType, AddonService, BookingFormData } from '@/types';
 import ImageGallery from '@/components/ImageGallery';
 
@@ -192,8 +192,9 @@ const BookingPage: React.FC = () => {
     try {
       const response = await api.post('/bookings/check-availability', {
         parkingTypeId: formData.parkingTypeId,
-        checkInTime: formData.checkInTime,
-        checkOutTime: formData.checkOutTime
+        // For availability, only the date should matter, not the specific time
+        checkInTime: startOfDayISO(formData.checkInTime),
+        checkOutTime: endOfDayISO(formData.checkOutTime)
       });
       
       const data = response.data;
@@ -266,8 +267,9 @@ const BookingPage: React.FC = () => {
     try {
       const result = await checkParkingTypeMaintenance(
         formData.parkingTypeId,
-        formData.checkInTime,
-        formData.checkOutTime
+        // Maintenance check should also be based on whole days
+        startOfDayISO(formData.checkInTime),
+        endOfDayISO(formData.checkOutTime)
       );
       
       setMaintenanceDays(result.maintenanceDays);
@@ -478,6 +480,16 @@ const BookingPage: React.FC = () => {
     }
   };
 
+  // Helper to calculate number of calendar days (inclusive) between two datetimes
+  const getCalendarDayDiff = (start: string, end: string) => {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const endDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    const diffTime = endDay.getTime() - startDay.getTime();
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  };
+
   const handleSubmit = async () => {
     // Check if all required terms are accepted
     const activeTerms = systemSettings?.termsCheckboxes?.filter(term => term.isActive) || [];
@@ -501,13 +513,15 @@ const BookingPage: React.FC = () => {
       return;
     }
 
-    // Check minimum booking days
+    // Block submit if there are conflicting (full) dates
+    if (showConflictMessage && conflictDetails && Array.isArray(conflictDetails.conflictingDates) && conflictDetails.conflictingDates.length > 0) {
+      toast.error('您選擇的日期中有已滿的日期，請調整日期後再試。');
+      return;
+    }
+
+    // Check minimum booking days (by calendar day, not by hours)
     if (formData.checkInTime && formData.checkOutTime) {
-      const checkInDate = new Date(formData.checkInTime);
-      const checkOutDate = new Date(formData.checkOutTime);
-      const diffTime = Math.abs(checkOutDate.getTime() - checkInDate.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
+      const diffDays = getCalendarDayDiff(formData.checkInTime, formData.checkOutTime);
       if (diffDays < minBookingDays) {
         toast.error(`最少需要預約 ${minBookingDays} 天，您選擇了 ${diffDays} 天`);
         return;
@@ -614,17 +628,6 @@ const BookingPage: React.FC = () => {
       disabled: '♿'
     };
     return iconMap[parkingType.type as keyof typeof iconMap] || '🚗';
-  };
-
-  const getParkingTypeBadge = (type: string) => {
-    const badgeConfig = {
-      indoor: { label: '室內', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-      outdoor: { label: '戶外', color: 'bg-green-100 text-green-800 border-green-200' },
-      disabled: { label: '無障礙', color: 'bg-orange-100 text-orange-800 border-orange-200' }
-    };
-    
-    const config = badgeConfig[type as keyof typeof badgeConfig] || badgeConfig.indoor;
-    return <Badge variant="outline" className={config.color}>{config.label}</Badge>;
   };
 
   const formatCurrency = (amount: number | undefined | null) => {
@@ -817,17 +820,10 @@ const BookingPage: React.FC = () => {
                             <div className="flex items-start justify-between mb-4">
                               <div className="flex items-center space-x-3">
                                 <div className="text-3xl">{getParkingTypeIcon(type)}</div>
-                                                              <div>
-                                <h3 className="font-bold text-lg text-gray-900">{type.name}</h3>
-                                                              <div className="flex items-center space-x-2 mt-2">
-                                {getParkingTypeBadge(type.type || 'indoor')}
-                                {isUnderMaintenance && (
-                                  <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-200">
-                                    🔧 維護中
-                                  </Badge>
-                                )}
-                              </div>
-                              </div>
+                                <div>
+                                  <h3 className="font-bold text-lg text-gray-900">{type.name}</h3>
+                                  {/* Badges removed as requested */}
+                                </div>
                               </div>
                             </div>
                             
@@ -875,17 +871,24 @@ const BookingPage: React.FC = () => {
                               onChange={(checkInTime) => {
                                 setFormData(prev => ({ ...prev, checkInTime }));
                                 
-                                // Auto-calculate minimum checkout time
+                                // Auto-adjust minimum checkout date based on calendar days (ignore hours)
                                 if (checkInTime && formData.checkOutTime) {
                                   const checkInDate = new Date(checkInTime);
-                                  const minCheckOutDate = new Date(checkInDate);
-                                  minCheckOutDate.setDate(checkInDate.getDate() + minBookingDays);
+                                  const minCheckOutDate = new Date(
+                                    checkInDate.getFullYear(),
+                                    checkInDate.getMonth(),
+                                    checkInDate.getDate() + (minBookingDays - 1),
+                                    0,
+                                    0,
+                                    0,
+                                    0
+                                  );
                                   
                                   const currentCheckOutDate = new Date(formData.checkOutTime);
                                   if (currentCheckOutDate < minCheckOutDate) {
                                     setFormData(prev => ({ 
                                       ...prev, 
-                                      checkOutTime: minCheckOutDate.toISOString().slice(0, 16)
+                                      checkOutTime: minCheckOutDate.toISOString()
                                     }));
                                   }
                                 }
@@ -908,12 +911,8 @@ const BookingPage: React.FC = () => {
                               value={formData.checkOutTime}
                               onChange={(checkOutTime) => {
                                 if (formData.checkInTime) {
-                                  const checkInDate = new Date(formData.checkInTime);
-                                  const checkOutDate = new Date(checkOutTime);
-                                  const minCheckOutDate = new Date(checkInDate);
-                                  minCheckOutDate.setDate(checkInDate.getDate() + minBookingDays);
-                                  
-                                  if (checkOutDate < minCheckOutDate) {
+                                  const diffDays = getCalendarDayDiff(formData.checkInTime, checkOutTime);
+                                  if (diffDays < minBookingDays) {
                                     toast.error(`最少需要預約 ${minBookingDays} 天`);
                                     return;
                                   }
@@ -922,8 +921,16 @@ const BookingPage: React.FC = () => {
                               }}
                               min={formData.checkInTime ? (() => {
                                 const checkInDate = new Date(formData.checkInTime);
-                                const minCheckOutDate = new Date(checkInDate);
-                                minCheckOutDate.setDate(checkInDate.getDate() + minBookingDays);
+                                // Min checkout is (minBookingDays - 1) days after check-in, at 00:00
+                                const minCheckOutDate = new Date(
+                                  checkInDate.getFullYear(),
+                                  checkInDate.getMonth(),
+                                  checkInDate.getDate() + (minBookingDays - 1),
+                                  0,
+                                  0,
+                                  0,
+                                  0
+                                );
                                 return minCheckOutDate.toISOString().slice(0, 16);
                               })() : new Date().toISOString().slice(0, 16)}
                               className="pl-10"
@@ -1027,6 +1034,21 @@ const BookingPage: React.FC = () => {
                               {systemSettings.luggageSettings.luggageContent.title}
                             </span>
                           </div>
+                          {systemSettings.luggageSettings.luggageContent.imageUrl && (
+                            <div className="mt-2">
+                              <button
+                                type="button"
+                                onClick={() => window.open(systemSettings.luggageSettings.luggageContent.imageUrl, '_blank')}
+                                className="w-full flex justify-center focus:outline-none"
+                              >
+                                <img
+                                  src={systemSettings.luggageSettings.luggageContent.imageUrl}
+                                  alt={systemSettings.luggageSettings.luggageContent.title}
+                                  className="w-full max-w-md max-h-64 rounded border object-contain bg-white cursor-zoom-in"
+                                />
+                              </button>
+                            </div>
+                          )}
                           <div className="text-sm text-yellow-700 leading-relaxed">
                             {systemSettings.luggageSettings.luggageContent.description}
                           </div>
@@ -1798,15 +1820,22 @@ const BookingPage: React.FC = () => {
             
             <div className="flex space-x-3">
               {currentStep < steps.length ? (
-                            <Button
+            <Button
               onClick={() => setCurrentStep(prev => prev + 1)}
               disabled={(() => {
+                const hasTimeSelected = !!formData.checkInTime && !!formData.checkOutTime;
+                const hasParkingType = !!formData.parkingTypeId;
+                const hasMaintenance = maintenanceDays.length > 0;
+                const hasConflicts =
+                  showConflictMessage &&
+                  conflictDetails &&
+                  Array.isArray(conflictDetails.conflictingDates) &&
+                  conflictDetails.conflictingDates.length > 0;
+
                 const disabled = (currentStep === 1 && !formData.agreedToTerms) ||
-                  (currentStep === 2 && !formData.parkingTypeId) ||
-                  (currentStep === 2 && (!formData.checkInTime || !formData.checkOutTime)) ||
-                  (currentStep === 2 && maintenanceDays.length > 0);
-              
-                
+                  (currentStep === 2 && (!hasParkingType || !hasTimeSelected)) ||
+                  (currentStep === 2 && (hasMaintenance || hasConflicts));
+
                 return disabled;
               })()}
               className="px-8 py-3 bg-[#39653f] hover:bg-[#2d4f33]"

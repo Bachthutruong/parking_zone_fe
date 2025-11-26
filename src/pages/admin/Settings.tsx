@@ -90,6 +90,7 @@ interface SettingsFormData {
     luggageContent: {
       title: string;
       description: string;
+      imageUrl: string;
       isActive: boolean;
     };
   };
@@ -321,6 +322,7 @@ const AdminSettings: React.FC = () => {
       luggageContent: {
         title: '行李注意事項',
         description: '請注意您的行李安全，建議將貴重物品隨身攜帶。',
+        imageUrl: '',
         isActive: true
       }
     },
@@ -442,6 +444,75 @@ const AdminSettings: React.FC = () => {
     } catch (error: any) {
       console.error('Error saving settings:', error);
       const errorMessage = error.response?.data?.message || error.message || '無法儲存設定';
+      toast.error(errorMessage);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Auto-save helpers for luggage image so it persists after refresh
+  const handleLuggageImageUpload = async (imageUrl: string) => {
+    // Update local state first for instant UI feedback
+    setFormData(prev => ({
+      ...prev,
+      luggageSettings: {
+        ...prev.luggageSettings,
+        luggageContent: {
+          ...prev.luggageSettings.luggageContent,
+          imageUrl
+        }
+      }
+    }));
+
+    try {
+      setSaving(true);
+      await updateSystemSettings({
+        luggageSettings: {
+          ...formData.luggageSettings,
+          luggageContent: {
+            ...formData.luggageSettings.luggageContent,
+            imageUrl
+          }
+        }
+      });
+      toast.success('行李圖片已儲存');
+    } catch (error: any) {
+      console.error('Error saving luggage image:', error);
+      const errorMessage = error.response?.data?.message || error.message || '無法儲存行李圖片';
+      toast.error(errorMessage);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLuggageImageDelete = async () => {
+    // Update local state first
+    setFormData(prev => ({
+      ...prev,
+      luggageSettings: {
+        ...prev.luggageSettings,
+        luggageContent: {
+          ...prev.luggageSettings.luggageContent,
+          imageUrl: ''
+        }
+      }
+    }));
+
+    try {
+      setSaving(true);
+      await updateSystemSettings({
+        luggageSettings: {
+          ...formData.luggageSettings,
+          luggageContent: {
+            ...formData.luggageSettings.luggageContent,
+            imageUrl: ''
+          }
+        }
+      });
+      toast.success('行李圖片已刪除');
+    } catch (error: any) {
+      console.error('Error deleting luggage image:', error);
+      const errorMessage = error.response?.data?.message || error.message || '無法刪除行李圖片';
       toast.error(errorMessage);
     } finally {
       setSaving(false);
@@ -1448,6 +1519,18 @@ const AdminSettings: React.FC = () => {
                         />
                       </div>
 
+                      {/* Luggage Content Image Upload */}
+                      <div>
+                        <Label className="block text-sm font-medium text-gray-700 mb-2">
+                          行李內容圖片
+                        </Label>
+                        <ContactImageUpload
+                          existingImageUrl={formData.luggageSettings.luggageContent.imageUrl}
+                          onUploadSuccess={handleLuggageImageUpload}
+                          onDeleteSuccess={handleLuggageImageDelete}
+                        />
+                      </div>
+
                       <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
                         <h5 className="font-semibold text-yellow-900 mb-2">預覽效果：</h5>
                         <div className="bg-white p-3 rounded border border-yellow-300">
@@ -1460,6 +1543,21 @@ const AdminSettings: React.FC = () => {
                           <p className="text-sm text-yellow-700">
                             {formData.luggageSettings.luggageContent.description}
                           </p>
+                          {formData.luggageSettings.luggageContent.imageUrl && (
+                            <div className="mt-3">
+                              <button
+                                type="button"
+                                onClick={() => window.open(formData.luggageSettings.luggageContent.imageUrl, '_blank')}
+                                className="w-full focus:outline-none"
+                              >
+                                <img
+                                  src={formData.luggageSettings.luggageContent.imageUrl}
+                                  alt="Luggage content image"
+                                  className="w-full max-h-64 object-contain rounded border bg-white cursor-zoom-in"
+                                />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -79,13 +79,41 @@ export const getCurrentDateTime = (): string => {
 };
 
 /**
+ * Normalize a date to the start of the day in local time and return ISO string
+ * @param dateString - Date string or Date object
+ * @returns ISO string at 00:00:00.000 local time
+ */
+export const startOfDayISO = (dateString: string | Date): string => {
+  const date = new Date(dateString);
+  date.setHours(0, 0, 0, 0);
+  return date.toISOString();
+};
+
+/**
+ * Normalize a date to the end of the day in local time and return ISO string
+ * @param dateString - Date string or Date object
+ * @returns ISO string at 23:59:59.999 local time
+ */
+export const endOfDayISO = (dateString: string | Date): string => {
+  const date = new Date(dateString);
+  date.setHours(23, 59, 59, 999);
+  return date.toISOString();
+};
+
+/**
  * Convert date to ISO string for datetime-local inputs
  * @param dateString - Date string or Date object
  * @returns ISO string for datetime-local input
  */
 export const toDateTimeLocal = (dateString: string | Date): string => {
   const date = new Date(dateString);
-  return date.toISOString().slice(0, 16);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  // Return local datetime in the format expected by <input type="datetime-local">
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
 /**
@@ -95,7 +123,11 @@ export const toDateTimeLocal = (dateString: string | Date): string => {
  */
 export const toDateInput = (dateString: string | Date): string => {
   const date = new Date(dateString);
-  return date.toISOString().split('T')[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  // Return local date in the format expected by <input type="date">
+  return `${year}-${month}-${day}`;
 };
 
 /**

@@ -135,11 +135,17 @@ const ContactImageUpload: React.FC<ContactImageUploadProps> = ({
               </Button>
             </div>
             <div className="mt-3">
-              <img
-                src={existingImageUrl}
-                alt="Current contact image"
-                className="w-full h-32 object-cover rounded-lg border"
-              />
+              <button
+                type="button"
+                onClick={() => window.open(existingImageUrl, '_blank')}
+                className="w-full focus:outline-none"
+              >
+                <img
+                  src={existingImageUrl}
+                  alt="Current contact image"
+                  className="w-full max-h-64 object-contain rounded-lg border bg-white cursor-zoom-in"
+                />
+              </button>
             </div>
           </CardContent>
         </Card>
