@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Input } from './input';
-import { formatDate, formatDateTime, toDateTimeLocal, toDateInput, fromDateTimeLocal, fromDateInput } from '@/lib/dateUtils';
+import { formatDate, formatDateTime, toDateInput, fromDateInput } from '@/lib/dateUtils';
 import { Calendar, Clock } from 'lucide-react';
 
 interface CustomDateInputProps {
@@ -27,6 +27,9 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [displayValue, setDisplayValue] = useState('');
   const [tempValue, setTempValue] = useState('');
+  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedHours, setSelectedHours] = useState('00');
+  const [selectedMinutes, setSelectedMinutes] = useState('00');
   const inputRef = useRef<HTMLInputElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
 
@@ -34,11 +37,19 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
     if (value) {
       if (type === 'datetime-local') {
         setDisplayValue(formatDateTime(value));
+        const date = new Date(value);
+        setSelectedDate(toDateInput(value));
+        setSelectedHours(String(date.getHours()).padStart(2, '0'));
+        setSelectedMinutes(String(date.getMinutes()).padStart(2, '0'));
       } else {
         setDisplayValue(formatDate(value));
+        setSelectedDate(toDateInput(value));
       }
     } else {
       setDisplayValue('');
+      setSelectedDate('');
+      setSelectedHours('00');
+      setSelectedMinutes('00');
     }
   }, [value, type]);
 
@@ -67,7 +78,20 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
 
   const handleInputClick = () => {
     setIsOpen(true);
-    setTempValue(value);
+    if (value) {
+      setTempValue(value);
+      const date = new Date(value);
+      setSelectedDate(toDateInput(value));
+      if (type === 'datetime-local') {
+        setSelectedHours(String(date.getHours()).padStart(2, '0'));
+        setSelectedMinutes(String(date.getMinutes()).padStart(2, '0'));
+      }
+    } else {
+      const now = new Date();
+      setSelectedDate(toDateInput(now.toISOString()));
+      setSelectedHours(String(now.getHours()).padStart(2, '0'));
+      setSelectedMinutes(String(now.getMinutes()).padStart(2, '0'));
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,53 +140,59 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
     }
   };
 
-  const handleNativeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const nativeValue = e.target.value;
-    
-    
-    if (type === 'datetime-local') {
-      const isoValue = fromDateTimeLocal(nativeValue);
-      setTempValue(isoValue);
-      // Also call onChange immediately for datetime-local
-      onChange(isoValue);
-    } else {
-      const isoValue = fromDateInput(nativeValue);
-      onChange(isoValue);
-      setIsOpen(false);
-    }
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const dateValue = e.target.value;
+    setSelectedDate(dateValue);
+    updateDateTimeValue(dateValue, selectedHours, selectedMinutes);
   };
 
-  const getNativeValue = () => {
-    // Use tempValue if available, otherwise use the current value
-    const valueToUse = tempValue || value;
-    if (!valueToUse) return '';
+  const handleTimeChange = (hours: string, minutes: string) => {
+    setSelectedHours(hours);
+    setSelectedMinutes(minutes);
+    updateDateTimeValue(selectedDate, hours, minutes);
+  };
+
+  const updateDateTimeValue = (date: string, hours: string, minutes: string) => {
+    if (!date) return;
     
     if (type === 'datetime-local') {
-      return toDateTimeLocal(valueToUse);
+      const [year, month, day] = date.split('-');
+      const dateObj = new Date(
+        parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day),
+        parseInt(hours),
+        parseInt(minutes)
+      );
+      const isoValue = dateObj.toISOString();
+      setTempValue(isoValue);
+      onChange(isoValue);
     } else {
-      return toDateInput(valueToUse);
+      const isoValue = fromDateInput(date);
+      setTempValue(isoValue);
+      onChange(isoValue);
     }
   };
 
   const getNativeMin = () => {
     if (!min) return undefined;
-    
-    if (type === 'datetime-local') {
-      return toDateTimeLocal(min);
-    } else {
-      return toDateInput(min);
-    }
+    return toDateInput(min);
   };
 
   const getNativeMax = () => {
     if (!max) return undefined;
-    
-    if (type === 'datetime-local') {
-      return toDateTimeLocal(max);
-    } else {
-      return toDateInput(max);
-    }
+    return toDateInput(max);
   };
+
+  // Generate hour options (00-23)
+  const hourOptions = Array.from({ length: 24 }, (_, i) => 
+    String(i).padStart(2, '0')
+  );
+
+  // Generate minute options (00, 15, 30, 45) or all minutes
+  const minuteOptions = Array.from({ length: 60 }, (_, i) => 
+    String(i).padStart(2, '0')
+  );
 
   return (
     <div className="relative">
@@ -195,45 +225,69 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
       {isOpen && (
         <div 
           ref={popupRef}
-          className="absolute top-full left-0 z-50 mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-4 min-w-[300px]"
+          className="absolute top-full left-0 z-50 mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-4 min-w-[320px]"
         >
           <div className="space-y-3">
             <div className="text-sm font-medium text-gray-700">
               {type === 'datetime-local' ? '選擇日期和時間' : '選擇日期'}
             </div>
             
-            <div className="space-y-2">
-              <label className="block text-xs text-gray-600">
-                使用原生選擇器:
-              </label>
-              <input
-                type={type}
-                value={getNativeValue()}
-                onChange={handleNativeChange}
-                min={getNativeMin()}
-                max={getNativeMax()}
-                placeholder={type === 'datetime-local' ? '年/月/日 00:00' : '年/月/日'}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+            <div className="space-y-3">
+              {/* Date Selection */}
+              <div className="space-y-2">
+                <label className="block text-xs text-gray-600">
+                  日期:
+                </label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={handleDateChange}
+                  min={getNativeMin()}
+                  max={getNativeMax()}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Time Selection (24-hour format) */}
+              {type === 'datetime-local' && (
+                <div className="space-y-2">
+                  <label className="block text-xs text-gray-600">
+                    時間 (24小時制):
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={selectedHours}
+                      onChange={(e) => handleTimeChange(e.target.value, selectedMinutes)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                    >
+                      {hourOptions.map((hour) => (
+                        <option key={hour} value={hour}>
+                          {hour}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-gray-500 font-semibold">:</span>
+                    <select
+                      value={selectedMinutes}
+                      onChange={(e) => handleTimeChange(selectedHours, e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                    >
+                      {minuteOptions.map((minute) => (
+                        <option key={minute} value={minute}>
+                          {minute}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
               {tempValue && (
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-500 pt-2 border-t">
                   當前選擇: {type === 'datetime-local' ? formatDateTime(tempValue) : formatDate(tempValue)}
                 </div>
               )}
             </div>
-            
-            {/* <div className="space-y-2">
-              <label className="block text-xs text-gray-600">
-                或直接輸入 (yyyy/mm/dd):
-              </label>
-              <input
-                type="text"
-                value={tempValue ? (type === 'datetime-local' ? formatDateTime(tempValue) : formatDate(tempValue)) : displayValue}
-                onChange={handleInputChange}
-                placeholder="年/月/日 00:00"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-              />
-            </div> */}
             
             <div className="flex justify-end space-x-2 pt-2">
               <button

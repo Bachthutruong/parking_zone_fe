@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -64,6 +65,7 @@ interface SettingsFormData {
   minBookingDays: number;
   timeSlotInterval: number;
   autoCancelMinutes: number;
+  cutoffHour: number;
   
   // Notification settings
   notificationSettings: {
@@ -302,6 +304,7 @@ const AdminSettings: React.FC = () => {
     minBookingDays: 3,
     timeSlotInterval: 15,
     autoCancelMinutes: 15,
+    cutoffHour: 0,
     notificationSettings: {
       emailNotifications: true,
       smsNotifications: false,
@@ -438,8 +441,13 @@ const AdminSettings: React.FC = () => {
   const handleSave = async () => {
     try {
       setSaving(true);
-      console.log('🔍 Saving settings:', formData);
-      await updateSystemSettings(formData);
+      // Ensure cutoffHour is a number
+      const dataToSave = {
+        ...formData,
+        cutoffHour: Number(formData.cutoffHour) || 0
+      };
+      console.log('🔍 Saving settings:', dataToSave);
+      await updateSystemSettings(dataToSave);
       toast.success('設定儲存成功！');
     } catch (error: any) {
       console.error('Error saving settings:', error);
@@ -1023,6 +1031,27 @@ const AdminSettings: React.FC = () => {
                     value={formData.minBookingDays}
                     onChange={(e) => setFormData(prev => ({ ...prev, minBookingDays: parseInt(e.target.value) }))}
                   />
+                </div>
+                <div>
+                  <Label htmlFor="cutoffHour">計費時段分界點</Label>
+                  <Select
+                    value={String(formData.cutoffHour)}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, cutoffHour: parseInt(value) || 0 }))}
+                  >
+                    <SelectTrigger id="cutoffHour">
+                      <SelectValue placeholder="選擇時段" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <SelectItem key={i} value={String(i)}>
+                          {String(i).padStart(2, '0')}:00
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    若進場時間早於此分界點，首日將計費；若進場時間晚於此分界點，首日免費，從次日開始計費。離場日始終計費。
+                  </p>
                 </div>
               </div>
 
