@@ -66,6 +66,7 @@ interface SettingsFormData {
   timeSlotInterval: number;
   autoCancelMinutes: number;
   cutoffHour: number;
+  enableCutoffHour: boolean;
   
   // Notification settings
   notificationSettings: {
@@ -305,6 +306,7 @@ const AdminSettings: React.FC = () => {
     timeSlotInterval: 15,
     autoCancelMinutes: 15,
     cutoffHour: 0,
+    enableCutoffHour: false,
     notificationSettings: {
       emailNotifications: true,
       smsNotifications: false,
@@ -441,10 +443,11 @@ const AdminSettings: React.FC = () => {
   const handleSave = async () => {
     try {
       setSaving(true);
-      // Ensure cutoffHour is a number
+      // Ensure cutoffHour is a number and enableCutoffHour is a boolean
       const dataToSave = {
         ...formData,
-        cutoffHour: Number(formData.cutoffHour) || 0
+        cutoffHour: Number(formData.cutoffHour) || 0,
+        enableCutoffHour: Boolean(formData.enableCutoffHour)
       };
       console.log('🔍 Saving settings:', dataToSave);
       await updateSystemSettings(dataToSave);
@@ -983,12 +986,6 @@ const AdminSettings: React.FC = () => {
         {/* Booking Settings */}
         <TabsContent value="booking" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Clock className="h-5 w-5 text-blue-600" />
-                <span>Cài đặt đặt chỗ</span>
-              </CardTitle>
-            </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
@@ -1032,26 +1029,43 @@ const AdminSettings: React.FC = () => {
                     onChange={(e) => setFormData(prev => ({ ...prev, minBookingDays: parseInt(e.target.value) }))}
                   />
                 </div>
-                <div>
-                  <Label htmlFor="cutoffHour">計費時段分界點</Label>
-                  <Select
-                    value={String(formData.cutoffHour)}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, cutoffHour: parseInt(value) || 0 }))}
-                  >
-                    <SelectTrigger id="cutoffHour">
-                      <SelectValue placeholder="選擇時段" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 24 }, (_, i) => (
-                        <SelectItem key={i} value={String(i)}>
-                          {String(i).padStart(2, '0')}:00
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    若進場時間早於此分界點，首日將計費；若進場時間晚於此分界點，首日免費，從次日開始計費。離場日始終計費。
-                  </p>
+                <div className="col-span-1 md:col-span-3">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Switch
+                      id="enableCutoffHour"
+                      checked={formData.enableCutoffHour}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, enableCutoffHour: checked }))}
+                    />
+                    <Label htmlFor="enableCutoffHour" className="font-medium">啟用計費時段分界點規則</Label>
+                  </div>
+                  {formData.enableCutoffHour && (
+                    <div className="mt-2">
+                      <Label htmlFor="cutoffHour">計費時段分界點</Label>
+                      <Select
+                        value={String(formData.cutoffHour)}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, cutoffHour: parseInt(value) || 0 }))}
+                      >
+                        <SelectTrigger id="cutoffHour">
+                          <SelectValue placeholder="選擇時段" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 24 }, (_, i) => (
+                            <SelectItem key={i} value={String(i)}>
+                              {String(i).padStart(2, '0')}:00
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        若進場時間早於此分界點，首日將計費；若進場時間晚於此分界點，首日免費，從次日開始計費。離場日始終計費。
+                      </p>
+                    </div>
+                  )}
+                  {!formData.enableCutoffHour && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      未啟用時，首日將始終計費，不受進場時間影響。
+                    </p>
+                  )}
                 </div>
               </div>
 
