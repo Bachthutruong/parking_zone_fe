@@ -874,10 +874,11 @@ const BookingPage: React.FC = () => {
                                 // Auto-adjust minimum checkout date based on calendar days (ignore hours)
                                 if (checkInTime && formData.checkOutTime) {
                                   const checkInDate = new Date(checkInTime);
+                                  // Min checkout is minBookingDays days after check-in date (inclusive)
                                   const minCheckOutDate = new Date(
                                     checkInDate.getFullYear(),
                                     checkInDate.getMonth(),
-                                    checkInDate.getDate() + (minBookingDays - 1),
+                                    checkInDate.getDate() + minBookingDays,
                                     0,
                                     0,
                                     0,
@@ -921,11 +922,14 @@ const BookingPage: React.FC = () => {
                               }}
                               min={formData.checkInTime ? (() => {
                                 const checkInDate = new Date(formData.checkInTime);
-                                // Min checkout is (minBookingDays - 1) days after check-in, at 00:00
+                                // Min checkout is minBookingDays days after check-in date (inclusive)
+                                // If check-in is day 12 and min is 3 days:
+                                // Day 12 = day 1, Day 13 = day 2, Day 14 = day 3, Day 15 = day 4
+                                // So min checkout should be day 15 (day 12 + 3)
                                 const minCheckOutDate = new Date(
                                   checkInDate.getFullYear(),
                                   checkInDate.getMonth(),
-                                  checkInDate.getDate() + (minBookingDays - 1),
+                                  checkInDate.getDate() + minBookingDays,
                                   0,
                                   0,
                                   0,
