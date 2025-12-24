@@ -30,7 +30,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { getSystemSettings, getAllParkingTypes, getAllAddonServices as getAddonServices, createBooking, api } from '@/services';
 import { checkParkingTypeMaintenance } from '@/services/maintenance';
-import { checkVIPStatus, checkVIPByCode } from '@/services/auth';
+import { checkVIPStatus } from '@/services/auth';
 import { formatDate, formatDateWithWeekday, formatDateTime, startOfDayISO, endOfDayISO } from '@/lib/dateUtils';
 import type { SystemSettings, ParkingType, AddonService, BookingFormData } from '@/types';
 import ImageGallery from '@/components/ImageGallery';
@@ -52,9 +52,9 @@ const BookingPage: React.FC = () => {
   const [isVIP, setIsVIP] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showVIPCodeInput, setShowVIPCodeInput] = useState(false);
-  const [vipCode, setVipCode] = useState('');
-  const [vipCodeLoading, setVipCodeLoading] = useState(false);
+  // const [showVIPCodeInput, setShowVIPCodeInput] = useState(false);
+  // const [vipCode, setVipCode] = useState('');
+  // const [vipCodeLoading, setVipCodeLoading] = useState(false);
   const [conflictingDays, setConflictingDays] = useState<string[]>([]);
   console.log(conflictingDays, 'conflictingDays');
   const [bookingTerms, setBookingTerms] = useState<string>('');
@@ -413,72 +413,72 @@ const BookingPage: React.FC = () => {
     }
   };
 
-  const handleCheckVIPByCode = async () => {
-    if (!vipCode.trim()) {
-      toast.error('請輸入VIP碼');
-      return;
-    }
+  // const handleCheckVIPByCode = async () => {
+  //   if (!vipCode.trim()) {
+  //     toast.error('請輸入VIP碼');
+  //     return;
+  //   }
 
-    setVipCodeLoading(true);
-    try {
-      const response = await checkVIPByCode(vipCode.trim());
+  //   setVipCodeLoading(true);
+  //   try {
+  //     const response = await checkVIPByCode(vipCode.trim());
       
-      if (response.success && response.user && response.user.isVIP) {
-        setCurrentUser(response.user);
-        setIsVIP(true);
-        setShowVIPCodeInput(false);
-        setVipCode('');
+  //     if (response.success && response.user && response.user.isVIP) {
+  //       setCurrentUser(response.user);
+  //       setIsVIP(true);
+  //       setShowVIPCodeInput(false);
+  //       setVipCode('');
         
-        // Auto-fill form with VIP user info
-        setFormData(prev => ({
-          ...prev,
-          driverName: response.user.name,
-          email: response.user.email,
-          phone: response.user.phone,
-          licensePlate: response.user.licensePlate || ''
-        }));
+  //       // Auto-fill form with VIP user info
+  //       setFormData(prev => ({
+  //         ...prev,
+  //         driverName: response.user.name,
+  //         email: response.user.email,
+  //         phone: response.user.phone,
+  //         licensePlate: response.user.licensePlate || ''
+  //       }));
         
-        toast.success(`🎉 歡迎VIP會員！您享有${response.user.vipDiscount || 0}%折扣！`);
-        // Recalculate pricing with VIP discount
-        await calculatePricing();
-      } else {
-        toast.error(response.message || 'VIP碼無效');
-        setCurrentUser(null);
-        setIsVIP(false);
-        // Recalculate pricing without VIP discount
-        await calculatePricing();
-      }
-    } catch (error) {
-      console.error('Error checking VIP code:', error);
-      toast.error('檢查VIP碼時發生錯誤');
-      setCurrentUser(null);
-      setIsVIP(false);
-    } finally {
-      setVipCodeLoading(false);
-    }
-  };
+  //       toast.success(`🎉 歡迎VIP會員！您享有${response.user.vipDiscount || 0}%折扣！`);
+  //       // Recalculate pricing with VIP discount
+  //       await calculatePricing();
+  //     } else {
+  //       toast.error(response.message || 'VIP碼無效');
+  //       setCurrentUser(null);
+  //       setIsVIP(false);
+  //       // Recalculate pricing without VIP discount
+  //       await calculatePricing();
+  //     }
+  //   } catch (error) {
+  //     console.error('Error checking VIP code:', error);
+  //     toast.error('檢查VIP碼時發生錯誤');
+  //     setCurrentUser(null);
+  //     setIsVIP(false);
+  //   } finally {
+  //     setVipCodeLoading(false);
+  //   }
+  // };
 
-  const handleDiscountCodeApply = async () => {
-    if (!formData.discountCode?.trim()) {
-      toast.error('請輸入折扣碼');
-      return;
-    }
+  // const handleDiscountCodeApply = async () => {
+  //   if (!formData.discountCode?.trim()) {
+  //     toast.error('請輸入折扣碼');
+  //     return;
+  //   }
 
-    if (!formData.parkingTypeId || !formData.checkInTime || !formData.checkOutTime) {
-      toast.error('請在應用折扣碼之前選擇停車場和時間');
-      return;
-    }
+  //   if (!formData.parkingTypeId || !formData.checkInTime || !formData.checkOutTime) {
+  //     toast.error('請在應用折扣碼之前選擇停車場和時間');
+  //     return;
+  //   }
 
-    try {
-      // Recalculate pricing with discount code
-      await calculatePricing();
-      toast.success('折扣碼應用成功！');
-    } catch (error: any) {
-      console.error('Error applying discount:', error);
-      toast.error('應用折扣碼時發生錯誤');
-      setDiscountInfo(null);
-    }
-  };
+  //   try {
+  //     // Recalculate pricing with discount code
+  //     await calculatePricing();
+  //     toast.success('折扣碼應用成功！');
+  //   } catch (error: any) {
+  //     console.error('Error applying discount:', error);
+  //     toast.error('應用折扣碼時發生錯誤');
+  //     setDiscountInfo(null);
+  //   }
+  // };
 
   // Helper to calculate number of calendar days (inclusive) between two datetimes
   const getCalendarDayDiff = (start: string, end: string) => {
@@ -1494,7 +1494,7 @@ const BookingPage: React.FC = () => {
               </CardHeader>
               <CardContent className="p-6 space-y-6">
                 {/* VIP Code Section */}
-                {!isVIP && (
+                {/* {!isVIP && (
                   <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-2">
@@ -1535,10 +1535,10 @@ const BookingPage: React.FC = () => {
                       </div>
                     )}
                   </div>
-                )}
+                )} */}
 
                 {/* Discount Code Section */}
-                <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
+                {/* <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-2">
                       <span className="text-green-800 font-medium">🎫 您有折扣碼嗎？</span>
@@ -1567,7 +1567,7 @@ const BookingPage: React.FC = () => {
                     </p>
                   </div>
                   
-                </div>
+                </div> */}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
