@@ -37,13 +37,13 @@ api.interceptors.response.use(
       url: error.config?.url,
       method: error.config?.method
     });
-    
+
     // Only redirect to login for 401 errors on protected routes
     // Public routes like booking and lookup should not redirect
     if (error.response?.status === 401) {
       const currentPath = window.location.pathname;
       const isPublicRoute = ['/booking', '/lookup', '/booking-confirmation'].includes(currentPath);
-      
+
       if (!isPublicRoute) {
         console.log('Unauthorized on protected route - logging out user');
         localStorage.removeItem('token');
