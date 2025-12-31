@@ -14,7 +14,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'https://parking-zone-be.onrender.com',
+        target: 'https://api-parking-zone.jiudi.cloud',
         // target: 'http://localhost:5002',
         changeOrigin: true,
       },
