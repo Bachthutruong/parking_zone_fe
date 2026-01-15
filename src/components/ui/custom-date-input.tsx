@@ -189,9 +189,9 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
     String(i).padStart(2, '0')
   );
 
-  // Generate minute options (00, 15, 30, 45) or all minutes
-  const minuteOptions = Array.from({ length: 60 }, (_, i) => 
-    String(i).padStart(2, '0')
+  // Generate minute options (00, 05, 10, ... 55)
+  const minuteOptions = Array.from({ length: 12 }, (_, i) => 
+    String(i * 5).padStart(2, '0')
   );
 
   return (

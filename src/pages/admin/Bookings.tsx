@@ -733,7 +733,7 @@ const BookingsPage: React.FC = () => {
                     onClick={() => handleDateBookingClick(date, parkingTypeId)}
                   >
                     <div className="font-medium text-blue-600">
-                      {parkingType.name}
+                      {parkingType?.name || '未知停車場'}
                     </div>
                     <div className="text-green-600">
                       空位: {availableSlots}
@@ -912,10 +912,10 @@ const BookingsPage: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <div className="font-medium">{booking.parkingType.name}</div>
+                          <div className="font-medium">{booking.parkingType?.name || '未知停車場'}</div>
                           <div className="text-sm text-gray-600">
-                            {booking.parkingType.icon || '🏢'} {(booking.parkingType.type || 'indoor') === 'indoor' ? '室內' : 
-                             (booking.parkingType.type || 'indoor') === 'outdoor' ? '戶外' : '無障礙'}
+                            {booking.parkingType?.icon || '🏢'} {(booking.parkingType?.type || 'indoor') === 'indoor' ? '室內' : 
+                             (booking.parkingType?.type || 'indoor') === 'outdoor' ? '戶外' : '無障礙'}
                           </div>
                         </div>
                       </TableCell>
@@ -1062,7 +1062,7 @@ const BookingsPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle>預約詳細列表</DialogTitle>
             <DialogDescription>
-              {selectedDate} - {dateBookings.length > 0 ? dateBookings[0].parkingType.name : '停車場'} 的預約
+              {selectedDate} - {dateBookings.length > 0 ? (dateBookings[0].parkingType?.name || '未知停車場') : '停車場'} 的預約
             </DialogDescription>
           </DialogHeader>
           
@@ -1202,8 +1202,8 @@ const BookingsPage: React.FC = () => {
                 <div>
                   <h4 className="font-semibold mb-2">預約資訊</h4>
                   <div className="space-y-2 text-sm">
-                    <div><strong>停車場:</strong> {selectedBooking.parkingType.name}</div>
-                    <div><strong>類型:</strong> {selectedBooking.parkingType.type || 'indoor'}</div>
+                    <div><strong>停車場:</strong> {selectedBooking.parkingType?.name || '未知停車場'}</div>
+                    <div><strong>類型:</strong> {selectedBooking.parkingType?.type || 'indoor'}</div>
                     <div><strong>進入:</strong> {formatDateTime(selectedBooking.checkInTime)}</div>
                     <div><strong>離開:</strong> {formatDateTime(selectedBooking.checkOutTime)}</div>
                     <div><strong>狀態:</strong> {getStatusBadge(selectedBooking.status)}</div>
