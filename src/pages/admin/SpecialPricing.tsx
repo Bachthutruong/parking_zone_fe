@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Plus,
@@ -19,13 +18,10 @@ import {
   XCircle,
   Calendar,
   Search,
-  Filter,
   RefreshCw,
   DollarSign,
   TrendingUp,
   Layers,
-  Globe,
-  Settings,
   Copy,
   Zap
 } from 'lucide-react';
@@ -62,7 +58,7 @@ const AdminSpecialPricing: React.FC = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedSpecialPrice, setSelectedSpecialPrice] = useState<SpecialPrice | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [viewMode, setViewMode] = useState<'single' | 'overview'>('single');
+  // const [viewMode, setViewMode] = useState<'single' | 'overview'>('single'); // Removed viewMode
   const [selectedParkingTypes, setSelectedParkingTypes] = useState<string[]>([]);
   const [bulkTemplateData, setBulkTemplateData] = useState<any[]>([]);
   const [showBulkTemplateDialog, setShowBulkTemplateDialog] = useState(false);
@@ -79,6 +75,7 @@ const AdminSpecialPricing: React.FC = () => {
     isActive: true
   });
   const [isSingleDayMode, setIsSingleDayMode] = useState(false);
+  const [dialogParkingTypeId, setDialogParkingTypeId] = useState<string>('');
 
   useEffect(() => {
     loadParkingTypes();
@@ -106,10 +103,12 @@ const AdminSpecialPricing: React.FC = () => {
       );
       
       setParkingTypes(parkingTypesWithSpecialPrices);
-      if (parkingTypesWithSpecialPrices.length > 0) {
-        setSelectedParkingType(parkingTypesWithSpecialPrices[0]);
-        setSpecialPrices(parkingTypesWithSpecialPrices[0].specialPrices);
-      }
+      setParkingTypes(parkingTypesWithSpecialPrices);
+      // Removed auto-selection to default to "Overview" mode
+      // if (parkingTypesWithSpecialPrices.length > 0) {
+      //   setSelectedParkingType(parkingTypesWithSpecialPrices[0]);
+      //   setSpecialPrices(parkingTypesWithSpecialPrices[0].specialPrices);
+      // }
     } catch (error: any) {
       console.error('Error loading parking types:', error);
       toast.error('Không thể tải danh sách bãi đậu xe');
@@ -129,6 +128,11 @@ const AdminSpecialPricing: React.FC = () => {
 //   };
 
   const handleParkingTypeChange = async (parkingTypeId: string) => {
+    if (parkingTypeId === 'all') {
+      setSelectedParkingType(null);
+      setSpecialPrices([]);
+      return;
+    }
     const parkingType = parkingTypes.find(pt => pt._id === parkingTypeId);
     setSelectedParkingType(parkingType || null);
     if (parkingType) {
@@ -137,7 +141,13 @@ const AdminSpecialPricing: React.FC = () => {
   };
 
   const handleCreate = async () => {
-    if (!selectedParkingType) return;
+    // Only use dialogParkingTypeId as the source of truth for creation
+    const targetParkingTypeId = dialogParkingTypeId;
+
+    if (!targetParkingTypeId) {
+      toast.error('請選擇一個停車場');
+      return;
+    }
     
     if (!formData.startDate || !formData.price || !formData.reason.trim()) {
       toast.error('Vui lòng điền đầy đủ thông tin bao gồm lý do');
@@ -157,7 +167,7 @@ const AdminSpecialPricing: React.FC = () => {
     };
     
     try {
-      const result = await addSpecialPrice(selectedParkingType._id, dataToSubmit);
+      const result = await addSpecialPrice(targetParkingTypeId, dataToSubmit);
       toast.success(result.message || '新增特殊價格成功');
       setShowCreateDialog(false);
       resetForm();
@@ -276,6 +286,7 @@ const AdminSpecialPricing: React.FC = () => {
     setSelectedTemplate('');
     setIsSingleDayMode(false);
     setSingleForceOverride(false);
+    setDialogParkingTypeId('');
   };
 
   const openCreateDialog = () => {
@@ -288,6 +299,15 @@ const AdminSpecialPricing: React.FC = () => {
     });
     setIsSingleDayMode(false);
     setSingleForceOverride(false);
+    
+    // If a parking type is selected, use it. Otherwise default to empty or first one.
+    // Always pre-fill with selected or first available, but allow user to change it in dialog
+    if (selectedParkingType) {
+        setDialogParkingTypeId(selectedParkingType._id);
+    } else if (parkingTypes.length > 0) {
+        setDialogParkingTypeId(parkingTypes[0]._id);
+    }
+    
     setShowCreateDialog(true);
   };
 
@@ -634,343 +654,201 @@ const AdminSpecialPricing: React.FC = () => {
             <Layers className="h-4 w-4 mr-2" />
             批量配置
           </Button>
-          <Button onClick={openCreateDialog} disabled={!selectedParkingType}>
-            <Plus className="h-4 w-4 mr-2" />
-            新增特殊價格
-          </Button>
+
         </div>
       </div>
 
-      <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'single' | 'overview')} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="single" className="flex items-center space-x-2">
-            <Settings className="h-4 w-4" />
-            <span>個別停車場配置</span>
-          </TabsTrigger>
-          <TabsTrigger value="overview" className="flex items-center space-x-2">
-            <Globe className="h-4 w-4" />
-            <span>全部概覽</span>
-          </TabsTrigger>
-        </TabsList>
+      {/* Filters & Actions Bar */}
+      <div className="bg-white p-4 rounded-lg shadow-sm border mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex-1 w-full md:w-auto flex flex-col md:flex-row gap-4 items-center">
+          <div className="w-full md:w-64">
+             <Label htmlFor="parkingTypeSelect" className="sr-only">選擇停車場</Label>
+             <select
+                id="parkingTypeSelect"
+                value={selectedParkingType?._id || 'all'}
+                onChange={(e) => handleParkingTypeChange(e.target.value)}
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="all">所有的停車場 (全部概覽)</option>
+                {parkingTypes.map((parkingType) => (
+                  <option key={parkingType._id} value={parkingType._id}>
+                    {parkingType.name}
+                  </option>
+                ))}
+              </select>
+          </div>
+          <div className="relative w-full md:w-64">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder={selectedParkingType ? "搜尋原因..." : "搜尋原因或停車場..."}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
 
-        <TabsContent value="single" className="space-y-6">
-          {/* Parking Type Selector */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <TrendingUp className="h-5 w-5 mr-2" />
-                選擇停車場
+        <div className="flex gap-2 w-full md:w-auto">
+             <Button onClick={openCreateDialog} className="bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all hover:scale-105">
+                <Plus className="h-4 w-4 mr-2" />
+                新增特殊價格
+              </Button>
+        </div>
+      </div>
+
+       {/* Parking Info Card (Visible only when specific parking type selected) */}
+       {selectedParkingType && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-blue-600 flex items-center">
+                <Layers className="h-4 w-4 mr-2" />
+                基本資訊
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="parkingType">停車場</Label>
-                  <select
-                    id="parkingType"
-                    value={selectedParkingType?._id || ''}
-                    onChange={(e) => handleParkingTypeChange(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-md"
-                  >
-                    {parkingTypes.map((parkingType) => (
-                      <option key={parkingType._id} value={parkingType._id}>
-                        {parkingType.name} ({parkingType.code}) - {formatCurrency(parkingType.pricePerDay)}/天
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="flex items-end">
-                  <div className="text-sm text-gray-600">
-                    基本價格: {selectedParkingType ? formatCurrency(selectedParkingType.pricePerDay) : 'N/A'}
-                  </div>
-                </div>
-              </div>
+              <div className="text-2xl font-bold text-gray-800">{selectedParkingType.name}</div>
+              <div className="text-sm text-gray-500 mt-1 font-mono">{selectedParkingType.code}</div>
             </CardContent>
           </Card>
-
-          {/* Filters */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Filter className="h-5 w-5 mr-2" />
-                篩選
+          
+          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-100 shadow-sm">
+             <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-green-600 flex items-center">
+                <DollarSign className="h-4 w-4 mr-2" />
+                標準價格
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="search">搜尋</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="search"
-                      placeholder="原因..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex items-end">
-                  <Button variant="outline" className="w-full">
-                    <Filter className="h-4 w-4 mr-2" />
-                    篩選
-                  </Button>
-                </div>
-              </div>
+              <div className="text-2xl font-bold text-gray-800">{formatCurrency(selectedParkingType.pricePerDay)}</div>
+              <div className="text-sm text-gray-500 mt-1">每天</div>
             </CardContent>
           </Card>
 
-          {/* Special Prices Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>特殊價格清單</CardTitle>
-              <CardDescription>
-                {selectedParkingType && `停車場: ${selectedParkingType.name}`} - 
-                共 {filteredSpecialPrices.length} 個特殊價格
-              </CardDescription>
+           <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-100 shadow-sm">
+             <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-purple-600 flex items-center">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                特殊價格設定
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>日期</TableHead>
-                    <TableHead>價格</TableHead>
-                    <TableHead>原因</TableHead>
-                    <TableHead>狀態</TableHead>
-                    <TableHead>操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSpecialPrices.map((specialPrice) => (
-                    <TableRow key={specialPrice._id}>
+              <div className="text-2xl font-bold text-gray-800">{filteredSpecialPrices.length}</div>
+              <div className="text-sm text-gray-500 mt-1">個設定項目</div>
+            </CardContent>
+          </Card>
+        </div>
+       )}
+
+      {/* Main Content Table (Unified) */}
+      <Card className="shadow-md border-0 overflow-hidden">
+        <CardHeader className="bg-gray-50/50 border-b">
+          <div className="flex justify-between items-center">
+             <div>
+                <CardTitle>特殊價格清單</CardTitle>
+                <CardDescription>
+                  {selectedParkingType 
+                    ? `管理 ${selectedParkingType.name} 的特殊價格` 
+                    : `顯示所有停車場的特殊價格 (${filteredAllSpecialPrices.length} 筆)`}
+                </CardDescription>
+             </div>
+             {!selectedParkingType && (
+               <Badge variant="outline" className="text-gray-500">全部概覽模式</Badge>
+             )}
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader className="bg-gray-50">
+              <TableRow>
+                {!selectedParkingType && <TableHead className="w-[200px]">停車場</TableHead>}
+                <TableHead>日期範圍</TableHead>
+                <TableHead>價格設定</TableHead>
+                <TableHead>原因/備註</TableHead>
+                <TableHead>狀態</TableHead>
+                {selectedParkingType && <TableHead className="text-right">操作</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(selectedParkingType ? filteredSpecialPrices : filteredAllSpecialPrices).length > 0 ? (
+                (selectedParkingType ? filteredSpecialPrices : filteredAllSpecialPrices).map((item: any) => (
+                  <TableRow key={item._id} className="hover:bg-blue-50/30 transition-colors">
+                    {!selectedParkingType && (
                       <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4 text-gray-500" />
-                          <span className="font-medium">{formatDateRange(specialPrice.startDate, specialPrice.endDate)}</span>
+                        <div className="font-medium">
+                          {item.parkingTypeName}
+                          <div className="text-xs text-gray-500 mt-0.5">{item.parkingTypeCode}</div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <DollarSign className="h-4 w-4 text-green-500" />
-                          <span className="font-bold text-green-600">
-                            {formatCurrency(specialPrice.price)}
-                          </span>
+                    )}
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <div className="bg-blue-100 p-1.5 rounded-md text-blue-600">
+                          <Calendar className="h-4 w-4" />
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">{specialPrice.reason}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={specialPrice.isActive ? 'default' : 'secondary'}>
-                          {specialPrice.isActive ? (
-                            <>
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Hoạt động
-                            </>
-                          ) : (
-                            <>
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Tạm khóa
-                            </>
-                          )}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
+                        <span className="font-medium text-gray-700">{formatDateRange(item.startDate, item.endDate)}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                         <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 font-bold px-2 py-0.5">
+                            {formatCurrency(item.price)}
+                         </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium text-gray-700 max-w-md truncate" title={item.reason}>{item.reason}</div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={item.isActive ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-0" : "bg-gray-100 text-gray-500 hover:bg-gray-200 border-0"}>
+                        {item.isActive ? (
+                          <div className="flex items-center gap-1"><CheckCircle className="h-3 w-3" /> 啟用</div>
+                        ) : (
+                          <div className="flex items-center gap-1"><XCircle className="h-3 w-3" /> 停用</div>
+                        )}
+                      </Badge>
+                    </TableCell>
+                    {selectedParkingType && (
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end space-x-2">
                           <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openEditDialog(specialPrice)}
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                            onClick={() => openEditDialog(item)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => openDeleteDialog(specialPrice)}
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-50"
+                            onClick={() => openDeleteDialog(item)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              {/* No Results */}
-              {filteredSpecialPrices.length === 0 && (
-                <div className="p-8 text-center">
-                  <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-600 mb-2">沒有特殊價格</h3>
-                  <p className="text-gray-500">
-                    此停車場尚未設置任何特殊價格。
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="overview" className="space-y-6">
-          {/* Parking Type Selection for Bulk Operations */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Layers className="h-5 w-5 mr-2" />
-                選擇停車場進行批量操作
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="selectAllOverview"
-                    checked={selectedParkingTypes.length === parkingTypes.length}
-                    onCheckedChange={handleSelectAllParkingTypes}
-                  />
-                  <Label htmlFor="selectAllOverview" className="font-medium">選擇所有停車場</Label>
-                </div>
-                
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto border rounded-md p-3">
-                  {parkingTypes.map((parkingType) => (
-                    <div key={parkingType._id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`overview-${parkingType._id}`}
-                        checked={selectedParkingTypes.includes(parkingType._id)}
-                        onCheckedChange={() => handleSelectParkingType(parkingType._id)}
-                      />
-                      <Label htmlFor={`overview-${parkingType._id}`} className="text-sm">
-                        {parkingType.name} ({parkingType.code})
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="text-sm text-gray-600">
-                  已選擇: {selectedParkingTypes.length}/{parkingTypes.length} 個停車場
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Overview Filters */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Filter className="h-5 w-5 mr-2" />
-                概覽篩選
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="overviewSearch">搜尋</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="overviewSearch"
-                      placeholder="原因或停車場名稱..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex items-end">
-                  <div className="text-sm text-gray-600">
-                    總計: {filteredAllSpecialPrices.length} 個特殊價格
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Overview Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>所有特殊價格概覽</CardTitle>
-              <CardDescription>
-                查看所有停車場的特殊價格
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>停車場</TableHead>
-                    <TableHead>日期</TableHead>
-                    <TableHead>價格</TableHead>
-                    <TableHead>原因</TableHead>
-                    <TableHead>狀態</TableHead>
+                    )}
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAllSpecialPrices.map((specialPrice) => (
-                    <TableRow key={`${specialPrice.parkingTypeCode}-${specialPrice._id}`}>
-                      <TableCell>
-                        <div className="font-medium">
-                          {specialPrice.parkingTypeName}
-                          <Badge variant="outline" className="ml-2">
-                            {specialPrice.parkingTypeCode}
-                          </Badge>
+                ))
+              ) : (
+                 <TableRow>
+                    <TableCell colSpan={selectedParkingType ? 5 : 6} className="h-32 text-center">
+                        <div className="flex flex-col items-center justify-center text-gray-400">
+                           <div className="bg-gray-100 p-3 rounded-full mb-3">
+                             <TrendingUp className="h-6 w-6" />
+                           </div>
+                           <p className="text-base font-medium">暫無特殊價格設定</p>
+                           <p className="text-sm mt-1">在此期間內沒有找到相關記錄</p>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4 text-gray-500" />
-                          <span className="font-medium">{formatDateRange(specialPrice.startDate, specialPrice.endDate)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <DollarSign className="h-4 w-4 text-green-500" />
-                          <span className="font-bold text-green-600">
-                            {formatCurrency(specialPrice.price)}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">{specialPrice.reason}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={specialPrice.isActive ? 'default' : 'secondary'}>
-                          {specialPrice.isActive ? (
-                            <>
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Hoạt động
-                            </>
-                          ) : (
-                            <>
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Tạm khóa
-                            </>
-                          )}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              {/* No Results */}
-              {filteredAllSpecialPrices.length === 0 && (
-                <div className="p-8 text-center">
-                  <Globe className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-600 mb-2">沒有特殊價格</h3>
-                  <p className="text-gray-500">
-                    尚未為任何停車場設置特殊價格。
-                  </p>
-                </div>
+                    </TableCell>
+                 </TableRow>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       {/* Create/Edit Dialog */}
       <Dialog open={showCreateDialog || showEditDialog} onOpenChange={(open) => {
@@ -989,6 +867,22 @@ const AdminSpecialPricing: React.FC = () => {
           </DialogHeader>
           
           <div className="space-y-4">
+            <div>
+              <Label htmlFor="dialogParkingType">停車場 *</Label>
+              <select
+                id="dialogParkingType"
+                value={dialogParkingTypeId}
+                onChange={(e) => setDialogParkingTypeId(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md mt-1"
+                disabled={isEditing} // Disable editing in edit mode if needed, or allow it. Usually you can't move a price to another lot easily backend-wise, but for create it should be enabled.
+              >
+                {parkingTypes.map((pt) => (
+                  <option key={pt._id} value={pt._id}>
+                    {pt.name} ({pt.code})
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="flex items-center space-x-2 mb-4">
               <Switch
                 id="singleDayMode"
@@ -1298,11 +1192,11 @@ const AdminSpecialPricing: React.FC = () => {
                   id="bulkReason"
                   value={formData.reason}
                   onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
-                  placeholder="Ví dụ: Cuối tuần, Ngày lễ Tết, Sự kiện đặc biệt, Mùa cao điểm, Lễ hội, Ngày nghỉ lễ..."
+                  placeholder="例如：週末、國定假日、特別活動、旺季、節慶、假期…"
                   rows={3}
                 />
                 <div className="text-xs text-gray-500 mt-1">
-                  💡 Nhập lý do cụ thể để khách hàng hiểu rõ tại sao giá thay đổi
+                  💡 提供具體理由，讓顧客了解價格變動的原因。
                 </div>
               </div>
 

@@ -36,18 +36,39 @@ export const getAllBookings = async (params?: {
   parkingTypeId?: string;
   page?: number;
   limit?: number;
+  isDeleted?: boolean;
+  sortBy?: string;
+  order?: 'asc' | 'desc';
 }): Promise<{ bookings: Booking[]; total: number; page: number; totalPages: number }> => {
   const response = await api.get('/admin/bookings', { params });
   return response.data;
 };
 
-export const updateBookingStatus = async (bookingId: string, status: string) => {
-  const response = await api.patch(`/admin/bookings/${bookingId}/status`, { status });
+export const updateBookingStatus = async (bookingId: string, status: string, reason?: string) => {
+  const response = await api.patch(`/admin/bookings/${bookingId}/status`, { status, reason });
+  return response.data;
+};
+
+export const deleteBooking = async (bookingId: string, reason?: string) => {
+  const response = await api.delete(`/admin/bookings/${bookingId}`, { data: { reason } });
   return response.data;
 };
 
 export const updateBooking = async (bookingId: string, bookingData: Partial<Booking>) => {
   const response = await api.put(`/admin/bookings/${bookingId}`, bookingData);
+  return response.data;
+};
+
+// Get all bookings for calendar view (no pagination)
+export const getCalendarBookings = async (params?: {
+  status?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  search?: string;
+  parkingTypeId?: string;
+  isDeleted?: boolean;
+}): Promise<{ bookings: Booking[]; total: number }> => {
+  const response = await api.get('/admin/bookings/calendar', { params });
   return response.data;
 };
 

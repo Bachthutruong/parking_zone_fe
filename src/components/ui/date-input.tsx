@@ -130,9 +130,9 @@ const DateInput: React.FC<DateInputProps> = ({
     String(i).padStart(2, '0')
   );
 
-  // Generate minute options (00-59)
-  const minuteOptions = Array.from({ length: 60 }, (_, i) => 
-    String(i).padStart(2, '0')
+  // Generate minute options (00-55 in 5-minute steps)
+  const minuteOptions = Array.from({ length: 12 }, (_, i) => 
+    String(i * 5).padStart(2, '0')
   );
 
   return (

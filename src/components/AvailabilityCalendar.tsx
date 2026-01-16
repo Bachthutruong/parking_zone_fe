@@ -11,6 +11,7 @@ interface AvailabilityCalendarProps {
   checkOutTime: string;
   onDateSelect?: (date: string) => void;
   onDateRangeSelect?: (checkIn: string, checkOut: string) => void;
+  vehicleCount?: number;
 }
 
 interface DayInfo {
@@ -30,7 +31,8 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   checkInTime,
   checkOutTime,
   onDateSelect,
-  onDateRangeSelect
+  onDateRangeSelect,
+  vehicleCount = 1
 }) => {
   const [availabilityData, setAvailabilityData] = useState<DayInfo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -185,7 +187,7 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   };
 
   const getDayStatus = (day: DayInfo) => {
-    if (!day.isAvailable || day.availableSlots === 0) {
+    if (!day.isAvailable || (day.availableSlots || 0) < vehicleCount) {
       return 'unavailable';
     }
     
@@ -302,7 +304,7 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
     if (!dateStr) return;
     
     const dayInfo = availabilityData.find(day => day.date === dateStr);
-    if (!dayInfo || !dayInfo.isAvailable || dayInfo.availableSlots === 0) return;
+    if (!dayInfo || !dayInfo.isAvailable || (dayInfo.availableSlots || 0) < vehicleCount) return;
     
     // Always call onDateSelect for single date selection
     onDateSelect?.(dateStr);
@@ -346,7 +348,7 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
       <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
         <CardTitle className="flex items-center space-x-3 text-blue-900">
           <Calendar className="h-6 w-6 text-blue-600" />
-          <span>Lịch khả dụng</span>
+          <span>可用性日曆</span>  
         </CardTitle>
       </CardHeader>
       <CardContent className="p-6">
@@ -403,7 +405,7 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                 <div
                   key={index}
                   className={`${className} cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-md ${
-                    dayInfo?.isAvailable && (dayInfo?.availableSlots || 0) > 0 
+                    dayInfo?.isAvailable && (dayInfo?.availableSlots || 0) >= vehicleCount 
                       ? 'hover:bg-blue-50 hover:border-blue-300' 
                       : 'cursor-not-allowed opacity-60'
                   }`}
@@ -417,7 +419,7 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                   
                   {/* Availability and price info in center */}
                   <div className="text-center">
-                    {dayInfo?.isAvailable && (dayInfo?.availableSlots || 0) > 0 ? (
+                    {dayInfo?.isAvailable && (dayInfo?.availableSlots || 0) >= vehicleCount ? (
                       <>
                         {/* Available slots */}
                         <div className="flex items-center justify-center space-x-1 mb-1">

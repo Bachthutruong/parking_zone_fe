@@ -201,6 +201,7 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
           ref={inputRef}
           id={id}
           type="text"
+          autoComplete="off"
           value={displayValue}
           onChange={handleInputChange}
           onClick={handleInputClick}

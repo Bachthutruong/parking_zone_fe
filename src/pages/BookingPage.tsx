@@ -7,7 +7,7 @@ import CustomDateInput from '@/components/ui/custom-date-input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Textarea } from '@/components/ui/textarea';
+// import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { 
   MapPin, 
@@ -72,7 +72,11 @@ const BookingPage: React.FC = () => {
     email: '',
     licensePlate: '',
     passengerCount: 0,
-    luggageCount: 0
+    luggageCount: 0,
+    departurePassengerCount: 0,
+    departureLuggageCount: 0,
+    returnPassengerCount: 0,
+    returnLuggageCount: 0
   });
 
   // State for individual terms checkboxes
@@ -172,16 +176,16 @@ const BookingPage: React.FC = () => {
     }
   }, [formData.parkingTypeId, formData.checkInTime, formData.checkOutTime]);
 
-  // Check VIP status when email changes
+  // Check VIP status when phone changes
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (formData.email) {
-        checkVIPStatusByEmail(formData.email);
+      if (formData.phone && formData.phone.length >= 8) { // Basic length check
+        checkVIPStatusByPhone(formData.phone);
       }
     }, 1000); // Debounce 1 second
 
     return () => clearTimeout(timeoutId);
-  }, [formData.email]);
+  }, [formData.phone]);
 
   // Scroll to top when step changes
   useEffect(() => {
@@ -231,7 +235,8 @@ const BookingPage: React.FC = () => {
         addonServices: formData.selectedAddonServices,
         discountCode: formData.discountCode,
         isVIP: isVIP,
-        userEmail: formData.email
+        userEmail: formData.email,
+        phone: formData.phone
       });
 
       if (response.data.success) {
@@ -378,13 +383,13 @@ const BookingPage: React.FC = () => {
     return conflicts;
   };
 
-  const checkVIPStatusByEmail = async (email: string) => {
-    if (!email || !email.includes('@')) return;
+  const checkVIPStatusByPhone = async (phone: string) => {
+    if (!phone) return;
     
     try {
       // First try to get user info from localStorage
       const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-      if (storedUser.email === email && storedUser.isVIP) {
+      if (storedUser.phone === phone && storedUser.isVIP) {
         setCurrentUser(storedUser);
         setIsVIP(true);
         toast.success(`🎉 歡迎VIP會員！您享有${storedUser.vipDiscount || 0}%折扣！`);
@@ -392,7 +397,7 @@ const BookingPage: React.FC = () => {
       }
       
       // Check VIP status from backend
-      const response = await checkVIPStatus(email);
+      const response = await checkVIPStatus(phone);
       
       if (response.success && response.user && response.user.isVIP) {
         setCurrentUser(response.user);
@@ -401,15 +406,17 @@ const BookingPage: React.FC = () => {
         // Recalculate pricing with VIP discount
         await calculatePricing();
       } else {
-        setCurrentUser(null);
-        setIsVIP(false);
-        // Recalculate pricing without VIP discount
-        await calculatePricing();
+        // Only clear if we are switching to non-VIP, but don't clear if user is just typing
+        // If we want strict check:
+        if (isVIP) {
+          setCurrentUser(null);
+          setIsVIP(false);
+          await calculatePricing();
+        }
       }
     } catch (error) {
       console.error('Error checking VIP status:', error);
-      setCurrentUser(null);
-      setIsVIP(false);
+      // Don't clear on error to prevent flashing
     }
   };
 
@@ -528,7 +535,7 @@ const BookingPage: React.FC = () => {
       }
     }
 
-    if (!formData.driverName || !formData.phone || !formData.email || !formData.licensePlate) {
+    if (!formData.driverName || !formData.phone || !formData.licensePlate) {
       toast.error('請填寫完整的個人資料');
       return;
     }
@@ -547,6 +554,10 @@ const BookingPage: React.FC = () => {
         licensePlate: formData.licensePlate,
         passengerCount: formData.passengerCount,
         luggageCount: formData.luggageCount,
+        departurePassengerCount: formData.departurePassengerCount,
+        departureLuggageCount: formData.departureLuggageCount,
+        returnPassengerCount: formData.returnPassengerCount,
+        returnLuggageCount: formData.returnLuggageCount,
         addonServices: formData.selectedAddonServices,
         discountCode: formData.discountCode,
         departureTerminal: formData.departureTerminal,
@@ -584,6 +595,10 @@ const BookingPage: React.FC = () => {
         paymentMethod: result.booking.paymentMethod || 'cash',
         status: result.booking.status,
         passengerCount: result.booking.passengerCount,
+        departurePassengerCount: result.booking.departurePassengerCount,
+        departureLuggageCount: result.booking.departureLuggageCount,
+        returnPassengerCount: result.booking.returnPassengerCount,
+        returnLuggageCount: result.booking.returnLuggageCount,
         departureTerminal: result.booking.departureTerminal,
         returnTerminal: result.booking.returnTerminal,
         // Add auto discount data from pricing
@@ -950,49 +965,19 @@ const BookingPage: React.FC = () => {
 
                     {/* Passenger and Luggage Selection */}
                     <div className="space-y-6">
-                      <div>
-                        <Label className="text-lg font-semibold text-gray-800 mb-4 block">接駁和行李資訊</Label>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label htmlFor="passengerCount" className="text-sm font-medium text-gray-700">接駁人數 (上限5人，多一個人現場收100元/人)</Label>
-                            <Input
-                              id="passengerCount"
-                              type="number"
-                              min="0"
-                              max="5"
-                              value={formData.passengerCount}
-                              onChange={(e) => setFormData(prev => ({ ...prev, passengerCount: parseInt(e.target.value) || 0 }))}
-                              placeholder="0"
-                            />
-                            <p className="text-xs text-gray-500">上限5人，多一個人現場收100元/人</p>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="luggageCount" className="text-sm font-medium text-gray-700">行李數量 (1個人免費1個行李，第2個以上現場收100元/行李)</Label>
-                            <Input
-                              id="luggageCount"
-                              type="number"
-                              min="0"
-                              value={formData.luggageCount}
-                              onChange={(e) => setFormData(prev => ({ ...prev, luggageCount: parseInt(e.target.value) || 0 }))}
-                              placeholder="0"
-                            />
-                            <p className="text-xs text-gray-500">1個人免費1個行李，第2個以上現場收100元/行李</p>
-                          </div>
+                      <div className="space-y-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-blue-800 font-medium">✈️ 接駁和行李資訊</span>
+                          <span className="text-xs text-blue-600">(接駁服務需要)</span>
                         </div>
-                      </div>
-
-                      {/* Terminal Selection - Only show if passengerCount > 0 */}
-                      {formData.passengerCount > 0 && (
-                        <div className="space-y-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-blue-800 font-medium">✈️ 航廈選擇</span>
-                            <span className="text-xs text-blue-600">(接駁服務需要)</span>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Departure Section */}
+                          <div className="space-y-4">
+                            <h4 className="font-semibold text-gray-700 border-b pb-2">出發 (前往機場)</h4>
                             <div className="space-y-2">
                               <Label htmlFor="departureTerminal" className="text-sm font-medium text-gray-700">
-                                出發航廈（前往機場）
+                                出發航廈
                               </Label>
                               <select
                                 id="departureTerminal"
@@ -1007,8 +992,48 @@ const BookingPage: React.FC = () => {
                             </div>
                             
                             <div className="space-y-2">
+                              <Label htmlFor="departurePassengerCount" className="text-sm font-medium text-gray-700">接駁人數 (上限5人)</Label>
+                              <Input
+                                id="departurePassengerCount"
+                                type="number"
+                                min="0"
+                                max="5"
+                                value={formData.departurePassengerCount || 0}
+                                onChange={(e) => setFormData(prev => ({ 
+                                  ...prev, 
+                                  departurePassengerCount: parseInt(e.target.value) || 0,
+                                  // Update legacy field for compatibility if needed, or derived
+                                  passengerCount: Math.max(parseInt(e.target.value) || 0, prev.returnPassengerCount || 0)
+                                }))}
+                                placeholder="0"
+                              />
+                              <p className="text-xs text-gray-500">上限5人，多一個人現場收100元/人</p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="departureLuggageCount" className="text-sm font-medium text-gray-700">行李數量</Label>
+                              <Input
+                                id="departureLuggageCount"
+                                type="number"
+                                min="0"
+                                value={formData.departureLuggageCount || 0}
+                                onChange={(e) => setFormData(prev => ({ 
+                                  ...prev, 
+                                  departureLuggageCount: parseInt(e.target.value) || 0,
+                                  luggageCount: Math.max(parseInt(e.target.value) || 0, prev.returnLuggageCount || 0)
+                                }))}
+                                placeholder="0"
+                              />
+                              <p className="text-xs text-gray-500">1個人免費1個行李，第2個以上現場收100元/行李</p>
+                            </div>
+                          </div>
+                          
+                          {/* Return Section */}
+                          <div className="space-y-4">
+                            <h4 className="font-semibold text-gray-700 border-b pb-2">回程 (接回停車場)</h4>
+                            <div className="space-y-2">
                               <Label htmlFor="returnTerminal" className="text-sm font-medium text-gray-700">
-                                回程航廈（接回停車場）
+                                回程航廈
                               </Label>
                               <select
                                 id="returnTerminal"
@@ -1021,13 +1046,48 @@ const BookingPage: React.FC = () => {
                                 <option value="terminal2">第二航廈</option>
                               </select>
                             </div>
-                          </div>
-                          
-                          <div className="text-lg text-blue-600 bg-blue-100 p-2 rounded">
-                            💡 上限5人，多一個人現場收100元/人。回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
+
+                            <div className="space-y-2">
+                              <Label htmlFor="returnPassengerCount" className="text-sm font-medium text-gray-700">接駁人數</Label>
+                              <Input
+                                id="returnPassengerCount"
+                                type="number"
+                                min="0"
+                                max="5"
+                                value={formData.returnPassengerCount || 0}
+                                onChange={(e) => setFormData(prev => ({ 
+                                  ...prev, 
+                                  returnPassengerCount: parseInt(e.target.value) || 0,
+                                  passengerCount: Math.max(prev.departurePassengerCount || 0, parseInt(e.target.value) || 0)
+                                }))}
+                                placeholder="0"
+                              />
+                              <p className="text-xs text-gray-500">若回程多出人數，每人加收 $100</p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="returnLuggageCount" className="text-sm font-medium text-gray-700">行李數量</Label>
+                              <Input
+                                id="returnLuggageCount"
+                                type="number"
+                                min="0"
+                                value={formData.returnLuggageCount || 0}
+                                onChange={(e) => setFormData(prev => ({ 
+                                  ...prev, 
+                                  returnLuggageCount: parseInt(e.target.value) || 0,
+                                  luggageCount: Math.max(prev.departureLuggageCount || 0, parseInt(e.target.value) || 0)
+                                }))}
+                                placeholder="0"
+                              />
+                              <p className="text-xs text-gray-500">超量行李可能產生額外費用</p>
+                            </div>
                           </div>
                         </div>
-                      )}
+                        
+                        <div className="text-lg text-blue-600 bg-blue-100 p-2 rounded mt-4">
+                          💡 溫馨提醒：請務必填寫正確人數與行李數，以便安排車輛接送。
+                        </div>
+                      </div>
 
                       {/* Luggage Content Box - Only show if luggageCount > 0 and content is active */}
                       {formData.luggageCount > 0 && systemSettings?.luggageSettings?.luggageContent?.isActive && (
@@ -1581,25 +1641,12 @@ const BookingPage: React.FC = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone" className="text-sm font-medium text-gray-700">電話號碼 *</Label>
-                    <Input
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                      placeholder="輸入電話號碼"
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium text-gray-700">信箱 *</Label>
                     <div className="relative">
                       <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                        placeholder="輸入電子郵件"
+                        id="phone"
+                        value={formData.phone}
+                        onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="輸入電話號碼"
                         className={isVIP ? 'border-yellow-400 bg-yellow-50' : ''}
                       />
                       {isVIP && currentUser && (
@@ -1615,11 +1662,19 @@ const BookingPage: React.FC = () => {
                         ✨ 歡迎VIP會員！您自動享有{currentUser.vipDiscount}%折扣。
                       </div>
                     )}
-                    {!isVIP && formData.email && !currentUser && (
-                      <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                        ℹ️ 普通客戶 - 無VIP優惠
-                      </div>
-                    )}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm font-medium text-gray-700">信箱</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="輸入電子郵件"
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="licensePlate" className="text-sm font-medium text-gray-700">車牌號碼 *</Label>
@@ -1633,14 +1688,14 @@ const BookingPage: React.FC = () => {
                 </div>
                 
                 
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <Label htmlFor="notes" className="text-sm font-medium text-gray-700">備註</Label>  
                   <Textarea
                     id="notes"
                     placeholder="輸入備註 (如果有的話)"
                     rows={3}
                   />
-                </div>
+                </div> */}
               </CardContent>
             </Card>
 

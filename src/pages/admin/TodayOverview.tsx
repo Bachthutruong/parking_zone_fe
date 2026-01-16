@@ -264,8 +264,8 @@ const AdminTodayOverview: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <div>
-                      <div className="font-medium">{booking.parkingType.name}</div>
-                      <div className="text-sm text-gray-600">{booking.parkingType.code}</div>
+                      <div className="font-medium">{booking.parkingType?.name || '未知停車場'}</div>
+                      <div className="text-sm text-gray-600">{booking.parkingType?.code || '-'}</div>
                     </div>
                   </TableCell>
                   <TableCell>

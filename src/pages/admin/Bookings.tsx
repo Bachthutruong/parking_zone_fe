@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,7 +23,9 @@ import {
   Table as TableIcon,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getAllBookings, updateBookingStatus } from '@/services/admin';
+import { getAllBookings, updateBookingStatus, deleteBooking, getAllParkingTypes, getCalendarBookings } from '@/services/admin';
+import { Textarea } from '@/components/ui/textarea';
+import { Trash2, RotateCcw } from 'lucide-react';
 import { getSystemSettings } from '@/services/systemSettings';
 import { formatDateTime } from '@/lib/dateUtils';
 import type { Booking } from '@/types';
@@ -45,23 +47,52 @@ const BookingsPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
   const [calendarData, setCalendarData] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>('');
-  const [selectedParkingType, setSelectedParkingType] = useState<string>('');
+  const [selectedParkingType, setSelectedParkingType] = useState<string>('all');
   const [showBookingsDialog, setShowBookingsDialog] = useState(false);
   const [dateBookings, setDateBookings] = useState<Booking[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [systemSettings, setSystemSettings] = useState<any>(null);
 
+
+  const [activeTab, setActiveTab] = useState('active');
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [bookingToDelete, setBookingToDelete] = useState<Booking | null>(null);
+  const [deleteReason, setDeleteReason] = useState('');
+
+  // Status Change Dialog State
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [bookingInProcess, setBookingInProcess] = useState<{booking: Booking, status: string} | null>(null);
+  const [statusReason, setStatusReason] = useState('');
+
+  // Parking Types State
+  const [parkingTypes, setParkingTypes] = useState<any[]>([]);
+  // selectedParkingType already declared above
+
+  useEffect(() => {
+    loadParkingTypes();
+  }, []);
+
   useEffect(() => {
     loadBookings();
     loadSettings();
-  }, [page, filters]);
+  }, [page, filters, activeTab, itemsPerPage, selectedParkingType]);
+
+  const loadParkingTypes = async () => {
+    try {
+      const data = await getAllParkingTypes();
+      setParkingTypes(data.parkingTypes || []);
+    } catch (error) {
+      console.error('Failed to load parking types:', error);
+    }
+  };
 
   useEffect(() => {
     if (viewMode === 'calendar') {
       loadCalendarData();
     }
-  }, [viewMode, selectedParkingType, currentMonth, currentYear]);
+  }, [viewMode, selectedParkingType, currentMonth, currentYear, filters, activeTab]);
 
   const loadSettings = async () => {
     try {
@@ -79,7 +110,11 @@ const BookingsPage: React.FC = () => {
         ...filters,
         status: filters.status === 'all' ? '' : filters.status,
         page,
-        limit: 10
+        limit: itemsPerPage, // Use dynamic limit
+        isDeleted: activeTab === 'deleted',
+        parkingTypeId: selectedParkingType === 'all' ? undefined : selectedParkingType,
+        sortBy: 'checkInTime',
+        order: 'asc' as const
       };
       const response = await getAllBookings(filterParams);
       setBookings(response.bookings);
@@ -95,17 +130,31 @@ const BookingsPage: React.FC = () => {
   const loadCalendarData = async () => {
     try {
       setLoading(true);
-      // This will be implemented with a new API endpoint
-      // For now, we'll use the existing bookings data
-      const response = await getAllBookings({
-        ...filters,
-        status: filters.status === 'all' ? '' : filters.status,
-        page: 1,
-        limit: 1000 // Get all bookings for calendar view
-      });
+      
+      // Build filter params for calendar API (no pagination needed)
+      const filterParams: any = {
+        status: filters.status === 'all' ? undefined : filters.status,
+        dateFrom: filters.dateFrom || undefined,
+        dateTo: filters.dateTo || undefined,
+        search: filters.search || undefined,
+        isDeleted: activeTab === 'deleted'
+      };
+      
+      // Add parking type filter if not 'all'
+      if (selectedParkingType && selectedParkingType !== 'all') {
+        filterParams.parkingTypeId = selectedParkingType;
+      }
+      
+      // Use the new calendar-specific API
+      const response = await getCalendarBookings(filterParams);
       
       // Group bookings by date and parking type
       const groupedData = response.bookings.reduce((acc: any, booking: Booking) => {
+        // Skip bookings without parkingType
+        if (!booking.parkingType || !booking.parkingType._id) {
+          return acc;
+        }
+        
         const parkingTypeId = booking.parkingType._id;
         const startDate = new Date(booking.checkInTime);
         const endDate = new Date(booking.checkOutTime);
@@ -138,17 +187,29 @@ const BookingsPage: React.FC = () => {
       
       setCalendarData(groupedData);
     } catch (error) {
+      console.error('Error loading calendar data:', error);
       toast.error('無法載入日曆數據');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStatusUpdate = async (bookingId: string, newStatus: string) => {
+
+
+  const openStatusDialog = (booking: Booking, status: string) => {
+    setBookingInProcess({ booking, status });
+    setStatusReason('');
+    setIsStatusDialogOpen(true);
+  };
+
+  const confirmStatusChange = async () => {
+    if (!bookingInProcess) return;
     try {
-      await updateBookingStatus(bookingId, newStatus);
+      await updateBookingStatus(bookingInProcess.booking._id, bookingInProcess.status, statusReason);
       toast.success('狀態更新成功');
       loadBookings();
+      setIsStatusDialogOpen(false);
+      setBookingInProcess(null);
     } catch (error: any) {
       console.error('Status update error:', error);
       const errorMessage = error.response?.data?.message || error.message || '狀態更新失敗';
@@ -156,18 +217,58 @@ const BookingsPage: React.FC = () => {
     }
   };
 
-  const createStatusUpdateHandler = (bookingId: string, newStatus: string) => {
-    return () => handleStatusUpdate(bookingId, newStatus);
+  const handleDeleteClick = (booking: Booking) => {
+    setBookingToDelete(booking);
+    setDeleteReason('');
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!bookingToDelete) return;
+    try {
+      await deleteBooking(bookingToDelete._id, deleteReason);
+      toast.success('預約已刪除');
+      setIsDeleteDialogOpen(false);
+      setBookingToDelete(null);
+      loadBookings();
+    } catch (error: any) {
+      toast.error(error.message || '刪除失敗');
+    }
+  };
+
+
+
+  const handleRevertStatus = (booking: Booking) => {
+    let newStatus = '';
+    switch (booking.status) {
+      case 'checked-in':
+        newStatus = 'confirmed';
+        break;
+      case 'checked-out':
+        newStatus = 'checked-in';
+        break;
+      case 'cancelled':
+        newStatus = 'confirmed';
+        break;
+    }
+    
+    if (newStatus) {
+      openStatusDialog(booking, newStatus);
+    }
   };
 
   const handleDateBookingClick = (date: string, parkingTypeId: string) => {
     const dateData = calendarData[date as keyof typeof calendarData];
+    
     if (dateData && dateData[parkingTypeId as keyof typeof dateData]) {
       setDateBookings((dateData as any)[parkingTypeId].bookings);
-      setSelectedDate(date);
-      setSelectedParkingType(parkingTypeId);
-      setShowBookingsDialog(true);
+    } else {
+      setDateBookings([]); // No bookings for this date
     }
+    
+    setSelectedDate(date);
+    setSelectedParkingType(parkingTypeId);
+    setShowBookingsDialog(true);
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -376,30 +477,19 @@ const BookingsPage: React.FC = () => {
             <div class="info-item">
               <span class="label">車牌號碼:</span> ${booking.licensePlate}
             </div>
-            <div class="info-item">
-              <span class="label">乘客:</span> ${booking.passengerCount} 人
-            </div>
-            <div class="info-item">
-              <span class="label">行李:</span> ${booking.luggageCount} 件
-            </div>
-          </div>
-        </div>
-
-        ${booking.passengerCount > 0 ? `
         <div class="section">
-          <h3>接駁服務信息</h3>
+          <h3>接駁與行李信息</h3>
           <div class="info-grid">
             <div class="info-item">
-              <span class="label">出發航廈:</span> ${booking.departureTerminal === 'terminal1' ? '第一航廈' : 
-                booking.departureTerminal === 'terminal2' ? '第二航廈' : '未選擇'}
+              <span class="label">出發 (${booking.departureTerminal === 'terminal1' ? '第一航廈' : booking.departureTerminal === 'terminal2' ? '第二航廈' : '未選擇'}):</span> 
+              接駁 ${booking.departurePassengerCount || booking.passengerCount || 0} 人 / 行李 ${booking.departureLuggageCount || booking.luggageCount || 0} 件
             </div>
             <div class="info-item">
-              <span class="label">回程航廈:</span> ${booking.returnTerminal === 'terminal1' ? '第一航廈' : 
-                booking.returnTerminal === 'terminal2' ? '第二航廈' : '未選擇'}
+              <span class="label">回程 (${booking.returnTerminal === 'terminal1' ? '第一航廈' : booking.returnTerminal === 'terminal2' ? '第二航廈' : '未選擇'}):</span> 
+              接駁 ${booking.returnPassengerCount || 0} 人 / 行李 ${booking.returnLuggageCount || 0} 件
             </div>
           </div>
         </div>
-        ` : ''}
 
         <div class="section">
           <h3>預約資訊</h3>
@@ -578,14 +668,6 @@ const BookingsPage: React.FC = () => {
     const daysInMonth = lastDay.getDate();
     const startingDayOfWeek = firstDay.getDay();
     
-    // Get unique parking types from calendar data
-    const allParkingTypes = new Set();
-    Object.values(calendarData).forEach((dateData: any) => {
-      Object.keys(dateData).forEach(parkingTypeId => {
-        allParkingTypes.add(parkingTypeId);
-      });
-    });
-    
     const days = [];
     
     // Add empty cells for days before the first day of the month
@@ -695,7 +777,7 @@ const BookingsPage: React.FC = () => {
         {/* Days */}
         {days.map((dayData, index) => {
           if (!dayData) {
-            return <div key={index} className="p-2 min-h-[100px]"></div>;
+            return <div key={`empty-${index}`} className="p-2 min-h-[100px]"></div>;
           }
           
           const { day, date, data } = dayData;
@@ -704,7 +786,7 @@ const BookingsPage: React.FC = () => {
           
           return (
             <div 
-              key={day} 
+              key={`day-${date}`} 
               className={`p-2 min-h-[100px] border border-gray-200 ${
                 isToday ? 'bg-blue-50 border-blue-300' : 
                 isCurrentMonth ? 'bg-white' : 'bg-gray-50 text-gray-400'
@@ -716,30 +798,40 @@ const BookingsPage: React.FC = () => {
                 {day}
               </div>
               
-              {/* Show parking type statistics */}
-              {Object.keys(data).map(parkingTypeId => {
-                const parkingData = data[parkingTypeId];
-                const parkingType = parkingData.parkingType;
-                const totalBookings = parkingData.totalBookings;
+              {/* Show parking type statistics - filter by selected parking type */}
+              {(selectedParkingType === 'all' ? parkingTypes : parkingTypes.filter(pt => pt._id === selectedParkingType)).map(pt => {
+                const parkingData = data[pt._id];
+                const totalBookings = parkingData?.totalBookings || 0;
+                const totalSpaces = pt.totalSpaces || 50;
+                const availableSlots = totalSpaces - totalBookings;
+                const hasBookings = totalBookings > 0;
                 
-                // Assume max capacity is 50 for now (this should come from parking type data)
-                const maxCapacity = 50;
-                const availableSlots = maxCapacity - totalBookings;
+                // Calculate occupancy percentage for color coding
+                const occupancyPercent = (totalBookings / totalSpaces) * 100;
+                let statusColor = 'bg-green-100 border-green-300 text-green-700'; // Low occupancy
+                if (occupancyPercent >= 80) {
+                  statusColor = 'bg-red-100 border-red-300 text-red-700'; // Almost full
+                } else if (occupancyPercent >= 50) {
+                  statusColor = 'bg-yellow-100 border-yellow-300 text-yellow-700'; // Medium occupancy
+                }
                 
                 return (
                   <div 
-                    key={parkingTypeId}
-                    className="mb-1 p-1 rounded text-xs cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleDateBookingClick(date, parkingTypeId)}
+                    key={pt._id}
+                    className={`mb-1 p-1.5 rounded border text-xs cursor-pointer transition-all hover:shadow-md ${statusColor}`}
+                    onClick={() => handleDateBookingClick(date, pt._id)}
+                    title={hasBookings ? `點擊查看 ${totalBookings} 筆預約` : '點擊查看詳情'}
                   >
-                    <div className="font-medium text-blue-600">
-                      {parkingType?.name || '未知停車場'}
+                    <div className="font-bold truncate" style={{ color: pt.color || '#3B82F6' }}>
+                      {pt.icon || '🏢'} {pt.name}
                     </div>
-                    <div className="text-green-600">
-                      空位: {availableSlots}
-                    </div>
-                    <div className="text-red-600">
-                      已訂: {totalBookings}
+                    <div className="flex justify-between items-center mt-0.5">
+                      <span>空: <strong>{availableSlots}</strong>/{totalSpaces}</span>
+                      {hasBookings && (
+                        <span className="bg-blue-500 text-white px-1 rounded text-[10px]">
+                          {totalBookings} 訂
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
@@ -803,6 +895,7 @@ const BookingsPage: React.FC = () => {
                 value={currentStatus} 
                 onValueChange={(value) => handleFilterChange('status', value)}
                 defaultValue="all"
+                disabled={activeTab === 'deleted'}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="所有狀態" />
@@ -847,34 +940,57 @@ const BookingsPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* View Mode Tabs */}
-      <Card className="mb-6">
-        <CardContent className="pt-6">
-          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'table' | 'calendar')}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="table" className="flex items-center space-x-2">
-                <TableIcon className="h-4 w-4" />
-                <span>列表視圖</span>
-              </TabsTrigger>
-              <TabsTrigger value="calendar" className="flex items-center space-x-2">
-                <Grid3X3 className="h-4 w-4" />
-                <span>日曆視圖</span>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </CardContent>
-      </Card>
+      {/* Parking Type Tabs */}
+      <Tabs value={selectedParkingType} onValueChange={setSelectedParkingType} className="mb-6">
+        <TabsList className="w-full justify-start overflow-x-auto">
+          <TabsTrigger value="all">所有停車場</TabsTrigger>
+          {parkingTypes.map((pt) => (
+            <TabsTrigger key={pt._id} value={pt._id}>{pt.name}</TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
-      {/* Bookings Table */}
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'active' | 'deleted')} className="mb-6">
+        <TabsList>
+          <TabsTrigger value="active">有效預約</TabsTrigger>
+          <TabsTrigger value="deleted">已刪除預約</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {/* Bookings List */}
       <Card>
-        <CardHeader>
-          <CardTitle>預約清單</CardTitle>
-          <CardDescription>
-            {viewMode === 'table' 
-              ? `共 ${total} 筆預約 • 第 ${page} 頁，共 ${totalPages} 頁`
-              : '日曆視圖 - 點擊數字查看詳細預約'
-            }
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>預約清單 ({total})</CardTitle>
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="limit">顯示數量:</Label>
+            <Select 
+              value={itemsPerPage.toString()} 
+              onValueChange={(val) => { setItemsPerPage(Number(val)); setPage(1); }}
+            >
+              <SelectTrigger className="w-[80px]">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'table' | 'calendar')}>
+              <TabsList className="h-9">
+                <TabsTrigger value="table" className="flex items-center gap-1.5 px-3">
+                  <TableIcon className="h-4 w-4" />
+                  <span>列表</span>
+                </TabsTrigger>
+                <TabsTrigger value="calendar" className="flex items-center gap-1.5 px-3">
+                  <Grid3X3 className="h-4 w-4" />
+                  <span>日曆</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -913,10 +1029,10 @@ const BookingsPage: React.FC = () => {
                       <TableCell>
                         <div className="space-y-1">
                           <div className="font-medium">{booking.parkingType?.name || '未知停車場'}</div>
-                          <div className="text-sm text-gray-600">
+                          {/* <div className="text-sm text-gray-600">
                             {booking.parkingType?.icon || '🏢'} {(booking.parkingType?.type || 'indoor') === 'indoor' ? '室內' : 
                              (booking.parkingType?.type || 'indoor') === 'outdoor' ? '戶外' : '無障礙'}
-                          </div>
+                          </div> */}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -972,16 +1088,16 @@ const BookingsPage: React.FC = () => {
                             <>
                               <Button
                                 size="sm"
-                                                variant="default"
-                className="bg-[#39653f] hover:bg-[#2d4f33] text-white"
-                                onClick={createStatusUpdateHandler(booking._id, 'checked-in')}
+                                variant="default"
+                                className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                                onClick={() => openStatusDialog(booking, 'checked-in')}
                               >
                                 已進入停車場
                               </Button>
                               <Button
                                 size="sm"
                                 variant="destructive"
-                                onClick={createStatusUpdateHandler(booking._id, 'cancelled')}
+                                onClick={() => openStatusDialog(booking, 'cancelled')}
                               >
                                 取消
                               </Button>
@@ -989,13 +1105,45 @@ const BookingsPage: React.FC = () => {
                           )}
                           
                           {booking.status === 'checked-in' && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                                onClick={() => openStatusDialog(booking, 'checked-out')}
+                              >
+                                已離開停車場
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleRevertStatus(booking)}
+                                title="返回上一狀態"
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+
+                          {booking.status === 'checked-out' && (
                             <Button
                               size="sm"
-                                              variant="default"
-                className="bg-[#39653f] hover:bg-[#2d4f33] text-white"
-                              onClick={createStatusUpdateHandler(booking._id, 'checked-out')}
+                              variant="outline"
+                              onClick={() => handleRevertStatus(booking)}
+                              title="返回上一狀態"
                             >
-                              已離開停車場
+                              <RotateCcw className="h-4 w-4" />
+                            </Button>
+                          )}
+
+                          {booking.status === 'cancelled' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleRevertStatus(booking)}
+                              title="恢復訂單"
+                            >
+                              <RotateCcw className="h-4 w-4" />
                             </Button>
                           )}
                           
@@ -1007,10 +1155,21 @@ const BookingsPage: React.FC = () => {
                           >
                             <Printer className="h-4 w-4" />
                           </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                      
+                      {activeTab !== 'deleted' && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteClick(booking)}
+                          title="刪除預約"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
                 </TableBody>
               </Table>
 
@@ -1062,10 +1221,22 @@ const BookingsPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle>預約詳細列表</DialogTitle>
             <DialogDescription>
-              {selectedDate} - {dateBookings.length > 0 ? (dateBookings[0].parkingType?.name || '未知停車場') : '停車場'} 的預約
+              {selectedDate} - {parkingTypes.find(pt => pt._id === selectedParkingType)?.name || '停車場'} 的預約
+              {dateBookings.length > 0 ? ` (共 ${dateBookings.length} 筆)` : ''}
             </DialogDescription>
           </DialogHeader>
           
+          {dateBookings.length === 0 ? (
+            <div className="py-12 text-center">
+              <div className="text-gray-400 mb-4">
+                <Calendar className="h-16 w-16 mx-auto opacity-50" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-600 mb-2">該日無預約</h3>
+              <p className="text-gray-500">
+                {selectedDate} 的 {parkingTypes.find(pt => pt._id === selectedParkingType)?.name || '此停車場'} 目前沒有任何預約記錄。
+              </p>
+            </div>
+          ) : (
           <div className="space-y-4">
             {dateBookings.map((booking) => (
               <Card key={booking._id} className="p-4">
@@ -1091,14 +1262,16 @@ const BookingsPage: React.FC = () => {
                   <div>
                     <h4 className="font-semibold text-sm text-gray-600">服務信息</h4>
                     <div className="space-y-1 text-sm">
-                      <div><strong>乘客:</strong> {booking.passengerCount} 人</div>
-                      <div><strong>行李:</strong> {booking.luggageCount} 件</div>
-                      {booking.passengerCount > 0 && (
-                        <>
-                          <div><strong>出發航廈:</strong> {booking.departureTerminal === 'terminal1' ? '第一航廈' : booking.departureTerminal === 'terminal2' ? '第二航廈' : '未選擇'}</div>
-                          <div><strong>回程航廈:</strong> {booking.returnTerminal === 'terminal1' ? '第一航廈' : booking.returnTerminal === 'terminal2' ? '第二航廈' : '未選擇'}</div>
-                        </>
-                      )}
+                      <div>
+                        <strong>出發:</strong> 
+                        {booking.departureTerminal === 'terminal1' ? '一航' : booking.departureTerminal === 'terminal2' ? '二航' : '-'} 
+                        ({booking.departurePassengerCount || booking.passengerCount || 0}人/{booking.departureLuggageCount || booking.luggageCount || 0}行李)
+                      </div>
+                      <div>
+                        <strong>回程:</strong> 
+                        {booking.returnTerminal === 'terminal1' ? '一航' : booking.returnTerminal === 'terminal2' ? '二航' : '-'} 
+                        ({booking.returnPassengerCount || 0}人/{booking.returnLuggageCount || 0}行李)
+                      </div>
                     </div>
                   </div>
                   
@@ -1150,15 +1323,8 @@ const BookingsPage: React.FC = () => {
                 </div>
               </Card>
             ))}
-            
-            {dateBookings.length === 0 && (
-              <div className="text-center py-8">
-                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-600 mb-2">沒有預約</h3>
-                <p className="text-gray-500">該日期沒有預約記錄</p>
-              </div>
-            )}
           </div>
+          )}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowBookingsDialog(false)}>
@@ -1188,14 +1354,18 @@ const BookingsPage: React.FC = () => {
                     <div><strong>電話:</strong> {selectedBooking.phone}</div>
                     <div><strong>電子郵件:</strong> {selectedBooking.email}</div>
                     <div><strong>車牌號碼:</strong> {selectedBooking.licensePlate}</div>
-                    <div><strong>乘客:</strong> {selectedBooking.passengerCount} 人</div>
-                    <div><strong>行李:</strong> {selectedBooking.luggageCount} 件</div>
-                    {selectedBooking.passengerCount > 0 && (
-                      <>
-                        <div><strong>出發航廈:</strong> {selectedBooking.departureTerminal === 'terminal1' ? '第一航廈' : selectedBooking.departureTerminal === 'terminal2' ? '第二航廈' : '未選擇'}</div>
-                        <div><strong>回程航廈:</strong> {selectedBooking.returnTerminal === 'terminal1' ? '第一航廈' : selectedBooking.returnTerminal === 'terminal2' ? '第二航廈' : '未選擇'}</div>
-                      </>
-                    )}
+                    <div className="bg-gray-50 p-2 rounded text-sm space-y-1">
+                      <div className="font-semibold text-gray-700">出發 (前往機場)</div>
+                      <div>航廈: {selectedBooking.departureTerminal === 'terminal1' ? '第一航廈' : selectedBooking.departureTerminal === 'terminal2' ? '第二航廈' : '未選擇'}</div>
+                      <div>接駁: {selectedBooking.departurePassengerCount || selectedBooking.passengerCount || 0} 人</div>
+                      <div>行李: {selectedBooking.departureLuggageCount || selectedBooking.luggageCount || 0} 件</div>
+                    </div>
+                    <div className="bg-gray-50 p-2 rounded text-sm space-y-1">
+                      <div className="font-semibold text-gray-700">回程 (接回停車場)</div>
+                      <div>航廈: {selectedBooking.returnTerminal === 'terminal1' ? '第一航廈' : selectedBooking.returnTerminal === 'terminal2' ? '第二航廈' : '未選擇'}</div>
+                      <div>接駁: {selectedBooking.returnPassengerCount || 0} 人</div>
+                      <div>行李: {selectedBooking.returnLuggageCount || 0} 件</div>
+                    </div>
                   </div>
                 </div>
                 
@@ -1293,6 +1463,87 @@ const BookingsPage: React.FC = () => {
       </Dialog>
 
 
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>確認刪除預約</DialogTitle>
+            <DialogDescription>
+              您確定要刪除此預約嗎？此操作將會把預約移至已刪除列表。
+              {bookingToDelete && (
+                <div className="mt-2 p-2 bg-gray-100 rounded text-sm">
+                  <p>預約編號: {bookingToDelete.bookingNumber || bookingToDelete._id}</p>
+                  <p>客戶: {bookingToDelete.driverName}</p>
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="deleteReason" className="mb-2 block">刪除原因 (可選)</Label>
+            <Textarea
+              id="deleteReason"
+              placeholder="請輸入刪除原因..."
+              value={deleteReason}
+              onChange={(e) => setDeleteReason(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              取消
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              確認刪除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
+      {/* Status Change Confirmation Dialog */}
+      <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>確認更改狀態</DialogTitle>
+            <DialogDescription>
+              {bookingInProcess && (
+                <>
+                  您確定要將預約 <strong>{bookingInProcess.booking.driverName}</strong> 的狀態更改為
+                  {bookingInProcess.status === 'checked-in' ? ' 已進入停車場' :
+                   bookingInProcess.status === 'checked-out' ? ' 已離開停車場' :
+                   bookingInProcess.status === 'cancelled' ? ' 已取消' :
+                   bookingInProcess.status === 'confirmed' ? ' 已確認' : 
+                   ` ${bookingInProcess.status}`} 嗎？
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {bookingInProcess?.status === 'cancelled' && (
+            <div className="py-4">
+              <Label htmlFor="statusReason" className="mb-2 block">取消原因 (可選)</Label>
+              <Textarea
+                id="statusReason"
+                placeholder="請輸入取消原因..."
+                value={statusReason}
+                onChange={(e) => setStatusReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsStatusDialogOpen(false)}>
+              取消
+            </Button>
+            <Button 
+              variant={bookingInProcess?.status === 'cancelled' ? 'destructive' : 'default'}
+              onClick={confirmStatusChange}
+            >
+              確認更改
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

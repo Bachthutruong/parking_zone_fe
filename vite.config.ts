@@ -15,7 +15,7 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'https://api-parking-zone.jiudi.cloud',
-        // target: 'http://localhost:5002',
+        // target: 'http://localhost:5004',
         changeOrigin: true,
       },
     },

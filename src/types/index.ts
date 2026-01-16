@@ -89,7 +89,7 @@ export interface Booking {
   licensePlate: string;
   driverName: string;
   phone: string;
-  email: string;
+  email?: string;
   checkInTime: string;
   checkOutTime: string;
   status: 'pending' | 'confirmed' | 'checked-in' | 'checked-out' | 'cancelled';
@@ -110,6 +110,10 @@ export interface Booking {
   };
   luggageCount: number;
   passengerCount: number;
+  departurePassengerCount?: number;
+  departureLuggageCount?: number;
+  returnPassengerCount?: number;
+  returnLuggageCount?: number;
   departureTerminal?: string;
   returnTerminal?: string;
   estimatedArrivalTime?: string;
@@ -266,10 +270,15 @@ export interface BookingFormData {
   discountCode: string;
   driverName: string;
   phone: string;
-  email: string;
+  email: string; // Kept as string for form state, but treated as optional in validation
   licensePlate: string;
-  passengerCount: number;
+  // Legacy fields kept for compatibility but marked optional in form logic if we switch completely
+  passengerCount: number; 
   luggageCount: number;
+  departurePassengerCount: number;
+  departureLuggageCount: number;
+  returnPassengerCount: number;
+  returnLuggageCount: number;
   departureTerminal?: string;
   returnTerminal?: string;
 }

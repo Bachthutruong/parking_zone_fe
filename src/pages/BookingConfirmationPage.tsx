@@ -39,7 +39,7 @@ interface BookingConfirmationData {
   };
   driverName: string;
   phone: string;
-  email: string;
+  email?: string;
   licensePlate: string;
   checkInTime: string;
   checkOutTime: string;
@@ -47,6 +47,11 @@ interface BookingConfirmationData {
   totalAmount: number;
   finalAmount: number;
   passengerCount?: number;
+  luggageCount?: number;
+  departurePassengerCount?: number;
+  departureLuggageCount?: number;
+  returnPassengerCount?: number;
+  returnLuggageCount?: number;
   departureTerminal?: string;
   returnTerminal?: string;
   dailyPrices?: Array<{
@@ -337,70 +342,79 @@ const BookingConfirmationPage: React.FC = () => {
                       <p className="font-semibold">{bookingData.phone}</p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <Mail className="h-5 w-5 text-gray-500" />
-                    <div>
-                      <p className="text-sm text-gray-600">電子郵件</p>
-                      <p className="font-semibold">{bookingData.email}</p>
+                  {bookingData.email && (
+                    <div className="flex items-center space-x-3">
+                      <Mail className="h-5 w-5 text-gray-500" />
+                      <div>
+                        <p className="text-sm text-gray-600">電子郵件</p>
+                        <p className="font-semibold">{bookingData.email}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Terminal Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Building className="h-5 w-5 text-blue-600" />
+                  <span>接駁和行李信息</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Departure */}
+                      <div className="space-y-3">
+                        <h4 className="font-semibold text-blue-800 border-b border-blue-200 pb-1">出發 (前往機場)</h4>
+                        <div className="space-y-2 text-sm">
+                           <div className="flex justify-between">
+                             <span className="text-gray-600">航廈:</span>
+                             <span className="font-semibold">
+                               {bookingData.departureTerminal === 'terminal1' ? '第一航廈' : 
+                                bookingData.departureTerminal === 'terminal2' ? '第二航廈' : '未選擇'}
+                             </span>
+                           </div>
+                           <div className="flex justify-between">
+                             <span className="text-gray-600">接駁人數:</span>
+                             <span className="font-semibold">{bookingData.departurePassengerCount || bookingData.passengerCount || 0} 人</span>
+                           </div>
+                           <div className="flex justify-between">
+                             <span className="text-gray-600">行李數量:</span>
+                             <span className="font-semibold">{bookingData.departureLuggageCount || bookingData.luggageCount || 0} 件</span>
+                           </div>
+                        </div>
+                      </div>
+
+                      {/* Return */}
+                      <div className="space-y-3">
+                        <h4 className="font-semibold text-blue-800 border-b border-blue-200 pb-1">回程 (接回停車場)</h4>
+                        <div className="space-y-2 text-sm">
+                           <div className="flex justify-between">
+                             <span className="text-gray-600">航廈:</span>
+                             <span className="font-semibold">
+                               {bookingData.returnTerminal === 'terminal1' ? '第一航廈' : 
+                                bookingData.returnTerminal === 'terminal2' ? '第二航廈' : '未選擇'}
+                             </span>
+                           </div>
+                           <div className="flex justify-between">
+                             <span className="text-gray-600">接駁人數:</span>
+                             <span className="font-semibold">{bookingData.returnPassengerCount || 0} 人</span>
+                           </div>
+                           <div className="flex justify-between">
+                             <span className="text-gray-600">行李數量:</span>
+                             <span className="font-semibold">{bookingData.returnLuggageCount || 0} 件</span>
+                           </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
-
-            {/* Terminal Information - Only show if passengerCount > 0 */}
-            {bookingData.passengerCount && bookingData.passengerCount > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Building className="h-5 w-5 text-blue-600" />
-                    <span>接駁服務信息</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <div className="flex items-center space-x-2 mb-3">
-                        <span className="text-blue-800 font-medium">✈️ 航廈選擇</span>
-                        <span className="text-xs text-blue-600">(接駁服務)</span>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <span className="text-blue-600 text-sm">🚀</span>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600">出發航廈</p>
-                            <p className="font-semibold">
-                              {bookingData.departureTerminal === 'terminal1' ? '第一航廈' : 
-                               bookingData.departureTerminal === 'terminal2' ? '第二航廈' : '未選擇'}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                            <span className="text-green-600 text-sm">🏠</span>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600">回程航廈</p>
-                            <p className="font-semibold">
-                              {bookingData.returnTerminal === 'terminal1' ? '第一航廈' : 
-                               bookingData.returnTerminal === 'terminal2' ? '第二航廈' : '未選擇'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-3 text-xs text-blue-600 bg-blue-100 p-2 rounded">
-                        💡 接駁服務將根據您選擇的航廈提供服務
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Payment Details */}
             <Card>
