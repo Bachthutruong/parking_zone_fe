@@ -220,7 +220,7 @@ const AdminDiscounts: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -229,34 +229,34 @@ const AdminDiscounts: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold">折扣碼</h1>
-          <p className="text-gray-600">管理折扣碼和優惠</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">折扣碼</h1>
+          <p className="text-gray-600 text-sm sm:text-base">管理折扣碼和優惠</p>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={loadDiscountCodes}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            重新整理
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={loadDiscountCodes} className="flex-1 sm:flex-initial text-xs sm:text-sm">
+            <RefreshCw className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">重新整理</span>
           </Button>
-          <Button onClick={openCreateDialog}>
-            <Plus className="h-4 w-4 mr-2" />
-            新增折扣碼
+          <Button onClick={openCreateDialog} className="flex-1 sm:flex-initial text-xs sm:text-sm">
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">新增折扣碼</span>
           </Button>
         </div>
       </div>
 
       {/* Filters */}
-      <Card className="mb-6">
+      <Card className="mb-4 sm:mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Filter className="h-5 w-5 mr-2" />
+          <CardTitle className="flex items-center text-base sm:text-lg">
+            <Filter className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
             篩選
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             <div>
               <Label htmlFor="search">搜尋</Label>
               <div className="relative">
@@ -298,12 +298,12 @@ const AdminDiscounts: React.FC = () => {
       {/* Discount Codes Table */}
       <Card>
         <CardHeader>
-          <CardTitle>折扣碼清單</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-base sm:text-lg">折扣碼清單</CardTitle>
+          <CardDescription className="text-sm">
             總共 {filteredDiscountCodes.length} 個折扣碼
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           <Table>
             <TableHeader>
               <TableRow>
@@ -417,16 +417,16 @@ const AdminDiscounts: React.FC = () => {
           resetForm();
         }
       }}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{isEditing ? '編輯折扣碼' : '新增折扣碼'}</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">{isEditing ? '編輯折扣碼' : '新增折扣碼'}</DialogTitle>
+            <DialogDescription className="text-sm">
               {isEditing ? '更新折扣碼資訊' : '創建新的折扣碼並提供必要資訊'}
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <Label htmlFor="code">折扣碼 *</Label>
                 <Input
@@ -458,7 +458,7 @@ const AdminDiscounts: React.FC = () => {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <Label htmlFor="discountType">折扣類型</Label> 
                 <select
@@ -483,7 +483,7 @@ const AdminDiscounts: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <Label htmlFor="minOrderAmount">最低訂單金額 (TWD)</Label>
                 <Input
@@ -506,7 +506,7 @@ const AdminDiscounts: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <Label htmlFor="maxUsage">使用限制</Label>
                 <Input
@@ -519,7 +519,7 @@ const AdminDiscounts: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <Label htmlFor="validFrom">開始日期</Label>
                 <Input
@@ -567,7 +567,7 @@ const AdminDiscounts: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>確認刪除</DialogTitle>
             <DialogDescription>

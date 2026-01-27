@@ -692,45 +692,45 @@ const AdminSettings: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6 px-3 sm:px-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">系統設定</h1>
-          <p className="text-gray-600">系統配置和一般資訊</p>
+          <h1 className="text-xl sm:text-2xl font-bold">系統設定</h1>
+          <p className="text-gray-600 text-sm sm:text-base">系統配置和一般資訊</p>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={loadSettings}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            重新整理
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={loadSettings} className="flex-1 sm:flex-initial text-xs sm:text-sm">
+            <RefreshCw className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">重新整理</span>
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? '儲存中...' : '儲存全部'}
+          <Button onClick={handleSave} disabled={saving} className="flex-1 sm:flex-initial text-xs sm:text-sm">
+            <Save className="h-4 w-4 sm:mr-2" />
+            {saving ? '儲存中...' : <span className="hidden sm:inline">儲存全部</span>}
           </Button>
         </div>
       </div>
 
-      <Tabs defaultValue="general" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="general">一般</TabsTrigger>
-          <TabsTrigger value="booking">預約</TabsTrigger>
-          <TabsTrigger value="notifications">通知</TabsTrigger>
-          <TabsTrigger value="payment">付款</TabsTrigger>
-          <TabsTrigger value="luggage">行李</TabsTrigger>
-          <TabsTrigger value="contract">合約條款</TabsTrigger>
+      <Tabs defaultValue="general" className="space-y-4 sm:space-y-6">
+        <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full overflow-x-auto">
+          <TabsTrigger value="general" className="text-xs sm:text-sm">一般</TabsTrigger>
+          <TabsTrigger value="booking" className="text-xs sm:text-sm">預約</TabsTrigger>
+          <TabsTrigger value="notifications" className="text-xs sm:text-sm">通知</TabsTrigger>
+          <TabsTrigger value="payment" className="text-xs sm:text-sm">付款</TabsTrigger>
+          <TabsTrigger value="luggage" className="text-xs sm:text-sm">行李</TabsTrigger>
+          <TabsTrigger value="contract" className="text-xs sm:text-sm">合約條款</TabsTrigger>
         </TabsList>
 
         {/* General Settings */}
-        <TabsContent value="general" className="space-y-6">
+        <TabsContent value="general" className="space-y-4 sm:space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <SettingsIcon className="h-5 w-5 text-blue-600" />
+              <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+                <SettingsIcon className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                 <span>一般設定</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <Label htmlFor="website">Website</Label>
                   <Input
@@ -770,7 +770,7 @@ const AdminSettings: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <Label>營業時間</Label>
                   <Input
@@ -836,7 +836,7 @@ const AdminSettings: React.FC = () => {
           {/* Contact Content Configuration */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
+              <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
                 <FileText className="h-5 w-5 text-blue-600" />
                 <span>預約確認頁面聯繫內容</span>
               </CardTitle>
@@ -844,7 +844,7 @@ const AdminSettings: React.FC = () => {
                 配置預約確認頁面右上角的聯繫信息框
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
               <div className="flex items-center space-x-2">
                 <Switch
                   id="contactContentActive"
@@ -984,10 +984,10 @@ const AdminSettings: React.FC = () => {
         </TabsContent>
 
         {/* Booking Settings */}
-        <TabsContent value="booking" className="space-y-6">
+        <TabsContent value="booking" className="space-y-4 sm:space-y-6">
           <Card>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 <div>
                   <Label htmlFor="defaultVIPDiscount">預設VIP折扣 (%)</Label>
                   <Input
@@ -1124,12 +1124,12 @@ const AdminSettings: React.FC = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
+              <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
                 <FileText className="h-5 w-5 text-blue-600" />
                 <span>Điều khoản đặt chỗ</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
               <p className="text-sm text-gray-600">
                 請在預約停車位前仔細閱讀相關規定和條款。
               </p>
@@ -1166,7 +1166,7 @@ const AdminSettings: React.FC = () => {
           {/* Terms Checkboxes Management */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
+              <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
                 <FileText className="h-5 w-5 text-green-600" />
                 <span>預約確認條款設定</span>
               </CardTitle>
@@ -1174,7 +1174,7 @@ const AdminSettings: React.FC = () => {
                 設定用戶在預約時需要同意的條款選項
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
               <div className="space-y-4">
                 {formData.termsCheckboxes.map((term, index) => (
                   <div key={term.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
@@ -1307,15 +1307,15 @@ const AdminSettings: React.FC = () => {
 
 
         {/* Notification Settings */}
-        <TabsContent value="notifications" className="space-y-6">
+        <TabsContent value="notifications" className="space-y-4 sm:space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
+              <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
                 <Bell className="h-5 w-5 text-blue-600" />
                 <span>Cài đặt thông báo</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
               <div className="flex items-center space-x-2">
                 <Switch
                   id="emailNotifications"
@@ -1371,16 +1371,16 @@ const AdminSettings: React.FC = () => {
         </TabsContent>
 
         {/* Payment Settings */}
-        <TabsContent value="payment" className="space-y-6">
+        <TabsContent value="payment" className="space-y-4 sm:space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
+              <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
                 <CreditCard className="h-5 w-5 text-blue-600" />
                 <span>Cài đặt thanh toán</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <Label htmlFor="currency">貨幣單位</Label>
                   <Input
@@ -1435,10 +1435,10 @@ const AdminSettings: React.FC = () => {
         </TabsContent>
 
         {/* Luggage Settings */}
-        <TabsContent value="luggage" className="space-y-6">
+        <TabsContent value="luggage" className="space-y-4 sm:space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
+              <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
                 <ShoppingCart className="h-5 w-5 text-blue-600" />
                 <span>Cài đặt hành lý</span>
               </CardTitle>
@@ -1446,8 +1446,8 @@ const AdminSettings: React.FC = () => {
                 配置行李費用和免費行李數量
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <Label htmlFor="freeLuggageCount">免費行李數量</Label>
                   <Input
@@ -1612,10 +1612,10 @@ const AdminSettings: React.FC = () => {
         </TabsContent>
 
         {/* Contract Terms */}
-        <TabsContent value="contract" className="space-y-6">
+        <TabsContent value="contract" className="space-y-4 sm:space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
+              <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
                 <FileText className="h-5 w-5 text-blue-600" />
                 <span>合約條款設定</span>
               </CardTitle>
@@ -1623,7 +1623,7 @@ const AdminSettings: React.FC = () => {
                 配置列印預約單時顯示的合約條款內容
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
               <div>
                 <Label htmlFor="contractTerms">合約條款內容</Label>
                 <div className="mt-2 border rounded-lg">
@@ -1667,10 +1667,10 @@ const AdminSettings: React.FC = () => {
         </TabsContent>
 
         {/* Terms Management */}
-        <TabsContent value="terms" className="space-y-6">
+        <TabsContent value="terms" className="space-y-4 sm:space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
+              <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
                 <FileText className="h-5 w-5 text-blue-600" />
                 <span>條款管理</span>
               </CardTitle>
@@ -1678,7 +1678,7 @@ const AdminSettings: React.FC = () => {
                 管理系統的所有條款和規定
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {(Object.keys(termsData) as Array<keyof TermsData>).map((section) => (
                   <Card key={section} className="relative">
@@ -1733,10 +1733,10 @@ const AdminSettings: React.FC = () => {
       <Dialog open={!!editingSection} onOpenChange={() => setEditingSection(null)}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">
               編輯 {editingSection ? getSectionName(editingSection) : ''}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm">
               更新此條款內容
             </DialogDescription>
           </DialogHeader>

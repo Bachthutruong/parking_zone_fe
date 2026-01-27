@@ -108,7 +108,7 @@ const AdminTodayOverview: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -118,7 +118,7 @@ const AdminTodayOverview: React.FC = () => {
 
   if (!data) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-600 mb-2">沒有資料</h3>
@@ -142,33 +142,33 @@ const AdminTodayOverview: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold">今日概覽</h1>
-          <p className="text-gray-600">今日停車場進出車輛統計</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">今日概覽</h1>
+          <p className="text-gray-600 text-sm sm:text-base">今日停車場進出車輛統計</p>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={loadTodayData}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            重新整理
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={loadTodayData} className="flex-1 sm:flex-initial text-xs sm:text-sm">
+            <RefreshCw className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">重新整理</span>
           </Button>
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            列印報告
+          <Button variant="outline" onClick={handlePrint} className="flex-1 sm:flex-initial text-xs sm:text-sm">
+            <Printer className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">列印報告</span>
           </Button>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">今日進入車輛</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">今日進入車輛</CardTitle>
+            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{data.summary.totalCheckIns}</div>
+          <CardContent className="p-4 sm:p-6">
+            <div className="text-xl sm:text-2xl font-bold text-green-600">{data.summary.totalCheckIns}</div>
             <p className="text-xs text-muted-foreground">
               今天將進入停車場的車輛
             </p>
@@ -180,8 +180,8 @@ const AdminTodayOverview: React.FC = () => {
             <CardTitle className="text-sm font-medium">今天離開車輛</CardTitle>
             <TrendingDown className="h-4 w-4 text-blue-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{data.summary.totalCheckOuts}</div>
+          <CardContent className="p-4 sm:p-6">
+            <div className="text-xl sm:text-2xl font-bold text-blue-600">{data.summary.totalCheckOuts}</div>
             <p className="text-xs text-muted-foreground">
               今天將離開停車場的車輛
             </p>
@@ -193,8 +193,8 @@ const AdminTodayOverview: React.FC = () => {
             <CardTitle className="text-sm font-medium">逾期車輛</CardTitle>
             <AlertTriangle className="h-4 w-4 text-red-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{data.summary.totalOverdue}</div>
+          <CardContent className="p-4 sm:p-6">
+            <div className="text-xl sm:text-2xl font-bold text-red-600">{data.summary.totalOverdue}</div>
             <p className="text-xs text-muted-foreground">
               已超過預約時間的車輛
             </p>
@@ -211,7 +211,7 @@ const AdminTodayOverview: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex space-x-2 mb-6">
+          <div className="flex flex-wrap gap-2 mb-4 sm:mb-6">
             <Button
               variant={activeTab === 'checkins' ? 'default' : 'outline'}
               onClick={() => setActiveTab('checkins')}
@@ -229,9 +229,10 @@ const AdminTodayOverview: React.FC = () => {
             <Button
               variant={activeTab === 'overdue' ? 'default' : 'outline'}
               onClick={() => setActiveTab('overdue')}
+              className="flex-1 sm:flex-initial text-xs sm:text-sm"
             >
-              <AlertTriangle className="h-4 w-4 mr-2" />
-              逾期 ({data.summary.totalOverdue})
+              <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+              <span className="hidden sm:inline">逾期</span> ({data.summary.totalOverdue})
             </Button>
           </div>
 

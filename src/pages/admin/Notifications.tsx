@@ -365,7 +365,7 @@ const AdminNotifications: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -374,67 +374,67 @@ const AdminNotifications: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold">通知模板</h1>
-          <p className="text-gray-600">管理系統通知模板</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">通知模板</h1>
+          <p className="text-gray-600 text-sm sm:text-base">管理系統通知模板</p>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={loadTemplates}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            重新整理
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={loadTemplates} className="flex-1 sm:flex-initial text-xs sm:text-sm">
+            <RefreshCw className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">重新整理</span>
           </Button>
-          <Button onClick={openCreateDialog}>
-            <Plus className="h-4 w-4 mr-2" />
-            新增模板
+          <Button onClick={openCreateDialog} className="flex-1 sm:flex-initial text-xs sm:text-sm">
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">新增模板</span>
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center space-x-2">
                 <BarChart3 className="h-5 w-5 text-blue-600" />
                 <div>
                   <p className="text-sm text-gray-600">總共模板</p>
-                  <p className="text-2xl font-bold">{stats.total}</p>
+                  <p className="text-xl sm:text-2xl font-bold">{stats.total}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center space-x-2">
                 <CheckCircle className="h-5 w-5 text-green-600" />
                 <div>
                   <p className="text-sm text-gray-600">啟用</p>
-                  <p className="text-2xl font-bold">{stats.active}</p>
+                  <p className="text-xl sm:text-2xl font-bold">{stats.active}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center space-x-2">
                 <XCircle className="h-5 w-5 text-red-600" />
                 <div>
                   <p className="text-sm text-gray-600">暫停</p>
-                  <p className="text-2xl font-bold">{stats.inactive}</p>
+                  <p className="text-xl sm:text-2xl font-bold">{stats.inactive}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center space-x-2">
                 <Bell className="h-5 w-5 text-purple-600" />
                 <div>
                   <p className="text-sm text-gray-600">類型</p>
-                  <p className="text-2xl font-bold">{stats.stats.length}</p>
+                  <p className="text-xl sm:text-2xl font-bold">{stats.stats.length}</p>
                 </div>
               </div>
             </CardContent>
@@ -443,7 +443,7 @@ const AdminNotifications: React.FC = () => {
       )}
 
       {/* Search Filter */}
-      <Card className="mb-6">
+      <Card className="mb-4 sm:mb-6">
         <CardHeader>
           <CardTitle className="flex items-center">
             <Search className="h-5 w-5 mr-2" />
@@ -615,18 +615,18 @@ const AdminNotifications: React.FC = () => {
           resetForm();
         }
       }}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">
               {isEditing ? '編輯通知模板' : '新增通知模板'}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm">
               {isEditing ? '更新通知模板內容' : '創建新的通知模板並提供必要資訊'}
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <Label htmlFor="name">通知模板名稱 *</Label>
                 <Input
@@ -713,15 +713,15 @@ const AdminNotifications: React.FC = () => {
 
       {/* Test Notification Dialog */}
       <Dialog open={showTestDialog} onOpenChange={setShowTestDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>測試發送通知</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">測試發送通知</DialogTitle>
+            <DialogDescription className="text-sm">
               發送測試通知以測試模板 "{selectedTemplate?.name}"
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div>
               <Label htmlFor="testRecipient">接收者 *</Label>
               <Input
@@ -766,15 +766,15 @@ const AdminNotifications: React.FC = () => {
 
       {/* Bulk Notification Dialog */}
       <Dialog open={showBulkDialog} onOpenChange={setShowBulkDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>發送批量通知</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">發送批量通知</DialogTitle>
+            <DialogDescription className="text-sm">
               發送通知 "{selectedTemplate?.name}" 給多個接收者
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div>
               <Label htmlFor="bulkRecipients">接收者列表 *</Label>
               <Textarea
@@ -823,15 +823,15 @@ const AdminNotifications: React.FC = () => {
 
       {/* Preview Dialog */}
       <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>預覽通知模板</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">預覽通知模板</DialogTitle>
+            <DialogDescription className="text-sm">
               {selectedTemplate?.name} - {selectedTemplate?.type.toUpperCase()}
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {selectedTemplate?.subject && (
               <div>
                 <Label className="text-sm font-medium">標題:</Label>
@@ -872,10 +872,10 @@ const AdminNotifications: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>確認刪除</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">確認刪除</DialogTitle>
+            <DialogDescription className="text-sm">
               您確定要刪除通知模板 "{selectedTemplate?.name}"? 
               此操作無法撤銷。
             </DialogDescription>

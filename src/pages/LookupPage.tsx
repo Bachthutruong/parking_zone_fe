@@ -186,27 +186,27 @@ const LookupPage: React.FC = () => {
   }, [advancedFilters, bookings]);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">查詢預約</h1>
-        <p className="text-gray-600">請輸入電話號碼或車牌號碼以查詢預約</p>
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-4xl">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold">查詢預約</h1>
+        <p className="text-gray-600 text-sm sm:text-base">請輸入電話號碼或車牌號碼以查詢預約</p>
       </div>
 
       {/* Search Form */}
-      <Card className="mb-8">
+      <Card className="mb-6 sm:mb-8">
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Search className="h-5 w-5" />
+          <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+            <Search className="h-4 w-4 sm:h-5 sm:w-5" />
             <span>查詢預約</span>
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-sm">
             選擇搜索方法並輸入信息
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           <div className="space-y-4">
             {/* Search Type Selection */}
-            <div className="flex space-x-4">
+            <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
               <div className="flex items-center space-x-2">
                 <input
                   type="radio"
@@ -241,9 +241,9 @@ const LookupPage: React.FC = () => {
             </div>
 
             {/* Search Input */}
-            <div className="flex space-x-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1">
-                <Label htmlFor="searchValue">
+                <Label htmlFor="searchValue" className="text-sm">
                   {searchType === 'phone' ? '電話號碼' : '車牌號碼'}
                 </Label>
                 <Input
@@ -258,22 +258,22 @@ const LookupPage: React.FC = () => {
                 <Button 
                   variant="outline"
                   onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
-                  className="px-4"
+                  className="px-3 sm:px-4 text-xs sm:text-sm"
                 >
-                  <Filter className="h-4 w-4 mr-2" />
-                  過濾器
+                  <Filter className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">過濾器</span>
                 </Button>
                 <Button 
                   onClick={handleSearch} 
                   disabled={loading || !searchValue.trim()}
-                  className="px-6"
+                  className="px-4 sm:px-6 flex-1 sm:flex-initial"
                 >
                   {loading ? (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   ) : (
                     <>
-                      <Search className="h-4 w-4 mr-2" />
-                      搜索
+                      <Search className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">搜索</span>
                     </>
                   )}
                 </Button>
@@ -282,16 +282,16 @@ const LookupPage: React.FC = () => {
 
             {/* Advanced Search Filters */}
             {showAdvancedSearch && (
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg space-y-4">
+              <div className="mt-4 p-3 sm:p-4 bg-gray-50 rounded-lg space-y-3 sm:space-y-4">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-gray-700">高級過濾器</h4>
-                  <Button variant="outline" size="sm" onClick={resetFilters}>
-                    <X className="h-4 w-4 mr-1" />
-                    清除過濾器
+                  <h4 className="font-medium text-gray-700 text-sm sm:text-base">高級過濾器</h4>
+                  <Button variant="outline" size="sm" onClick={resetFilters} className="text-xs sm:text-sm">
+                    <X className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                    <span className="hidden sm:inline">清除過濾器</span>
                   </Button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   <div>
                     <Label htmlFor="status">狀態</Label>  
                     <select
@@ -361,24 +361,24 @@ const LookupPage: React.FC = () => {
       {bookings.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>搜索結果</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-base sm:text-lg">搜索結果</CardTitle>
+            <CardDescription className="text-sm">
               找到 {filteredBookings.length} 預約 {filteredBookings.length !== bookings.length && `(總共 ${bookings.length})`}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="p-4 sm:p-6">
+            <div className="space-y-3 sm:space-y-4">
               {filteredBookings.map((booking) => (
                 <Card key={booking._id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <h3 className="font-semibold">{booking.driverName}</h3>
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-sm sm:text-base">{booking.driverName}</h3>
                           {getStatusBadge(booking.status)}
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600">
                           <div className="space-y-1">
                             <div className="flex items-center space-x-2">
                               <Phone className="h-4 w-4" />
@@ -438,8 +438,9 @@ const LookupPage: React.FC = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => handleViewDetails(booking._id)}
+                        className="w-full sm:w-auto text-xs sm:text-sm"
                       >
-                        <Info className="h-4 w-4 mr-1" />
+                        <Info className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
                         詳細信息
                       </Button>
                     </div>
@@ -454,10 +455,10 @@ const LookupPage: React.FC = () => {
       {/* No Results */}
       {bookings.length === 0 && !loading && searchValue && (
         <Card>
-          <CardContent className="p-8 text-center">
-            <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-600 mb-2">找不到預約</h3>
-            <p className="text-gray-500">
+          <CardContent className="p-6 sm:p-8 text-center">
+            <AlertCircle className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-base sm:text-lg font-semibold text-gray-600 mb-2">找不到預約</h3>
+            <p className="text-gray-500 text-sm sm:text-base">
               找不到任何預約與 {searchType === 'phone' ? '電話號碼' : '車牌號碼'} 相關。
             </p>
           </CardContent>
@@ -466,23 +467,23 @@ const LookupPage: React.FC = () => {
 
       {/* Booking Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>預約詳細信息</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">預約詳細信息</DialogTitle>
+            <DialogDescription className="text-sm">
               預約詳細信息
             </DialogDescription>
           </DialogHeader>
           
           {selectedBooking && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Customer Information */}
               <div>
-                <h4 className="font-semibold mb-3 flex items-center">
-                  <User className="h-4 w-4 mr-2" />
+                <h4 className="font-semibold mb-2 sm:mb-3 flex items-center text-sm sm:text-base">
+                  <User className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   客戶信息
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                   <div className="space-y-2">
                     <div><strong>姓名:</strong> {selectedBooking.driverName}</div>
                     <div><strong>電話號碼:</strong> {selectedBooking.phone}</div>
@@ -499,11 +500,11 @@ const LookupPage: React.FC = () => {
 
               {/* Booking Information */}
               <div>
-                <h4 className="font-semibold mb-3 flex items-center">
-                  <Calendar className="h-4 w-4 mr-2" />
+                <h4 className="font-semibold mb-2 sm:mb-3 flex items-center text-sm sm:text-base">
+                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   預約信息
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                   <div className="space-y-2">
                     <div><strong>停車場:</strong> {selectedBooking.parkingType.name}</div>
                     <div><strong>類型:</strong> {getParkingTypeIcon(selectedBooking.parkingType)} {selectedBooking.parkingType.type || 'indoor'}</div>
@@ -520,11 +521,11 @@ const LookupPage: React.FC = () => {
               {/* Additional Information */}
               {(selectedBooking.estimatedArrivalTime || selectedBooking.flightNumber || selectedBooking.notes) && (
                 <div>
-                  <h4 className="font-semibold mb-3 flex items-center">
-                    <Info className="h-4 w-4 mr-2" />
+                  <h4 className="font-semibold mb-2 sm:mb-3 flex items-center text-sm sm:text-base">
+                    <Info className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                     附加信息
                   </h4>
-                  <div className="space-y-2 text-sm">
+                  <div className="space-y-2 text-xs sm:text-sm">
                     {selectedBooking.estimatedArrivalTime && (
                       <div><strong>預計到達時間:</strong> {formatDateTime(selectedBooking.estimatedArrivalTime)}</div>
                     )}
@@ -541,8 +542,8 @@ const LookupPage: React.FC = () => {
               {/* Addon Services */}
               {selectedBooking.addonServices && selectedBooking.addonServices.length > 0 && (
                 <div>
-                  <h4 className="font-semibold mb-3 flex items-center">
-                    <Package className="h-4 w-4 mr-2" />
+                  <h4 className="font-semibold mb-2 sm:mb-3 flex items-center text-sm sm:text-base">
+                    <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                     附加服務
                   </h4>
                   <div className="flex flex-wrap gap-2">
@@ -557,11 +558,11 @@ const LookupPage: React.FC = () => {
 
               {/* Payment Information */}
               <div>
-                <h4 className="font-semibold mb-3 flex items-center">
-                  <span className="text-lg mr-2">💰</span>
+                <h4 className="font-semibold mb-2 sm:mb-3 flex items-center text-sm sm:text-base">
+                  <span className="text-base sm:text-lg mr-2">💰</span>
                   付款信息
                 </h4>
-                <div className="space-y-2 text-sm">
+                <div className="space-y-2 text-xs sm:text-sm">
                   <div><strong>總金額:</strong> {formatCurrency(selectedBooking.totalAmount)}</div>
                   
                   {/* Voucher Discount */}

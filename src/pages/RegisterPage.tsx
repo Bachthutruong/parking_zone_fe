@@ -47,15 +47,15 @@ const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-muted/30 py-6 sm:py-12 px-3 sm:px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">註冊</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-xl sm:text-2xl">註冊</CardTitle>
+          <CardDescription className="text-sm sm:text-base">
             創建新帳戶以使用服務
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">姓名</Label>

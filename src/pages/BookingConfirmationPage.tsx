@@ -230,11 +230,11 @@ const BookingConfirmationPage: React.FC = () => {
 
   if (!bookingData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-3 sm:px-4">
         <div className="text-center">
-          <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">找不到預約信息</h1>
-          <p className="text-gray-600 mb-6">請返回預約頁面</p>
+          <div className="text-red-500 text-4xl sm:text-6xl mb-4">⚠️</div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">找不到預約信息</h1>
+          <p className="text-gray-600 mb-6 text-sm sm:text-base">請返回預約頁面</p>
           <Button onClick={handleBackToHome} className="bg-[#39653f] hover:bg-[#2d4f33]">
             <Home className="h-4 w-4 mr-2" />
             返回主頁
@@ -245,36 +245,36 @@ const BookingConfirmationPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
-      <div className="container mx-auto px-4 max-w-full">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-4 sm:py-8">
+      <div className="container mx-auto px-3 sm:px-4 max-w-full">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
-            <CheckCircle className="h-10 w-10 text-green-600" />
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-green-100 rounded-full mb-3 sm:mb-4">
+            <CheckCircle className="h-8 w-8 sm:h-10 sm:w-10 text-green-600" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">預約成功！</h1>
-          <p className="text-gray-600">感謝您使用我們的服務</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">預約成功！</h1>
+          <p className="text-gray-600 text-sm sm:text-base">感謝您使用我們的服務</p>
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Left Column - Booking Details */}
           <div className="lg:col-span-2 space-y-6">
             {/* Booking Summary */}
             <Card className="border-2 border-green-200 bg-green-50/50">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
+              <CardHeader className="pb-3 sm:pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
                   <div>
-                    <CardTitle className="text-xl text-gray-800">預約信息</CardTitle>
-                    <CardDescription className="text-gray-600">
-                      預約編號: <span className="font-mono font-bold text-blue-600">{bookingData.bookingNumber}</span>
+                    <CardTitle className="text-lg sm:text-xl text-gray-800">預約信息</CardTitle>
+                    <CardDescription className="text-gray-600 text-xs sm:text-sm">
+                      預約編號: <span className="font-mono font-bold text-blue-600 break-all">{bookingData.bookingNumber}</span>
                     </CardDescription>
                   </div>
                   {getStatusBadge(bookingData.status)}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="flex items-center space-x-3">
                     <Calendar className="h-5 w-5 text-blue-600" />
                     <div>
@@ -309,18 +309,18 @@ const BookingConfirmationPage: React.FC = () => {
             {/* Customer Information */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <User className="h-5 w-5 text-blue-600" />
+                <CardTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
+                  <User className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                   <span>客戶信息</span>
                   {bookingData.isVIP && (
-                    <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0">
+                    <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 text-xs">
                       👑 VIP 會員
                     </Badge>
                   )}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="flex items-center space-x-3">
                     <User className="h-5 w-5 text-gray-500" />
                     <div>
@@ -358,15 +358,15 @@ const BookingConfirmationPage: React.FC = () => {
             {/* Terminal Information */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Building className="h-5 w-5 text-blue-600" />
+                <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+                  <Building className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                   <span>接駁和行李信息</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <CardContent className="p-4 sm:p-6">
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="bg-blue-50 p-3 sm:p-4 rounded-lg">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                       {/* Departure */}
                       <div className="space-y-3">
                         <h4 className="font-semibold text-blue-800 border-b border-blue-200 pb-1">出發 (前往機場)</h4>
@@ -419,18 +419,18 @@ const BookingConfirmationPage: React.FC = () => {
             {/* Payment Details */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Receipt className="h-5 w-5 text-blue-600" />
+                <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+                  <Receipt className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                   <span>付款明細</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6">
                 <div className="space-y-3">
                   
                   {/* Daily Prices Breakdown */}
                   {(bookingData.dailyPrices && bookingData.dailyPrices.length > 0 || true) && (
-                    <div className="bg-blue-50 p-3 rounded-lg">
-                      <div className="text-sm font-semibold text-blue-700 mb-2">📅 每日價格詳細:</div>
+                    <div className="bg-blue-50 p-2 sm:p-3 rounded-lg">
+                      <div className="text-xs sm:text-sm font-semibold text-blue-700 mb-2">📅 每日價格詳細:</div>
                       <div className="space-y-2">
                         {(bookingData.dailyPrices && bookingData.dailyPrices.length > 0
                           ? bookingData.dailyPrices
@@ -442,24 +442,24 @@ const BookingConfirmationPage: React.FC = () => {
                             : 0;
                           
                           return (
-                            <div key={index} className="flex justify-between items-center text-sm bg-white p-2 rounded">
-                              <div className="flex items-center space-x-2">
+                            <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 text-xs sm:text-sm bg-white p-2 rounded">
+                              <div className="flex flex-wrap items-center gap-1 sm:gap-2">
                                 <span className="text-gray-600">
                                   {formatDateWithWeekday(day.date)}
                                 </span>
                                 {day.isSpecialPrice && (
-                                  <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-200 max-w-32 truncate" title={day.specialPriceReason}>
+                                  <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-200 max-w-24 sm:max-w-32 truncate" title={day.specialPriceReason}>
                                     💰 {day.specialPriceReason || '特殊價格'}
                                   </Badge>
                                 )}
                                 {/* Auto Discount Badge for each day */}
                                 {bookingData?.autoDiscountInfo && dailyDiscount > 0 && (
-                                  <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-200 max-w-32 truncate" title={bookingData.autoDiscountInfo.description}>
+                                  <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-200 max-w-24 sm:max-w-32 truncate" title={bookingData.autoDiscountInfo.description}>
                                     🎯 {bookingData.autoDiscountInfo.name}
                                   </Badge>
                                 )}
                               </div>
-                              <div className="flex items-center space-x-2">
+                              <div className="flex items-center space-x-1 sm:space-x-2 ml-auto sm:ml-0">
                                 {day.isSpecialPrice && day.originalPrice ? (
                                   <span className="text-xs text-gray-500 line-through">
                                     {formatCurrency(day.originalPrice)}
@@ -561,17 +561,17 @@ const BookingConfirmationPage: React.FC = () => {
                   )}
                   
                   <Separator />
-                  <div className="bg-gradient-to-r from-emerald-100 to-teal-100 p-3 rounded-lg border-2 border-emerald-300">
+                  <div className="bg-gradient-to-r from-emerald-100 to-teal-100 p-3 sm:p-4 rounded-lg border-2 border-emerald-300">
                     <div className="space-y-2">
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-center text-sm sm:text-base">
                         <span className="font-semibold">總費用:</span>
                         <span className="font-semibold">{formatCurrency(bookingData.totalAmount)}</span>
                       </div>
                       
                       {(bookingData.discountAmount > 0 || (bookingData.vipDiscount && bookingData.vipDiscount > 0) || (bookingData.autoDiscountAmount && bookingData.autoDiscountAmount > 0)) && (
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center text-sm sm:text-base">
                           <span className="font-semibold text-green-700">總折扣:</span>
-                          <span className="font-bold text-green-700 text-lg">
+                          <span className="font-bold text-green-700 text-base sm:text-lg">
                             -{formatCurrency(
                               (bookingData.discountAmount || 0) + 
                               (bookingData.vipDiscount || 0) + 
@@ -583,8 +583,8 @@ const BookingConfirmationPage: React.FC = () => {
                       
                       <div className="border-t pt-2">
                         <div className="flex justify-between items-center">
-                          <span className="font-bold text-lg">總付款:</span>
-                          <span className="font-bold text-emerald-800 text-xl">
+                          <span className="font-bold text-base sm:text-lg">總付款:</span>
+                          <span className="font-bold text-emerald-800 text-lg sm:text-xl">
                             {formatCurrency(bookingData.finalAmount)}
                           </span>
                         </div>
@@ -645,12 +645,12 @@ const BookingConfirmationPage: React.FC = () => {
             {systemSettings?.contactContent?.isActive && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg flex items-center space-x-2">
-                    <FileText className="h-5 w-5 text-blue-600" />
+                  <CardTitle className="text-base sm:text-lg flex items-center space-x-2">
+                    <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                     <span>{systemSettings.contactContent.title}</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 text-sm">
+                <CardContent className="space-y-3 text-xs sm:text-sm p-4 sm:p-6">
                   <div 
                     className="text-gray-700 leading-relaxed"
                     dangerouslySetInnerHTML={{ __html: systemSettings.contactContent.content }}

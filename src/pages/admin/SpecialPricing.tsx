@@ -630,7 +630,7 @@ const AdminSpecialPricing: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -639,27 +639,27 @@ const AdminSpecialPricing: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold">特殊價格</h1>
-          <p className="text-gray-600">管理特定日期的特殊價格</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">特殊價格</h1>
+          <p className="text-gray-600 text-sm sm:text-base">管理特定日期的特殊價格</p>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={loadParkingTypes}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            重新整理
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={loadParkingTypes} className="flex-1 sm:flex-initial text-xs sm:text-sm">
+            <RefreshCw className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">重新整理</span>
           </Button>
-          <Button variant="outline" onClick={openBulkCreateDialog}>
-            <Layers className="h-4 w-4 mr-2" />
-            批量配置
+          <Button variant="outline" onClick={openBulkCreateDialog} className="flex-1 sm:flex-initial text-xs sm:text-sm">
+            <Layers className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">批量配置</span>
           </Button>
 
         </div>
       </div>
 
       {/* Filters & Actions Bar */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+      <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border mb-4 sm:mb-6 flex flex-col md:flex-row gap-3 sm:gap-4 items-center justify-between">
         <div className="flex-1 w-full md:w-auto flex flex-col md:flex-row gap-4 items-center">
           <div className="w-full md:w-64">
              <Label htmlFor="parkingTypeSelect" className="sr-only">選擇停車場</Label>
@@ -698,42 +698,42 @@ const AdminSpecialPricing: React.FC = () => {
 
        {/* Parking Info Card (Visible only when specific parking type selected) */}
        {selectedParkingType && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100 shadow-sm">
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-2 p-3 sm:p-4">
               <CardTitle className="text-sm font-medium text-blue-600 flex items-center">
                 <Layers className="h-4 w-4 mr-2" />
                 基本資訊
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-800">{selectedParkingType.name}</div>
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-xl sm:text-2xl font-bold text-gray-800">{selectedParkingType.name}</div>
               <div className="text-sm text-gray-500 mt-1 font-mono">{selectedParkingType.code}</div>
             </CardContent>
           </Card>
           
           <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-100 shadow-sm">
-             <CardHeader className="pb-2">
+             <CardHeader className="pb-2 p-3 sm:p-4">
               <CardTitle className="text-sm font-medium text-green-600 flex items-center">
                 <DollarSign className="h-4 w-4 mr-2" />
                 標準價格
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-800">{formatCurrency(selectedParkingType.pricePerDay)}</div>
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-xl sm:text-2xl font-bold text-gray-800">{formatCurrency(selectedParkingType.pricePerDay)}</div>
               <div className="text-sm text-gray-500 mt-1">每天</div>
             </CardContent>
           </Card>
 
            <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-100 shadow-sm">
-             <CardHeader className="pb-2">
+             <CardHeader className="pb-2 p-3 sm:p-4">
               <CardTitle className="text-sm font-medium text-purple-600 flex items-center">
                 <TrendingUp className="h-4 w-4 mr-2" />
                 特殊價格設定
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-800">{filteredSpecialPrices.length}</div>
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-xl sm:text-2xl font-bold text-gray-800">{filteredSpecialPrices.length}</div>
               <div className="text-sm text-gray-500 mt-1">個設定項目</div>
             </CardContent>
           </Card>
@@ -745,8 +745,8 @@ const AdminSpecialPricing: React.FC = () => {
         <CardHeader className="bg-gray-50/50 border-b">
           <div className="flex justify-between items-center">
              <div>
-                <CardTitle>特殊價格清單</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-base sm:text-lg">特殊價格清單</CardTitle>
+                <CardDescription className="text-sm">
                   {selectedParkingType 
                     ? `管理 ${selectedParkingType.name} 的特殊價格` 
                     : `顯示所有停車場的特殊價格 (${filteredAllSpecialPrices.length} 筆)`}
@@ -858,7 +858,7 @@ const AdminSpecialPricing: React.FC = () => {
           resetForm();
         }
       }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{isEditing ? '編輯特殊價格' : '新增特殊價格'}</DialogTitle>
             <DialogDescription>
@@ -910,7 +910,7 @@ const AdminSpecialPricing: React.FC = () => {
                 />
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <Label htmlFor="startDate">開始日期 *</Label>
                   <Input
@@ -995,7 +995,7 @@ const AdminSpecialPricing: React.FC = () => {
 
              {/* Bulk Template Dialog */}
        <Dialog open={showBulkTemplateDialog} onOpenChange={setShowBulkTemplateDialog}>
-         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+         <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
            <DialogHeader>
              <DialogTitle>選擇要應用的模板</DialogTitle>
              <DialogDescription>
@@ -1062,7 +1062,7 @@ const AdminSpecialPricing: React.FC = () => {
 
               {/* Bulk Create Dialog */}
        <Dialog open={showBulkCreateDialog} onOpenChange={setShowBulkCreateDialog}>
-         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+         <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>批量特殊價格配置</DialogTitle>
             <DialogDescription>
@@ -1070,7 +1070,7 @@ const AdminSpecialPricing: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
                          {/* Quick Templates */}
              <div>
                <Label className="text-sm font-medium">快速模板</Label>
@@ -1079,7 +1079,7 @@ const AdminSpecialPricing: React.FC = () => {
                    💡 "週末"模板將為 {formData.startDate} 到 {formData.endDate} 期間的所有週末創建特殊價格
                  </div>
                )}
-               <div className="grid grid-cols-3 gap-2 mt-2">
+               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
                  <Button 
                    variant={selectedTemplate === 'weekend' ? 'default' : 'outline'}
                    size="sm"
@@ -1139,7 +1139,7 @@ const AdminSpecialPricing: React.FC = () => {
                   />
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <Label htmlFor="bulkStartDate">開始日期 *</Label>
                     <Input
@@ -1271,7 +1271,7 @@ const AdminSpecialPricing: React.FC = () => {
 
       {/* Bulk Template Dialog */}
       <Dialog open={showBulkTemplateDialog} onOpenChange={setShowBulkTemplateDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Chọn template để áp dụng</DialogTitle>
             <DialogDescription>
@@ -1338,7 +1338,7 @@ const AdminSpecialPricing: React.FC = () => {
 
       {/* Bulk Delete Dialog */}
       <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>確認刪除</DialogTitle>
             <DialogDescription>
@@ -1359,7 +1359,7 @@ const AdminSpecialPricing: React.FC = () => {
 
       {/* Bulk Edit Dialog */}
       <Dialog open={showBulkEditDialog} onOpenChange={setShowBulkEditDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>批量更新特殊價格</DialogTitle>
             <DialogDescription>
@@ -1394,7 +1394,7 @@ const AdminSpecialPricing: React.FC = () => {
                 />
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <Label htmlFor="bulkStartDateEdit">開始日期 *</Label>
                   <Input
@@ -1467,7 +1467,7 @@ const AdminSpecialPricing: React.FC = () => {
 
        {/* Bulk Delete Dialog */}
        <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
-         <DialogContent>
+         <DialogContent className="max-w-[95vw] sm:max-w-md">
            <DialogHeader>
              <DialogTitle>確認批量刪除</DialogTitle>
              <DialogDescription>
@@ -1488,7 +1488,7 @@ const AdminSpecialPricing: React.FC = () => {
 
        {/* Bulk Edit Dialog */}
        <Dialog open={showBulkEditDialog} onOpenChange={setShowBulkEditDialog}>
-         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+         <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
            <DialogHeader>
              <DialogTitle>Cập nhật giá đặc biệt hàng loạt</DialogTitle>
              <DialogDescription>
@@ -1569,7 +1569,7 @@ const AdminSpecialPricing: React.FC = () => {
 
        {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>確認刪除</DialogTitle>
             <DialogDescription>

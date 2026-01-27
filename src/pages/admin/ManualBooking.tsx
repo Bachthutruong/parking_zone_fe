@@ -505,7 +505,7 @@ const AdminManualBooking: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -514,15 +514,15 @@ const AdminManualBooking: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold">手動預約</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">手動預約</h1>
           <p className="text-gray-600">為客戶創建預約</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8">
         {/* Booking Form */}
         <Card>
           <CardHeader>
@@ -534,7 +534,7 @@ const AdminManualBooking: React.FC = () => {
               輸入新預約的詳細資訊
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
             {/* Parking Type Selection */}
             <div>
               <Label htmlFor="parkingType">停車場 *</Label>
@@ -553,7 +553,7 @@ const AdminManualBooking: React.FC = () => {
             </div>
 
             {/* Date and Time */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <Label htmlFor="checkInTime">進場停車時間 *</Label>
                 <DateInput
@@ -645,7 +645,7 @@ const AdminManualBooking: React.FC = () => {
                 客戶資訊
               </h3>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <Label htmlFor="driverName">您的姓名 *</Label>
                   <Input
@@ -681,7 +681,7 @@ const AdminManualBooking: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -709,7 +709,7 @@ const AdminManualBooking: React.FC = () => {
                   <span className="text-xs text-blue-600">(接駁服務需要)</span>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   {/* Departure Section */}
                   <div className="space-y-4">
                     <h4 className="font-semibold text-gray-700 border-b pb-2">出發 (前往機場)</h4>
@@ -820,7 +820,7 @@ const AdminManualBooking: React.FC = () => {
                 附加資訊
               </h3>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <Label htmlFor="estimatedArrivalTime">預計到達時間</Label>
                   <DateInput
@@ -854,7 +854,7 @@ const AdminManualBooking: React.FC = () => {
         </Card>
 
         {/* Right Column - Addon Services and Pricing */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Addon Services */}
           <Card>
             <CardHeader>
@@ -866,7 +866,7 @@ const AdminManualBooking: React.FC = () => {
                 為客戶選擇附加服務
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
               {addonServices.map((service) => (
                 <div key={service._id} className="flex items-center space-x-3 p-3 border rounded-lg">
                   <Checkbox
@@ -924,7 +924,7 @@ const AdminManualBooking: React.FC = () => {
                 如有折扣碼請輸入
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
               <div className="flex space-x-3">
                 <Input
                   placeholder="輸入折扣碼"
@@ -1033,7 +1033,7 @@ const AdminManualBooking: React.FC = () => {
                 價格摘要
               </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6">
                 <div className="space-y-4">
                   {/* Base Price */}
                   <div className="bg-gray-50 p-3 rounded-lg">
@@ -1251,7 +1251,7 @@ const AdminManualBooking: React.FC = () => {
 
       {/* Success Dialog */}
       <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <CheckCircle className="h-5 w-5 mr-2 text-green-500" />

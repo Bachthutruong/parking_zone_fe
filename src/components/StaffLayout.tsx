@@ -107,7 +107,7 @@ const StaffLayout: React.FC = () => {
       {/* Main content */}
       <div className="flex-1 flex flex-col lg:ml-0">
         {/* Top bar */}
-        <header className="bg-white shadow-sm border-b px-4 py-3 flex items-center justify-between">
+        <header className="bg-white shadow-sm border-b px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between">
           <Button
             variant="ghost"
             size="sm"
@@ -117,15 +117,15 @@ const StaffLayout: React.FC = () => {
             <Menu className="h-5 w-5" />
           </Button>
           
-          <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-600">
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            <div className="text-xs sm:text-sm text-gray-600">
               Chào mừng, Staff
             </div>
           </div>
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-auto">
           <Outlet />
         </main>
       </div>

@@ -227,7 +227,7 @@ const AdminServices: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -236,34 +236,34 @@ const AdminServices: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold">附加服務</h1>
-          <p className="text-gray-600">管理客戶的附加服務</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">附加服務</h1>
+          <p className="text-gray-600 text-sm sm:text-base">管理客戶的附加服務</p>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={loadServices}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            重新整理
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={loadServices} className="flex-1 sm:flex-initial text-xs sm:text-sm">
+            <RefreshCw className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">重新整理</span>
           </Button>
-          <Button onClick={openCreateDialog}>
-            <Plus className="h-4 w-4 mr-2" />
-            新增服務
+          <Button onClick={openCreateDialog} className="flex-1 sm:flex-initial text-xs sm:text-sm">
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">新增服務</span>
           </Button>
         </div>
       </div>
 
       {/* Filters */}
-      <Card className="mb-6">
+      <Card className="mb-4 sm:mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Filter className="h-5 w-5 mr-2" />
+          <CardTitle className="flex items-center text-base sm:text-lg">
+            <Filter className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
             篩選
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             <div>
               <Label htmlFor="search">搜尋</Label>
               <div className="relative">
@@ -308,12 +308,12 @@ const AdminServices: React.FC = () => {
       {/* Services Table */}
       <Card>
         <CardHeader>
-          <CardTitle>服務清單</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-base sm:text-lg">服務清單</CardTitle>
+          <CardDescription className="text-sm">
             共 {filteredServices.length} 項服務
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           <Table>
             <TableHeader>
               <TableRow>
@@ -333,7 +333,7 @@ const AdminServices: React.FC = () => {
                   <TableRow key={service._id}>
                     <TableCell>
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-2xl">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xl sm:text-2xl">
                           {service.icon}
                         </div>
                         <div>
@@ -437,16 +437,16 @@ const AdminServices: React.FC = () => {
           resetForm();
         }
       }}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{isEditing ? '編輯服務' : '新增服務'}</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">{isEditing ? '編輯服務' : '新增服務'}</DialogTitle>
+            <DialogDescription className="text-sm">
               {isEditing ? '更新服務資訊' : '創建新的附加服務，包含必要資訊'}
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <Label htmlFor="name">服務名稱 *</Label>
                 <Input
@@ -478,7 +478,7 @@ const AdminServices: React.FC = () => {
                 />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <Label htmlFor="price">價格 (TWD)</Label>
                 <Input
@@ -554,7 +554,7 @@ const AdminServices: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>確認刪除</DialogTitle>
             <DialogDescription>

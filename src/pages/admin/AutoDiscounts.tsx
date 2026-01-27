@@ -160,14 +160,14 @@ const AutoDiscounts: React.FC = () => {
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 px-3 sm:px-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">自動折扣管理</h1>
-          <p className="text-gray-600 mt-2">管理停車場自動折扣規則</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">自動折扣管理</h1>
+          <p className="text-gray-600 mt-2 text-sm sm:text-base">管理停車場自動折扣規則</p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <Button
             onClick={loadAutoDiscounts}
             variant="outline"
@@ -193,19 +193,19 @@ const AutoDiscounts: React.FC = () => {
       )}
 
       {/* Main Content */}
-      <Tabs defaultValue="list" className="space-y-6">
+      <Tabs defaultValue="list" className="space-y-4 sm:space-y-6">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="list" className="flex items-center space-x-2">
-            <Tag className="h-4 w-4" />
+          <TabsTrigger value="list" className="flex items-center space-x-2 text-xs sm:text-sm">
+            <Tag className="h-3 w-3 sm:h-4 sm:w-4" />
             <span>折扣列表</span>
           </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center space-x-2">
-            <TrendingUp className="h-4 w-4" />
+          <TabsTrigger value="analytics" className="flex items-center space-x-2 text-xs sm:text-sm">
+            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
             <span>分析報告</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="list" className="space-y-6">
+        <TabsContent value="list" className="space-y-4 sm:space-y-6">
           <AutoDiscountList
             autoDiscounts={autoDiscounts}
             loading={loading}
@@ -219,7 +219,7 @@ const AutoDiscounts: React.FC = () => {
           />
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-6">
+        <TabsContent value="analytics" className="space-y-4 sm:space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -230,7 +230,7 @@ const AutoDiscounts: React.FC = () => {
                 查看自動折扣的使用情況和效果分析
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6">
               <div className="text-center py-8 text-gray-500">
                 <TrendingUp className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                 <p>分析功能開發中...</p>

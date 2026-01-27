@@ -686,12 +686,12 @@ const BookingPage: React.FC = () => {
                   <span>條款和規定</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                <p className="text-gray-600 mb-6 leading-relaxed">
+              <CardContent className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+                <p className="text-gray-600 mb-4 sm:mb-6 leading-relaxed text-sm sm:text-base">
                   請在預約停車位之前仔細閱讀規定和條款。
                 </p>
                 
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                   {/* Booking Terms */}
                   {bookingTerms && (
                     <div className="bg-blue-50 rounded-lg p-4">
@@ -777,11 +777,11 @@ const BookingPage: React.FC = () => {
                   <span>選擇停車場類型和時間</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6 space-y-8">
+              <CardContent className="p-4 sm:p-6 space-y-6 sm:space-y-8">
                 {/* Parking Type Selection */}
                 <div>
-                  <Label className="text-lg font-semibold text-gray-800 mb-4 block">停車場類型</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <Label className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4 block">停車場類型</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {(parkingTypes || []).filter(type => type.isActive).map((type) => {
                       const isSelected = formData.parkingTypeId === type._id;
                       const isUnderMaintenance = maintenanceDays.some(maintenance => 
@@ -804,7 +804,7 @@ const BookingPage: React.FC = () => {
                             }
                           }}
                         >
-                          <CardContent className="p-6">
+                          <CardContent className="p-4 sm:p-6">
                             {/* Image Carousel */}
                             {type.images && type.images.length > 0 ? (
                               <div className="mb-4">
@@ -872,10 +872,10 @@ const BookingPage: React.FC = () => {
 
                 {/* Time Selection */}
                 {formData.parkingTypeId && (
-                  <div className="space-y-6">
+                  <div className="space-y-4 sm:space-y-6">
                     <div>
-                      <Label className="text-lg font-semibold text-gray-800 mb-4 block">選擇預約時間</Label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Label className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4 block">選擇預約時間</Label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                         <div className="space-y-2">
                           <Label htmlFor="checkInTime" className="text-sm font-medium text-gray-700">進場停車時間 *</Label>
                           <div className="relative">
@@ -964,14 +964,14 @@ const BookingPage: React.FC = () => {
                     </div>
 
                     {/* Passenger and Luggage Selection */}
-                    <div className="space-y-6">
-                      <div className="space-y-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-blue-800 font-medium">✈️ 接駁和行李資訊</span>
+                    <div className="space-y-4 sm:space-y-6">
+                      <div className="space-y-4 sm:space-y-6 bg-blue-50 p-3 sm:p-4 rounded-lg border border-blue-200">
+                        <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
+                          <span className="text-blue-800 font-medium text-sm sm:text-base">✈️ 接駁和行李資訊</span>
                           <span className="text-xs text-blue-600">(接駁服務需要)</span>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                           {/* Departure Section */}
                           <div className="space-y-4">
                             <h4 className="font-semibold text-gray-700 border-b pb-2">出發 (前往機場)</h4>
@@ -1215,8 +1215,8 @@ const BookingPage: React.FC = () => {
                   選擇您需要的服務
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <CardContent className="p-4 sm:p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {(addonServices || []).filter(service => service.isActive).map((service) => {
                     const isSelected = formData.selectedAddonServices.includes(service._id);
                     return (
@@ -1552,7 +1552,7 @@ const BookingPage: React.FC = () => {
                   填寫個人資料以完成預約
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-6 space-y-6">
+              <CardContent className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                 {/* VIP Code Section */}
                 {/* {!isVIP && (
                   <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4">
@@ -1629,7 +1629,7 @@ const BookingPage: React.FC = () => {
                   
                 </div> */}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="driverName" className="text-sm font-medium text-gray-700">您的姓名 *</Label>
                     <Input
@@ -1701,9 +1701,9 @@ const BookingPage: React.FC = () => {
 
             {/* Terms Agreement */}
             <Card className="border-0 shadow-lg">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">預約條款確認</h3>
+              <CardContent className="p-4 sm:p-6">
+                <div className="space-y-3 sm:space-y-4">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">預約條款確認</h3>
                   {systemSettings && systemSettings?.termsCheckboxes?.filter(term => term.isActive).sort((a, b) => a.order - b.order).map((term) => (
                     <div key={term.id} className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
                       <Checkbox
@@ -1758,7 +1758,7 @@ const BookingPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -1768,14 +1768,14 @@ const BookingPage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <Card className="border-0 shadow-lg">
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2 text-red-600">
-              <AlertCircle className="h-5 w-5" />
+          <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
+            <div className="flex items-center space-x-2 text-red-600 text-sm sm:text-base">
+              <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5" />
               <span>{error}</span>
             </div>
-            <Button onClick={loadInitialData} className="mt-4">
+            <Button onClick={loadInitialData} className="mt-4 text-xs sm:text-sm">
               重試
             </Button>
           </CardContent>
@@ -1786,31 +1786,31 @@ const BookingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="max-w-6xl mx-auto">
           {/* Progress Steps */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between bg-white rounded-lg shadow-lg p-4">
+          <div className="mb-4 sm:mb-8">
+            <div className="flex items-center justify-between bg-white rounded-lg shadow-lg p-2 sm:p-4 overflow-x-auto">
               {steps.map((step, index) => (
-                <div key={step.id} className="flex items-center">
-                  <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 ${
+                <div key={step.id} className="flex items-center flex-shrink-0">
+                  <div className={`flex items-center justify-center w-8 h-8 sm:w-12 sm:h-12 rounded-full border-2 transition-all duration-300 ${
                     currentStep >= step.id 
                       ? 'bg-[#39653f] border-[#39653f] text-white shadow-lg' 
                       : 'bg-white border-gray-300 text-gray-500'
                   }`}>
                     {currentStep > step.id ? (
-                      <CheckCircle className="h-6 w-6" />
+                      <CheckCircle className="h-4 w-4 sm:h-6 sm:w-6" />
                     ) : (
-                      step.icon
+                      <div className="scale-75 sm:scale-100">{step.icon}</div>
                     )}
                   </div>
-                  <span className={`ml-3 text-sm font-medium transition-colors duration-300 ${
+                  <span className={`ml-1 sm:ml-3 text-xs sm:text-sm font-medium transition-colors duration-300 hidden sm:inline ${
                     currentStep >= step.id ? 'text-blue-600' : 'text-gray-500'
                   }`}>
                     {step.title}
                   </span>
                   {index < steps.length - 1 && (
-                    <div className={`w-20 h-0.5 mx-4 transition-colors duration-300 ${
+                    <div className={`w-8 sm:w-20 h-0.5 mx-1 sm:mx-4 transition-colors duration-300 ${
                       currentStep > step.id ? 'bg-[#39653f]' : 'bg-gray-300'
                     }`} />
                   )}
@@ -1821,28 +1821,28 @@ const BookingPage: React.FC = () => {
 
           {/* Selected Date Information */}
           {currentStep >= 2 && formData.checkInTime && formData.checkOutTime && (
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <Card className="border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <Clock className="h-5 w-5 text-blue-600" />
-                      <div>
-                        <h3 className="font-semibold text-blue-900">已選擇時間:</h3>
-                        <div className="flex items-center space-x-4 text-sm text-blue-800">
-                          <span>
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                    <div className="flex items-start sm:items-center space-x-2 sm:space-x-3">
+                      <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0 mt-1 sm:mt-0" />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-blue-900 text-sm sm:text-base">已選擇時間:</h3>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-1 sm:space-y-0 text-xs sm:text-sm text-blue-800">
+                          <span className="break-words">
                             <strong>進入:</strong> {formatDateTime(formData.checkInTime)}
                           </span>
-                          <span className="text-blue-600">→</span>
-                          <span>
+                          <span className="text-blue-600 hidden sm:inline">→</span>
+                          <span className="break-words">
                             <strong>離開:</strong> {formatDateTime(formData.checkOutTime)}
                           </span>
                         </div>
                       </div>
                     </div>
                     {formData.parkingTypeId && (
-                      <div className="text-right">
-                        <div className="text-sm text-blue-700">
+                      <div className="text-left sm:text-right">
+                        <div className="text-xs sm:text-sm text-blue-700">
                           <strong>停車場:</strong> {parkingTypes.find(pt => pt._id === formData.parkingTypeId)?.name || '未選擇'}
                         </div>
                         <div className="text-xs text-blue-600">
@@ -1866,18 +1866,18 @@ const BookingPage: React.FC = () => {
           {renderStepContent()}
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between mt-8">
+          <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0 mt-6 sm:mt-8">
             <Button
               variant="outline"
               onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
               disabled={currentStep === 1}
-              className="px-6 py-3"
+              className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 order-2 sm:order-1"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               返回
             </Button>
             
-            <div className="flex space-x-3">
+            <div className="flex space-x-3 order-1 sm:order-2">
               {currentStep < steps.length ? (
             <Button
               onClick={() => setCurrentStep(prev => prev + 1)}
@@ -1897,7 +1897,7 @@ const BookingPage: React.FC = () => {
 
                 return disabled;
               })()}
-              className="px-8 py-3 bg-[#39653f] hover:bg-[#2d4f33]"
+              className="w-full sm:w-auto px-6 sm:px-8 py-2 sm:py-3 bg-[#39653f] hover:bg-[#2d4f33]"
             >
                   下一步
                   <ArrowRight className="h-4 w-4 ml-2" />
@@ -1908,7 +1908,7 @@ const BookingPage: React.FC = () => {
                   disabled={(() => {
                     return isButtonDisabled;
                   })()}
-                  className="px-8 py-3 bg-[#39653f] hover:bg-[#2d4f33]"
+                  className="w-full sm:w-auto px-6 sm:px-8 py-2 sm:py-3 bg-[#39653f] hover:bg-[#2d4f33]"
                 >
                   {loading ? '正在處理...' : '完成預約'}
                 </Button>

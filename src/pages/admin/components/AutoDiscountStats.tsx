@@ -49,15 +49,15 @@ const AutoDiscountStats: React.FC<AutoDiscountStatsProps> = ({ stats }) => {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
       {/* Total Discounts */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">總折扣規則</CardTitle>
-          <Tag className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-xs sm:text-sm font-medium">總折扣規則</CardTitle>
+          <Tag className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{overview.totalDiscounts}</div>
+        <CardContent className="p-4 sm:p-6">
+          <div className="text-xl sm:text-2xl font-bold">{overview.totalDiscounts}</div>
           <p className="text-xs text-muted-foreground">
             其中 {overview.activeDiscounts} 個啟用中
           </p>
@@ -67,11 +67,11 @@ const AutoDiscountStats: React.FC<AutoDiscountStatsProps> = ({ stats }) => {
       {/* Active Discounts */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">啟用中折扣</CardTitle>
-          <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-xs sm:text-sm font-medium">啟用中折扣</CardTitle>
+          <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-green-600">{overview.activeDiscounts}</div>
+        <CardContent className="p-4 sm:p-6">
+          <div className="text-xl sm:text-2xl font-bold text-green-600">{overview.activeDiscounts}</div>
           <p className="text-xs text-muted-foreground">
             活躍折扣規則
           </p>
@@ -81,11 +81,11 @@ const AutoDiscountStats: React.FC<AutoDiscountStatsProps> = ({ stats }) => {
       {/* Total Usage */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">總使用次數</CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-xs sm:text-sm font-medium">總使用次數</CardTitle>
+          <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{overview.totalUsage}</div>
+        <CardContent className="p-4 sm:p-6">
+          <div className="text-xl sm:text-2xl font-bold">{overview.totalUsage}</div>
           <p className="text-xs text-muted-foreground">
             所有折扣規則使用次數
           </p>
@@ -95,11 +95,11 @@ const AutoDiscountStats: React.FC<AutoDiscountStatsProps> = ({ stats }) => {
       {/* Average Priority */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">平均優先級</CardTitle>
-          <Clock className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-xs sm:text-sm font-medium">平均優先級</CardTitle>
+          <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{overview.avgPriority.toFixed(1)}</div>
+          <div className="text-xl sm:text-2xl font-bold">{overview.avgPriority.toFixed(1)}</div>
           <p className="text-xs text-muted-foreground">
             優先級越高越先應用
           </p>

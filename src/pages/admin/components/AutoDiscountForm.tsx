@@ -244,32 +244,32 @@ const AutoDiscountForm: React.FC<AutoDiscountFormProps> = ({ discount, onSubmit,
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
+          <DialogTitle className="flex items-center space-x-2 text-base sm:text-lg">
             <Tag className="h-5 w-5" />
             <span>{discount ? '編輯自動折扣' : '新增自動折扣'}</span>
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm">
             {discount ? '修改自動折扣規則設定' : '創建新的自動折扣規則'}
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="basic" className="space-y-6">
+        <Tabs defaultValue="basic" className="space-y-4 sm:space-y-6">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="basic">基本設定</TabsTrigger>
-            <TabsTrigger value="conditions">適用條件</TabsTrigger>
+            <TabsTrigger value="basic" className="text-xs sm:text-sm">基本設定</TabsTrigger>
+            <TabsTrigger value="conditions" className="text-xs sm:text-sm">適用條件</TabsTrigger>
           </TabsList>
 
           {/* Basic Settings */}
-          <TabsContent value="basic" className="space-y-6">
+          <TabsContent value="basic" className="space-y-4 sm:space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">基本資訊</CardTitle>
-                <CardDescription>設定折扣的基本資訊和類型</CardDescription>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">基本資訊</CardTitle>
+                <CardDescription className="text-sm">設定折扣的基本資訊和類型</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">折扣名稱 *</Label>
                     <Input
@@ -405,12 +405,12 @@ const AutoDiscountForm: React.FC<AutoDiscountFormProps> = ({ discount, onSubmit,
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">適用停車場</CardTitle>
-                <CardDescription>選擇此折扣適用的停車場類型</CardDescription>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">適用停車場</CardTitle>
+                <CardDescription className="text-sm">選擇此折扣適用的停車場類型</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardContent className="p-4 sm:p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {parkingTypes.map((parkingType) => (
                     <div key={parkingType._id} className="flex items-center space-x-2">
                       <Checkbox
@@ -438,12 +438,12 @@ const AutoDiscountForm: React.FC<AutoDiscountFormProps> = ({ discount, onSubmit,
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">有效期設定</CardTitle>
-                <CardDescription>設定折扣的有效時間</CardDescription>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">有效期設定</CardTitle>
+                <CardDescription className="text-sm">設定折扣的有效時間</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="validFrom">開始日期 *</Label>
                     <Input
@@ -483,13 +483,13 @@ const AutoDiscountForm: React.FC<AutoDiscountFormProps> = ({ discount, onSubmit,
           </TabsContent>
 
           {/* Conditions */}
-          <TabsContent value="conditions" className="space-y-6">
+          <TabsContent value="conditions" className="space-y-4 sm:space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">用戶限制</CardTitle>
-                <CardDescription>設定折扣適用的用戶條件</CardDescription>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">用戶限制</CardTitle>
+                <CardDescription className="text-sm">設定折扣適用的用戶條件</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
                     <Switch
@@ -519,12 +519,12 @@ const AutoDiscountForm: React.FC<AutoDiscountFormProps> = ({ discount, onSubmit,
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">金額條件</CardTitle>
-                <CardDescription>設定訂單金額條件</CardDescription>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">金額條件</CardTitle>
+                <CardDescription className="text-sm">設定訂單金額條件</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="minBookingAmount">最低訂單金額</Label>
                     <Input
@@ -559,11 +559,11 @@ const AutoDiscountForm: React.FC<AutoDiscountFormProps> = ({ discount, onSubmit,
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">使用限制</CardTitle>
-                <CardDescription>設定折扣使用次數限制</CardDescription>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">使用限制</CardTitle>
+                <CardDescription className="text-sm">設定折扣使用次數限制</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
                 <div className="space-y-2">
                   <Label htmlFor="maxUsage">最大使用次數</Label>
                   <Input

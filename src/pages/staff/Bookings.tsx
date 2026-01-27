@@ -758,7 +758,7 @@ const StaffBookings: React.FC = () => {
   // Don't render until state is ready
   if (loading && bookings.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
         </div>
@@ -767,22 +767,22 @@ const StaffBookings: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">預約管理</h1>
-        <p className="text-gray-600">管理系統中的所有預約</p>
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold">預約管理</h1>
+        <p className="text-gray-600 text-sm sm:text-base">管理系統中的所有預約</p>
       </div>
 
       {/* Filters */}
-      <Card className="mb-6">
+      <Card className="mb-4 sm:mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Filter className="h-5 w-5" />
+          <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+            <Filter className="h-4 w-4 sm:h-5 sm:w-5" />
             <span>篩選</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
             <div>
               <Label htmlFor="search">搜尋</Label>
               <div className="relative">
@@ -848,16 +848,16 @@ const StaffBookings: React.FC = () => {
       </Card>
 
       {/* View Mode Tabs */}
-      <Card className="mb-6">
-        <CardContent className="pt-6">
+      <Card className="mb-4 sm:mb-6">
+        <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
           <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'table' | 'calendar')}>
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="table" className="flex items-center space-x-2">
-                <TableIcon className="h-4 w-4" />
+              <TabsTrigger value="table" className="flex items-center space-x-2 text-xs sm:text-sm">
+                <TableIcon className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span>列表視圖</span>
               </TabsTrigger>
-              <TabsTrigger value="calendar" className="flex items-center space-x-2">
-                <Grid3X3 className="h-4 w-4" />
+              <TabsTrigger value="calendar" className="flex items-center space-x-2 text-xs sm:text-sm">
+                <Grid3X3 className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span>日曆視圖</span>
               </TabsTrigger>
             </TabsList>
@@ -868,15 +868,15 @@ const StaffBookings: React.FC = () => {
       {/* Bookings Table */}
       <Card>
         <CardHeader>
-          <CardTitle>預約清單</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-base sm:text-lg">預約清單</CardTitle>
+          <CardDescription className="text-sm">
             {viewMode === 'table' 
               ? `共 ${total} 筆預約 • 第 ${page} 頁，共 ${totalPages} 頁`
               : '日曆視圖 - 點擊數字查看詳細預約'
             }
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -1058,18 +1058,18 @@ const StaffBookings: React.FC = () => {
 
       {/* Date Bookings Dialog */}
       <Dialog open={showBookingsDialog} onOpenChange={setShowBookingsDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>預約詳細列表</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">預約詳細列表</DialogTitle>
+            <DialogDescription className="text-sm">
               {selectedDate} - {dateBookings.length > 0 ? (dateBookings[0].parkingType?.name || '未知停車場') : '停車場'} 的預約
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
             {dateBookings.map((booking) => (
-              <Card key={booking._id} className="p-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card key={booking._id} className="p-3 sm:p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   <div>
                     <h4 className="font-semibold text-sm text-gray-600">客戶信息</h4>
                     <div className="space-y-1 text-sm">
@@ -1170,17 +1170,17 @@ const StaffBookings: React.FC = () => {
 
       {/* Booking Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>預約詳細資訊</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">預約詳細資訊</DialogTitle>
+            <DialogDescription className="text-sm">
               預約的詳細資訊
             </DialogDescription>
           </DialogHeader>
           
           {selectedBooking && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <h4 className="font-semibold mb-2">客戶資訊</h4>
                   <div className="space-y-2 text-sm">

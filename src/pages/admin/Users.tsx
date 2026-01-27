@@ -538,7 +538,7 @@ const AdminUsers: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -547,90 +547,90 @@ const AdminUsers: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold">用戶管理</h1>
-          <p className="text-gray-600">查看和管理系統中的所有用戶</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">用戶管理</h1>
+          <p className="text-gray-600 text-sm sm:text-base">查看和管理系統中的所有用戶</p>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={handleExportUsers}>
-            <Download className="h-4 w-4 mr-2" />
-            導出數據
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={handleExportUsers} className="flex-1 sm:flex-initial text-xs sm:text-sm">
+            <Download className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">導出數據</span>
           </Button>
-          <Button variant="outline" onClick={loadUsers}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            刷新
+          <Button variant="outline" onClick={loadUsers} className="flex-1 sm:flex-initial text-xs sm:text-sm">
+            <RefreshCw className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">刷新</span>
           </Button>
-          <Button onClick={openCreateDialog}>
-            <Plus className="h-4 w-4 mr-2" />
-            添加用戶
+          <Button onClick={openCreateDialog} className="flex-1 sm:flex-initial text-xs sm:text-sm">
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">添加用戶</span>
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">總用戶</p>
-                <p className="text-2xl font-bold">{stats.totalUsers}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">總用戶</p>
+                <p className="text-xl sm:text-2xl font-bold">{stats.totalUsers}</p>
               </div>
-              <Users className="h-8 w-8 text-blue-600" />
+              <Users className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">VIP用戶</p>
-                <p className="text-2xl font-bold">{stats.vipUsers}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">VIP用戶</p>
+                <p className="text-xl sm:text-2xl font-bold">{stats.vipUsers}</p>
               </div>
-              <Crown className="h-8 w-8 text-yellow-600" />
+              <Crown className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600" />
             </div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">非VIP用戶</p>
-                <p className="text-2xl font-bold">{stats.totalUsers - stats.vipUsers}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">非VIP用戶</p>
+                <p className="text-xl sm:text-2xl font-bold">{stats.totalUsers - stats.vipUsers}</p>
               </div>
-              <UserIcon className="h-8 w-8 text-gray-600" />
+              <UserIcon className="h-6 w-6 sm:h-8 sm:w-8 text-gray-600" />
             </div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">活動用戶</p>
-                <p className="text-2xl font-bold">{stats.activeUsers}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">活動用戶</p>
+                <p className="text-xl sm:text-2xl font-bold">{stats.activeUsers}</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters */}
-      <Card className="mb-6">
+      <Card className="mb-4 sm:mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Filter className="h-5 w-5 mr-2" />
+          <CardTitle className="flex items-center text-base sm:text-lg">
+            <Filter className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
             過濾器
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
             <div>
               <Label htmlFor="search">搜索</Label>
               <div className="relative">
@@ -720,20 +720,20 @@ const AdminUsers: React.FC = () => {
       {/* Users Table */}
       <Card>
         <CardHeader>
-          <CardTitle>用戶列表</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-base sm:text-lg">用戶列表</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             總共 {totalUsers} 用戶 • VIP: {stats.vipUsers} • 非VIP: {stats.totalUsers - stats.vipUsers} • 第 {currentPage} 頁 / {totalPages} 頁
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
                      <Tabs defaultValue="all" className="w-full" onValueChange={(value) => {
              setActiveTab(value as 'all' | 'vip' | 'non-vip');
              setCurrentPage(1); // Reset to first page when switching tabs
            }}>
              <TabsList className="grid w-full grid-cols-3">
-               <TabsTrigger value="all">所有用戶</TabsTrigger>
-               <TabsTrigger value="vip">VIP用戶</TabsTrigger>
-               <TabsTrigger value="non-vip">非VIP用戶</TabsTrigger>
+               <TabsTrigger value="all" className="text-xs sm:text-sm">所有用戶</TabsTrigger>
+               <TabsTrigger value="vip" className="text-xs sm:text-sm">VIP用戶</TabsTrigger>
+               <TabsTrigger value="non-vip" className="text-xs sm:text-sm">非VIP用戶</TabsTrigger>
              </TabsList>
             <TabsContent value="all">
               <Table>
@@ -1318,23 +1318,23 @@ const AdminUsers: React.FC = () => {
 
       {/* User Details Dialog */}
       <Dialog open={showUserDetails} onOpenChange={setShowUserDetails}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>用戶詳細信息</DialogTitle> 
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">用戶詳細信息</DialogTitle> 
+            <DialogDescription className="text-sm">
               用戶詳細信息
             </DialogDescription>
           </DialogHeader>
           
           {selectedUser && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Basic Information */}
               <div>
-                <h4 className="font-semibold mb-3 flex items-center">
-                  <UserIcon className="h-4 w-4 mr-2" />
+                <h4 className="font-semibold mb-2 sm:mb-3 flex items-center text-sm sm:text-base">
+                  <UserIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   基本信息
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                   <div className="space-y-2">
                     <div><strong>姓名:</strong> {selectedUser.name}</div>    
                     <div><strong>電子郵件:</strong> {selectedUser.email}</div>
@@ -1385,27 +1385,27 @@ const AdminUsers: React.FC = () => {
                   <Star className="h-4 w-4 mr-2" />
                   統計
                 </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div className="text-center p-3 bg-gray-50 rounded">
-                    <div className="text-2xl font-bold text-blue-600">{selectedUser.stats?.totalBookings || 0}</div>
-                    <div className="text-gray-500">總預約</div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 text-xs sm:text-sm">
+                  <div className="text-center p-2 sm:p-3 bg-gray-50 rounded">
+                    <div className="text-lg sm:text-2xl font-bold text-blue-600">{selectedUser.stats?.totalBookings || 0}</div>
+                    <div className="text-gray-500 text-xs">總預約</div>
                   </div>
-                  <div className="text-center p-3 bg-gray-50 rounded">
-                    <div className="text-2xl font-bold text-green-600">{formatCurrency(selectedUser.stats?.totalSpent || 0)}</div>
-                    <div className="text-gray-500">總支出</div>
+                  <div className="text-center p-2 sm:p-3 bg-gray-50 rounded">
+                    <div className="text-lg sm:text-2xl font-bold text-green-600">{formatCurrency(selectedUser.stats?.totalSpent || 0)}</div>
+                    <div className="text-gray-500 text-xs">總支出</div>
                   </div>
-                  <div className="text-center p-3 bg-gray-50 rounded">
-                    <div className="text-2xl font-bold text-purple-600">{formatCurrency(selectedUser.stats?.averageSpent || 0)}</div>
-                    <div className="text-gray-500">平均/預約</div>
+                  <div className="text-center p-2 sm:p-3 bg-gray-50 rounded">
+                    <div className="text-lg sm:text-2xl font-bold text-purple-600">{formatCurrency(selectedUser.stats?.averageSpent || 0)}</div>
+                    <div className="text-gray-500 text-xs">平均/預約</div>
                   </div>
-                  <div className="text-center p-3 bg-gray-50 rounded">
-                    <div className="text-2xl font-bold text-orange-600">{getTrendIcon(selectedUser.stats?.bookingTrend || 'stable')}</div>
-                    <div className="text-gray-500">趨勢</div>
+                  <div className="text-center p-2 sm:p-3 bg-gray-50 rounded">
+                    <div className="text-lg sm:text-2xl font-bold text-orange-600">{getTrendIcon(selectedUser.stats?.bookingTrend || 'stable')}</div>
+                    <div className="text-gray-500 text-xs">趨勢</div>
                   </div>
                 </div>
 
                 {/* Additional Statistics */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-sm">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mt-3 sm:mt-4 text-xs sm:text-sm">
                   <div className="text-center p-3 bg-blue-50 rounded">
                     <div className="text-xl font-bold text-blue-600">{selectedUser.stats?.completedBookings || 0}</div>
                     <div className="text-gray-500">完成</div>
@@ -1508,9 +1508,9 @@ const AdminUsers: React.FC = () => {
           resetForm();
         }
       }}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{isEditing ? '編輯用戶' : '添加新用戶'}</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">{isEditing ? '編輯用戶' : '添加新用戶'}</DialogTitle>
             <DialogDescription>
               {isEditing ? '更新用戶信息' : '在系統中創建新用戶'}
             </DialogDescription>

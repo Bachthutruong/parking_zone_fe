@@ -56,4 +56,31 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Mobile optimizations */
+@layer utilities {
+  /* Prevent text size adjustment on iOS */
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  
+  /* Touch-friendly tap targets */
+  button, a, input, select, textarea {
+    touch-action: manipulation;
+  }
+  
+  /* Smooth scrolling on mobile */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+  
+  /* Better focus visibility on mobile */
+  *:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
 } 

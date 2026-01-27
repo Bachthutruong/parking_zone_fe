@@ -850,7 +850,7 @@ const BookingsPage: React.FC = () => {
   // Don't render until state is ready
   if (loading && bookings.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
         </div>
@@ -859,22 +859,22 @@ const BookingsPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">預約管理</h1>
-        <p className="text-gray-600">管理系統中的所有預約</p>
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold">預約管理</h1>
+        <p className="text-gray-600 text-sm sm:text-base">管理系統中的所有預約</p>
       </div>
 
       {/* Filters */}
-      <Card className="mb-6">
+      <Card className="mb-4 sm:mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Filter className="h-5 w-5" />
+          <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+            <Filter className="h-4 w-4 sm:h-5 sm:w-5" />
             <span>篩選</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
             <div>
               <Label htmlFor="search">搜尋</Label>
               <div className="relative">
@@ -941,27 +941,27 @@ const BookingsPage: React.FC = () => {
       </Card>
 
       {/* Parking Type Tabs */}
-      <Tabs value={selectedParkingType} onValueChange={setSelectedParkingType} className="mb-6">
+      <Tabs value={selectedParkingType} onValueChange={setSelectedParkingType} className="mb-4 sm:mb-6">
         <TabsList className="w-full justify-start overflow-x-auto">
-          <TabsTrigger value="all">所有停車場</TabsTrigger>
+          <TabsTrigger value="all" className="text-xs sm:text-sm">所有停車場</TabsTrigger>
           {parkingTypes.map((pt) => (
-            <TabsTrigger key={pt._id} value={pt._id}>{pt.name}</TabsTrigger>
+            <TabsTrigger key={pt._id} value={pt._id} className="text-xs sm:text-sm">{pt.name}</TabsTrigger>
           ))}
         </TabsList>
       </Tabs>
 
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'active' | 'deleted')} className="mb-6">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'active' | 'deleted')} className="mb-4 sm:mb-6">
         <TabsList>
-          <TabsTrigger value="active">有效預約</TabsTrigger>
-          <TabsTrigger value="deleted">已刪除預約</TabsTrigger>
+          <TabsTrigger value="active" className="text-xs sm:text-sm">有效預約</TabsTrigger>
+          <TabsTrigger value="deleted" className="text-xs sm:text-sm">已刪除預約</TabsTrigger>
         </TabsList>
       </Tabs>
 
       {/* Bookings List */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>預約清單 ({total})</CardTitle>
-          <div className="flex items-center space-x-2">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+          <CardTitle className="text-base sm:text-lg">預約清單 ({total})</CardTitle>
+          <div className="flex flex-wrap items-center gap-2">
             <Label htmlFor="limit">顯示數量:</Label>
             <Select 
               value={itemsPerPage.toString()} 
@@ -979,20 +979,20 @@ const BookingsPage: React.FC = () => {
             </Select>
 
             <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'table' | 'calendar')}>
-              <TabsList className="h-9">
-                <TabsTrigger value="table" className="flex items-center gap-1.5 px-3">
-                  <TableIcon className="h-4 w-4" />
-                  <span>列表</span>
+              <TabsList className="h-8 sm:h-9">
+                <TabsTrigger value="table" className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 text-xs sm:text-sm">
+                  <TableIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">列表</span>
                 </TabsTrigger>
-                <TabsTrigger value="calendar" className="flex items-center gap-1.5 px-3">
-                  <Grid3X3 className="h-4 w-4" />
-                  <span>日曆</span>
+                <TabsTrigger value="calendar" className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 text-xs sm:text-sm">
+                  <Grid3X3 className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">日曆</span>
                 </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -1204,10 +1204,10 @@ const BookingsPage: React.FC = () => {
               )}
             </>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div className="text-center">
-                <h3 className="text-lg font-semibold mb-2">停車場使用情況日曆</h3>
-                <p className="text-gray-600">點擊數字查看該日期的詳細預約</p>
+                <h3 className="text-base sm:text-lg font-semibold mb-2">停車場使用情況日曆</h3>
+                <p className="text-gray-600 text-sm">點擊數字查看該日期的詳細預約</p>
               </div>
               {renderCalendar()}
             </div>
@@ -1217,30 +1217,30 @@ const BookingsPage: React.FC = () => {
 
       {/* Date Bookings Dialog */}
       <Dialog open={showBookingsDialog} onOpenChange={setShowBookingsDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>預約詳細列表</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">預約詳細列表</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               {selectedDate} - {parkingTypes.find(pt => pt._id === selectedParkingType)?.name || '停車場'} 的預約
               {dateBookings.length > 0 ? ` (共 ${dateBookings.length} 筆)` : ''}
             </DialogDescription>
           </DialogHeader>
           
           {dateBookings.length === 0 ? (
-            <div className="py-12 text-center">
+            <div className="py-8 sm:py-12 text-center">
               <div className="text-gray-400 mb-4">
-                <Calendar className="h-16 w-16 mx-auto opacity-50" />
+                <Calendar className="h-12 w-12 sm:h-16 sm:w-16 mx-auto opacity-50" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-600 mb-2">該日無預約</h3>
-              <p className="text-gray-500">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-600 mb-2">該日無預約</h3>
+              <p className="text-gray-500 text-sm sm:text-base">
                 {selectedDate} 的 {parkingTypes.find(pt => pt._id === selectedParkingType)?.name || '此停車場'} 目前沒有任何預約記錄。
               </p>
             </div>
           ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {dateBookings.map((booking) => (
-              <Card key={booking._id} className="p-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card key={booking._id} className="p-3 sm:p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   <div>
                     <h4 className="font-semibold text-sm text-gray-600">客戶信息</h4>
                     <div className="space-y-1 text-sm">

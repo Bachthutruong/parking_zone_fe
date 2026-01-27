@@ -149,7 +149,7 @@ const AutoDiscountList: React.FC<AutoDiscountListProps> = ({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="p-4 sm:p-6">
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>自動折扣列表</CardTitle>
@@ -168,7 +168,7 @@ const AutoDiscountList: React.FC<AutoDiscountListProps> = ({
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 sm:p-6">
         {/* Filters */}
         <div className="flex items-center space-x-4 mb-6">
           <div className="flex-1">
@@ -302,7 +302,7 @@ const AutoDiscountList: React.FC<AutoDiscountListProps> = ({
                               <span>刪除</span>
                             </Button>
                           </AlertDialogTrigger>
-                          <AlertDialogContent>
+                          <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
                             <AlertDialogHeader>
                               <AlertDialogTitle>確認刪除</AlertDialogTitle>
                               <AlertDialogDescription>

@@ -201,16 +201,16 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold">儀表板</h1>
-          <p className="text-gray-600">停車場系統概覽</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">儀表板</h1>
+          <p className="text-gray-600 text-sm sm:text-base">停車場系統概覽</p>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-32">
+            <SelectTrigger className="w-full sm:w-32">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -220,26 +220,26 @@ const Dashboard: React.FC = () => {
               <SelectItem value="1y">1年</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={loadDashboardData}>
+          <Button variant="outline" onClick={loadDashboardData} className="flex-1 sm:flex-initial">
             <RefreshCw className="h-4 w-4 mr-2" />
-            重新整理
+            <span className="hidden sm:inline">重新整理</span>
           </Button>
-          <Button onClick={handleExportReport}>
+          <Button onClick={handleExportReport} className="flex-1 sm:flex-initial">
             <Download className="h-4 w-4 mr-2" />
-            匯出報告
+            <span className="hidden sm:inline">匯出報告</span>
           </Button>
         </div>
       </div>
 
       {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">今日預約</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">今日預約</CardTitle>
+            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.todayBookings || 0}</div>
+          <CardContent className="p-4 sm:p-6">
+            <div className="text-xl sm:text-2xl font-bold">{stats?.todayBookings || 0}</div>
             <div className="flex items-center text-xs text-muted-foreground">
               {getGrowthIcon(8.2)}
               <span className="ml-1">比昨天增加8.2%</span>
@@ -248,12 +248,12 @@ const Dashboard: React.FC = () => {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">今日營收</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">今日營收</CardTitle>
+            <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats?.todayRevenue || 0)}</div>
+          <CardContent className="p-4 sm:p-6">
+            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(stats?.todayRevenue || 0)}</div>
             <div className="flex items-center text-xs text-muted-foreground">
               {getGrowthIcon(12.5)}
               <span className="ml-1">比昨天增加12.5%</span>
@@ -262,12 +262,12 @@ const Dashboard: React.FC = () => {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">剩餘空位</CardTitle>
-            <Car className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">剩餘空位</CardTitle>
+            <Car className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.availableSpaces || 0}</div>
+          <CardContent className="p-4 sm:p-6">
+            <div className="text-xl sm:text-2xl font-bold">{stats?.availableSpaces || 0}</div>
             <p className="text-xs text-muted-foreground">
               總共 {stats?.totalSpaces || 0} 個停車位
             </p>
@@ -275,12 +275,12 @@ const Dashboard: React.FC = () => {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">正在停車</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">正在停車</CardTitle>
+            <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.parkedVehicles || 0}</div>
+          <CardContent className="p-4 sm:p-6">
+            <div className="text-xl sm:text-2xl font-bold">{stats?.parkedVehicles || 0}</div>
             <p className="text-xs text-muted-foreground">
               {stats?.leavingToday || 0} 輛車今天即將離開
             </p>
@@ -289,17 +289,17 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Main Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8">
         {/* Revenue Trend Chart */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
               <span>營收趨勢</span>
             </CardTitle>
-            <CardDescription>按時間的營收</CardDescription>
+            <CardDescription className="text-sm">按時間的營收</CardDescription>
           </CardHeader>
-          <CardContent style={{ height: 300 }}>
+          <CardContent className="p-4 sm:p-6" style={{ height: 300 }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={revenueData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -314,14 +314,14 @@ const Dashboard: React.FC = () => {
 
         {/* Parking Usage Chart */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <MapPin className="h-5 w-5" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+              <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
               <span>停車場使用率</span>
             </CardTitle>
-            <CardDescription>各類型停車場的使用分布</CardDescription>
+            <CardDescription className="text-sm">各類型停車場的使用分布</CardDescription>
           </CardHeader>
-          <CardContent style={{ height: 300 }}>
+          <CardContent className="p-4 sm:p-6" style={{ height: 300 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -346,13 +346,13 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Peak Hours Chart */}
-      <Card className="mb-8">
-        <CardHeader>
-                      <CardTitle className="flex items-center space-x-2">
-              <Clock className="h-5 w-5" />
+      <Card className="mb-6 sm:mb-8">
+        <CardHeader className="p-4 sm:p-6">
+                      <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
               <span>高峰時段</span>
             </CardTitle>
-            <CardDescription>每日各時段的預約數量</CardDescription>
+            <CardDescription className="text-sm">每日各時段的預約數量</CardDescription>
         </CardHeader>
         <CardContent style={{ height: 300 }}>
           <ResponsiveContainer width="100%" height="100%">
@@ -368,31 +368,31 @@ const Dashboard: React.FC = () => {
       </Card>
 
       {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="overview">概覽</TabsTrigger>
-          <TabsTrigger value="revenue">營收</TabsTrigger>
-          <TabsTrigger value="bookings">預約</TabsTrigger>
-          <TabsTrigger value="customers">客戶</TabsTrigger>
-          <TabsTrigger value="parking">停車場</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 overflow-x-auto">
+          <TabsTrigger value="overview" className="text-xs sm:text-sm">概覽</TabsTrigger>
+          <TabsTrigger value="revenue" className="text-xs sm:text-sm">營收</TabsTrigger>
+          <TabsTrigger value="bookings" className="text-xs sm:text-sm">預約</TabsTrigger>
+          <TabsTrigger value="customers" className="text-xs sm:text-sm">客戶</TabsTrigger>
+          <TabsTrigger value="parking" className="text-xs sm:text-sm">停車場</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TabsContent value="overview" className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Recent Bookings */}
             <Card>
-              <CardHeader>
-                                  <CardTitle className="flex items-center space-x-2">
-                    <Activity className="h-5 w-5" />
+              <CardHeader className="p-4 sm:p-6">
+                                  <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+                    <Activity className="h-4 w-4 sm:h-5 sm:w-5" />
                     <span>最近預約</span>
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-sm">
                     最新預約清單
                   </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="p-4 sm:p-6">
+                <div className="space-y-3 sm:space-y-4">
                   {stats?.recentBookings?.slice(0, 5).map((booking) => (
                     <div key={booking._id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center space-x-3">
@@ -418,31 +418,31 @@ const Dashboard: React.FC = () => {
 
             {/* Quick Actions */}
             <Card>
-              <CardHeader>
-                                  <CardTitle className="flex items-center space-x-2">
-                    <Settings className="h-5 w-5" />
+              <CardHeader className="p-4 sm:p-6">
+                                  <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+                    <Settings className="h-4 w-4 sm:h-5 sm:w-5" />
                     <span>快速操作</span>
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-sm">
                     常用操作
                   </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                                      <Button className="h-20 flex flex-col space-y-2">
-                      <Plus className="h-6 w-6" />
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                                      <Button className="h-16 sm:h-20 flex flex-col space-y-1 sm:space-y-2 text-xs sm:text-sm">
+                      <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
                       <span>創建預約</span>
                     </Button>
-                    <Button variant="outline" className="h-20 flex flex-col space-y-2">
-                      <BarChart3 className="h-6 w-6" />
+                    <Button variant="outline" className="h-16 sm:h-20 flex flex-col space-y-1 sm:space-y-2 text-xs sm:text-sm">
+                      <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6" />
                       <span>報告</span>
                     </Button>
-                    <Button variant="outline" className="h-20 flex flex-col space-y-2">
-                      <Users className="h-6 w-6" />
+                    <Button variant="outline" className="h-16 sm:h-20 flex flex-col space-y-1 sm:space-y-2 text-xs sm:text-sm">
+                      <Users className="h-5 w-5 sm:h-6 sm:w-6" />
                       <span>管理客戶</span>
                     </Button>
-                    <Button variant="outline" className="h-20 flex flex-col space-y-2">
-                      <Settings className="h-6 w-6" />
+                    <Button variant="outline" className="h-16 sm:h-20 flex flex-col space-y-1 sm:space-y-2 text-xs sm:text-sm">
+                      <Settings className="h-5 w-5 sm:h-6 sm:w-6" />
                       <span>設定</span>
                     </Button>
                 </div>
@@ -452,14 +452,14 @@ const Dashboard: React.FC = () => {
         </TabsContent>
 
         {/* Revenue Tab */}
-        <TabsContent value="revenue" className="space-y-6">
+        <TabsContent value="revenue" className="space-y-4 sm:space-y-6">
           <Card>
             <CardHeader>
-                          <CardTitle>營收分析</CardTitle>
-            <CardDescription>按時間的詳細營收</CardDescription>
+                          <CardTitle className="text-base sm:text-lg">營收分析</CardTitle>
+            <CardDescription className="text-sm">按時間的詳細營收</CardDescription>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
+            <CardContent className="p-4 sm:p-6">
+              <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={revenueData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
@@ -472,48 +472,48 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">平均每日營收</CardTitle>
+                <CardTitle className="text-base sm:text-lg">平均每日營收</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-600">{formatCurrency(516000)}</div>
-                <p className="text-sm text-gray-500">比上個月增長12.5%</p>
+                <div className="text-2xl sm:text-3xl font-bold text-green-600">{formatCurrency(516000)}</div>
+                <p className="text-xs sm:text-sm text-gray-500">比上個月增長12.5%</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">最高營收</CardTitle>
+                <CardTitle className="text-base sm:text-lg">最高營收</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-blue-600">{formatCurrency(3490000)}</div>
-                <p className="text-sm text-gray-500">2024年7月</p>
+                <div className="text-2xl sm:text-3xl font-bold text-blue-600">{formatCurrency(3490000)}</div>
+                <p className="text-xs sm:text-sm text-gray-500">2024年7月</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">增長率</CardTitle>
+                <CardTitle className="text-base sm:text-lg">增長率</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-purple-600">+15.2%</div>
-                <p className="text-sm text-gray-500">與去年同期相比</p>
+                <div className="text-2xl sm:text-3xl font-bold text-purple-600">+15.2%</div>
+                <p className="text-xs sm:text-sm text-gray-500">與去年同期相比</p>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
         {/* Bookings Tab */}
-        <TabsContent value="bookings" className="space-y-6">
+        <TabsContent value="bookings" className="space-y-4 sm:space-y-6">
           <Card>
             <CardHeader>
-                          <CardTitle>預約趨勢</CardTitle>
-            <CardDescription>按狀態的預約統計</CardDescription>
+                          <CardTitle className="text-base sm:text-lg">預約趨勢</CardTitle>
+            <CardDescription className="text-sm">按狀態的預約統計</CardDescription>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
+            <CardContent className="p-4 sm:p-6">
+              <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={bookingTrendsData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
@@ -527,45 +527,45 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">成功預約</CardTitle>
+                <CardTitle className="text-base sm:text-lg">成功預約</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-600">2,679</div>
-                <p className="text-sm text-gray-500">94.2% 總預約數</p>
+                <div className="text-2xl sm:text-3xl font-bold text-green-600">2,679</div>
+                <p className="text-xs sm:text-sm text-gray-500">94.2% 總預約數</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">已取消預約</CardTitle>
+                <CardTitle className="text-base sm:text-lg">已取消預約</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-red-600">168</div>
-                <p className="text-sm text-gray-500">5.8% 總預約數</p>
+                <div className="text-2xl sm:text-3xl font-bold text-red-600">168</div>
+                <p className="text-xs sm:text-sm text-gray-500">5.8% 總預約數</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">等待確認</CardTitle>
+                <CardTitle className="text-base sm:text-lg">等待確認</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-yellow-600">45</div>
-                <p className="text-sm text-gray-500">1.6% 總預約數</p>
+                <div className="text-2xl sm:text-3xl font-bold text-yellow-600">45</div>
+                <p className="text-xs sm:text-sm text-gray-500">1.6% 總預約數</p>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
         {/* Customers Tab */}
-        <TabsContent value="customers" className="space-y-6">
+        <TabsContent value="customers" className="space-y-4 sm:space-y-6">
           <Card>
             <CardHeader>
-                          <CardTitle>頂級客戶</CardTitle>
-            <CardDescription>預約數量最高的前5名客戶</CardDescription>
+                          <CardTitle className="text-base sm:text-lg">頂級客戶</CardTitle>
+            <CardDescription className="text-sm">預約數量最高的前5名客戶</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -592,14 +592,14 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             <Card>
               <CardHeader>
-                              <CardTitle>新客戶</CardTitle>
-              <CardDescription>按月份的新客戶統計</CardDescription>
+                              <CardTitle className="text-base sm:text-lg">新客戶</CardTitle>
+              <CardDescription className="text-sm">按月份的新客戶統計</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={revenueData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
@@ -613,23 +613,23 @@ const Dashboard: React.FC = () => {
 
             <Card>
               <CardHeader>
-                              <CardTitle>客戶統計</CardTitle>
-              <CardDescription>客戶概覽</CardDescription>
+                              <CardTitle className="text-base sm:text-lg">客戶統計</CardTitle>
+              <CardDescription className="text-sm">客戶概覽</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
+              <CardContent className="space-y-3 sm:space-y-4">
+                <div className="flex justify-between items-center text-sm sm:text-base">
                   <span>總客戶數</span>
                   <span className="font-semibold">1,247</span>
                 </div>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center text-sm sm:text-base">
                   <span>本月新客戶</span>
                   <span className="font-semibold text-green-600">156</span>
                 </div>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center text-sm sm:text-base">
                   <span>VIP客戶</span>
                   <span className="font-semibold text-purple-600">89</span>
                 </div>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center text-sm sm:text-base">
                   <span>回訪率</span>
                   <span className="font-semibold text-blue-600">78.5%</span>
                 </div>
@@ -639,32 +639,32 @@ const Dashboard: React.FC = () => {
         </TabsContent>
 
         {/* Parking Tab */}
-        <TabsContent value="parking" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TabsContent value="parking" className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <MapPin className="h-5 w-5" />
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+                  <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
                   <span>停車場狀態</span>
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-sm">
                   各停車場狀況概覽
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <CardContent className="p-4 sm:p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {parkingStats.map((lot) => (
                     <Card key={lot._id} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-4">
+                      <CardContent className="p-3 sm:p-4">
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold">{lot.name}</h3>
+                          <h3 className="font-semibold text-sm sm:text-base">{lot.name}</h3>
                           <Badge variant={(lot.type || 'indoor') === 'indoor' ? 'default' : 'secondary'}>
                             {(lot.type || 'indoor') === 'indoor' ? '🏢 Trong nhà' : 
                              (lot.type || 'indoor') === 'outdoor' ? '🌤 Ngoài trời' : '♿️ Khuyết tật'}
                           </Badge>
                         </div>
                         
-                        <div className="space-y-2 text-sm">
+                        <div className="space-y-2 text-xs sm:text-sm">
                           <div className="flex justify-between">
                             <span>空位:</span>
                             <span className="font-medium">{lot.availableSpaces}/{lot.totalSpaces}</span>
@@ -696,11 +696,11 @@ const Dashboard: React.FC = () => {
 
             <Card>
               <CardHeader>
-                            <CardTitle>停車場效能</CardTitle>
-            <CardDescription>各類型停車場的使用率</CardDescription>
+                            <CardTitle className="text-base sm:text-lg">停車場效能</CardTitle>
+            <CardDescription className="text-sm">各類型停車場的使用率</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
                     <Pie
                       data={parkingTypeData}
@@ -724,27 +724,27 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Current Status Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Currently Parked Vehicles */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Car className="h-5 w-5" />
+                <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+                  <Car className="h-4 w-4 sm:h-5 sm:w-5" />
                   <span>正在停車 ({currentStatus?.parkedVehicles?.length || 0})</span>
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-sm">
                   停車場內的車輛清單
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
+              <CardContent className="p-4 sm:p-6">
+                <div className="space-y-2 sm:space-y-3">
                   {currentStatus?.parkedVehicles?.slice(0, 5).map((booking) => (
-                    <div key={booking._id} className="p-3 border rounded-lg">
+                    <div key={booking._id} className="p-2 sm:p-3 border rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium">{booking.driverName}</span>
                         <CheckCircle className="h-4 w-4 text-green-600" />
                       </div>
-                      <div className="text-sm text-gray-600 space-y-1">
+                      <div className="text-xs sm:text-sm text-gray-600 space-y-1">
                         <div>{booking.licensePlate}</div>
                         <div>進入: {formatDateTime(booking.actualCheckInTime || booking.checkInTime)}</div>
                         <div>預計離開: {formatDateTime(booking.checkOutTime)}</div>
@@ -758,23 +758,23 @@ const Dashboard: React.FC = () => {
             {/* Arriving Today */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Clock className="h-5 w-5" />
+                <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
                   <span>即將到達 ({currentStatus?.arrivingToday?.length || 0})</span>
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-sm">
                   今天預計到達的車輛
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
+              <CardContent className="p-4 sm:p-6">
+                <div className="space-y-2 sm:space-y-3">
                   {currentStatus?.arrivingToday?.slice(0, 5).map((booking) => (
-                    <div key={booking._id} className="p-3 border rounded-lg">
+                    <div key={booking._id} className="p-2 sm:p-3 border rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium">{booking.driverName}</span>
                         <AlertCircle className="h-4 w-4 text-yellow-600" />
                       </div>
-                      <div className="text-sm text-gray-600 space-y-1">
+                      <div className="text-xs sm:text-sm text-gray-600 space-y-1">
                         <div>{booking.licensePlate}</div>
                         <div>預計: {formatDateTime(booking.estimatedArrivalTime || booking.checkInTime)}</div>
                         <div>航班: {booking.flightNumber || 'N/A'}</div>
@@ -788,18 +788,18 @@ const Dashboard: React.FC = () => {
             {/* Leaving Today */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <XCircle className="h-5 w-5" />
+                <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+                  <XCircle className="h-4 w-4 sm:h-5 sm:w-5" />
                   <span>即將離開 ({currentStatus?.leavingToday?.length || 0})</span>
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-sm">
                   今天預計離開的車輛
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
+              <CardContent className="p-4 sm:p-6">
+                <div className="space-y-2 sm:space-y-3">
                   {currentStatus?.leavingToday?.slice(0, 5).map((booking) => (
-                    <div key={booking._id} className="p-3 border rounded-lg">
+                    <div key={booking._id} className="p-2 sm:p-3 border rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium">{booking.driverName}</span>
                         <XCircle className="h-4 w-4 text-red-600" />
