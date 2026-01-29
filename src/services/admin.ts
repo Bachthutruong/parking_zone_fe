@@ -78,8 +78,30 @@ export const getAllUsers = async (params?: {
   isVIP?: boolean;
   page?: number;
   limit?: number;
+  search?: string;
+  isActive?: boolean;
 }): Promise<{ users: User[]; total: number; page: number; totalPages: number }> => {
   const response = await api.get('/admin/users', { params });
+  return response.data;
+};
+
+// Get all users with stats in one request (single API call, server-side pagination)
+export const getAllUsersWithStats = async (params?: {
+  role?: string;
+  isVIP?: boolean;
+  page?: number;
+  limit?: number;
+  search?: string;
+  isActive?: boolean;
+}): Promise<{
+  users: (User & { stats: any })[];
+  total: number;
+  totalPages: number;
+  currentPage: number;
+  totalVip?: number;
+  totalActive?: number;
+}> => {
+  const response = await api.get('/admin/users/with-stats', { params });
   return response.data;
 };
 

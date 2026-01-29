@@ -3,13 +3,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Calendar,
   Car,
   Clock,
-//   User,
-//   Phone,
-//   Mail,
+  Pencil,
   AlertTriangle,
   CheckCircle,
   XCircle,
@@ -19,8 +21,8 @@ import {
   Printer
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getTodayBookings } from '@/services/admin';
-import { formatDateTime } from '@/lib/dateUtils';
+import { getTodayBookings, updateBooking } from '@/services/admin';
+import { formatDateTime, toDateTimeLocal, fromDateTimeLocal } from '@/lib/dateUtils';
 
 interface TodayBooking {
   _id: string;
@@ -54,10 +56,41 @@ interface TodaySummary {
   };
 }
 
+interface EditFormState {
+  driverName: string;
+  phone: string;
+  email: string;
+  licensePlate: string;
+  checkInTime: string;
+  checkOutTime: string;
+  status: string;
+  notes?: string;
+}
+
+const STATUS_OPTIONS = [
+  { value: 'pending', label: '待確認' },
+  { value: 'confirmed', label: '預約成功' },
+  { value: 'checked-in', label: '已進入停車場' },
+  { value: 'checked-out', label: '已離開停車場' },
+  { value: 'cancelled', label: '已取消' },
+] as const;
+
 const AdminTodayOverview: React.FC = () => {
   const [data, setData] = useState<TodaySummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'checkins' | 'checkouts' | 'overdue'>('checkins');
+  const [editingBooking, setEditingBooking] = useState<TodayBooking | null>(null);
+  const [editForm, setEditForm] = useState<EditFormState>({
+    driverName: '',
+    phone: '',
+    email: '',
+    licensePlate: '',
+    checkInTime: '',
+    checkOutTime: '',
+    status: 'confirmed',
+    notes: '',
+  });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadTodayData();
@@ -104,6 +137,50 @@ const AdminTodayOverview: React.FC = () => {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const openEditDialog = (booking: TodayBooking) => {
+    setEditingBooking(booking);
+    setEditForm({
+      driverName: booking.driverName ?? '',
+      phone: booking.phone ?? '',
+      email: (booking as any).email ?? '',
+      licensePlate: booking.licensePlate ?? '',
+      checkInTime: toDateTimeLocal(booking.checkInTime),
+      checkOutTime: toDateTimeLocal(booking.checkOutTime),
+      status: booking.status ?? 'confirmed',
+      notes: (booking as any).notes ?? '',
+    });
+  };
+
+  const closeEditDialog = () => {
+    setEditingBooking(null);
+    setSaving(false);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBooking) return;
+    try {
+      setSaving(true);
+      await updateBooking(editingBooking._id, {
+        driverName: editForm.driverName,
+        phone: editForm.phone,
+        email: editForm.email || undefined,
+        licensePlate: editForm.licensePlate,
+        checkInTime: fromDateTimeLocal(editForm.checkInTime),
+        checkOutTime: fromDateTimeLocal(editForm.checkOutTime),
+        status: editForm.status as 'pending' | 'confirmed' | 'checked-in' | 'checked-out' | 'cancelled',
+        notes: editForm.notes || undefined,
+      });
+      toast.success('已更新預約資訊');
+      closeEditDialog();
+      loadTodayData();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || '更新失敗');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -246,6 +323,7 @@ const AdminTodayOverview: React.FC = () => {
                 <TableHead>時間</TableHead>
                 <TableHead>狀態</TableHead>
                 <TableHead>金額</TableHead>
+                <TableHead className="no-print">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -287,6 +365,18 @@ const AdminTodayOverview: React.FC = () => {
                       {formatCurrency(booking.finalAmount)}
                     </div>
                   </TableCell>
+                  <TableCell className="no-print">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs sm:text-sm"
+                      onClick={() => openEditDialog(booking)}
+                      title="編輯此預約"
+                    >
+                      <Pencil className="h-3 w-3 sm:mr-1" />
+                      <span className="hidden sm:inline">編輯</span>
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -309,6 +399,119 @@ const AdminTodayOverview: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Booking Dialog */}
+      <Dialog open={!!editingBooking} onOpenChange={(open) => !open && closeEditDialog()}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>編輯預約</DialogTitle>
+            <DialogDescription>
+              {editingBooking && `預約編號: ${editingBooking.bookingNumber}`}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-driverName">客戶姓名 *</Label>
+                <Input
+                  id="edit-driverName"
+                  value={editForm.driverName}
+                  onChange={(e) => setEditForm((f) => ({ ...f, driverName: e.target.value }))}
+                  required
+                  placeholder="客戶姓名"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">電話 *</Label>
+                <Input
+                  id="edit-phone"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                  required
+                  placeholder="電話"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="email@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-licensePlate">車牌號碼 *</Label>
+              <Input
+                id="edit-licensePlate"
+                value={editForm.licensePlate}
+                onChange={(e) => setEditForm((f) => ({ ...f, licensePlate: e.target.value }))}
+                required
+                placeholder="車牌號碼"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-checkInTime">進入時間 *</Label>
+                <Input
+                  id="edit-checkInTime"
+                  type="datetime-local"
+                  value={editForm.checkInTime}
+                  onChange={(e) => setEditForm((f) => ({ ...f, checkInTime: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-checkOutTime">離開時間 *</Label>
+                <Input
+                  id="edit-checkOutTime"
+                  type="datetime-local"
+                  value={editForm.checkOutTime}
+                  onChange={(e) => setEditForm((f) => ({ ...f, checkOutTime: e.target.value }))}
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-status">狀態</Label>
+              <Select
+                value={editForm.status}
+                onValueChange={(value) => setEditForm((f) => ({ ...f, status: value }))}
+              >
+                <SelectTrigger id="edit-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-notes">備註</Label>
+              <Input
+                id="edit-notes"
+                value={editForm.notes ?? ''}
+                onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
+                placeholder="備註"
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closeEditDialog} disabled={saving}>
+                取消
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? '儲存中...' : '儲存'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Print Styles */}
       <style>{`

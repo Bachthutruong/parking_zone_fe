@@ -41,7 +41,7 @@ import {
   Key
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getAllUsers, updateUserVIP, updateUser, createUser, deleteUser, getUserStats } from '@/services/admin';
+import { getAllUsersWithStats, updateUserVIP, updateUser, createUser, deleteUser } from '@/services/admin';
 import { formatDate } from '@/lib/dateUtils';
 import type { User, Booking } from '@/types';
 
@@ -81,6 +81,8 @@ const AdminUsers: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
   console.log(isTyping,'isTyping');
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const prevFilterRef = useRef<string>('');
+  const lastLoadedPageRef = useRef<number>(1);
   const [searchValue, setSearchValue] = useState('');
   const [filters, setFilters] = useState<UserFilters>({
     search: '',
@@ -99,9 +101,8 @@ const AdminUsers: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
-  const [allUsers, setAllUsers] = useState<UserWithStats[]>([]);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
   const [activeTab, setActiveTab] = useState<'all' | 'vip' | 'non-vip'>('all');
-  console.log(activeTab,'activeTab');
   const [stats, setStats] = useState({
     totalUsers: 0,
     vipUsers: 0,
@@ -130,8 +131,16 @@ const AdminUsers: React.FC = () => {
   });
 
   useEffect(() => {
-    loadUsers();
-  }, [filters.search, filters.role, filters.vipStatus, filters.isActive]);
+    const filterKey = `${filters.search}|${filters.role}|${filters.vipStatus}|${filters.isActive}|${activeTab}|${itemsPerPage}`;
+    const filterChanged = prevFilterRef.current !== filterKey;
+    prevFilterRef.current = filterKey;
+    const pageToLoad = filterChanged ? 1 : currentPage;
+    const pageChanged = lastLoadedPageRef.current !== pageToLoad;
+    if (!filterChanged && !pageChanged) return;
+    lastLoadedPageRef.current = pageToLoad;
+    if (filterChanged) setCurrentPage(1);
+    loadUsers(pageToLoad);
+  }, [filters.search, filters.role, filters.vipStatus, filters.isActive, currentPage, itemsPerPage, activeTab]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -142,71 +151,30 @@ const AdminUsers: React.FC = () => {
     };
   }, []);
 
-  const loadUsers = async () => {
+  const loadUsers = async (pageOverride?: number) => {
     try {
       setLoading(true);
+      const page = pageOverride !== undefined ? pageOverride : currentPage;
       const params: any = {
-        page: 1,
-        limit: 1000 // Load all users at once
+        page,
+        limit: itemsPerPage
       };
+      if (filters.search) params.search = filters.search;
+      if (filters.role !== 'all') params.role = filters.role;
+      if (filters.vipStatus !== 'all') params.isVIP = filters.vipStatus === 'vip';
+      if (filters.isActive !== 'all') params.isActive = filters.isActive === 'active';
+      if (activeTab === 'vip') params.isVIP = true;
+      if (activeTab === 'non-vip') params.isVIP = false;
 
-      if (filters.search) {
-        params.search = filters.search;
-      }
-      if (filters.role !== 'all') {
-        params.role = filters.role;
-      }
-      if (filters.vipStatus !== 'all') {
-        params.isVIP = filters.vipStatus === 'vip';
-      }
-      if (filters.isActive !== 'all') {
-        params.isActive = filters.isActive === 'active';
-      }
+      const data = await getAllUsersWithStats(params);
 
-      const data = await getAllUsers(params);
-      
-      // Load stats for each user
-      const usersWithStats = await Promise.all(
-        data.users.map(async (user: User) => {
-          try {
-            const statsData = await getUserStats(user._id);
-            return {
-              ...user,
-              stats: statsData.stats
-            };
-          } catch (error) {
-            console.error(`Error loading stats for user ${user._id}:`, error);
-            return {
-              ...user,
-              stats: {
-                totalBookings: 0,
-                totalSpent: 0,
-                averageSpent: 0,
-                bookingTrend: 'stable' as const,
-                recentBookings: [],
-                completedBookings: 0,
-                cancelledBookings: 0,
-                pendingBookings: 0,
-                confirmedBookings: 0,
-                averageDuration: 0,
-                totalVipSavings: 0,
-                vipBookingsCount: 0
-              }
-            };
-          }
-        })
-      );
-      
-      setAllUsers(usersWithStats);
-      setUsers(usersWithStats);
+      setUsers(data.users);
       setTotalUsers(data.total || 0);
-      setTotalPages(Math.ceil((data.total || 0) / 10));
-      
-      // Update stats
+      setTotalPages(data.totalPages || 1);
       setStats({
         totalUsers: data.total || 0,
-        vipUsers: usersWithStats.filter(u => u.isVIP).length,
-        activeUsers: usersWithStats.filter(u => u.isActive).length,
+        vipUsers: data.totalVip ?? data.users.filter((u: User) => u.isVIP).length,
+        activeUsers: data.totalActive ?? data.users.filter((u: User) => u.isActive).length,
         newUsersThisMonth: Math.floor(Math.random() * 20)
       });
     } catch (error: any) {
@@ -514,23 +482,6 @@ const AdminUsers: React.FC = () => {
     }, 500);
   }, []);
 
-  const getPaginatedUsers = (userList: UserWithStats[], page: number, pageSize: number = 10) => {
-    const startIndex = (page - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    return userList.slice(startIndex, endIndex);
-  };
-
-  const getFilteredUsers = (userList: UserWithStats[], filterType: 'all' | 'vip' | 'non-vip') => {
-    switch (filterType) {
-      case 'vip':
-        return userList.filter(user => user.isVIP);
-      case 'non-vip':
-        return userList.filter(user => !user.isVIP);
-      default:
-        return userList;
-    }
-  };
-
   const handleExportUsers = () => {
     // In a real app, this would call an API to export users
     toast.success('導出數據成功');
@@ -559,7 +510,7 @@ const AdminUsers: React.FC = () => {
             <Download className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">導出數據</span>
           </Button>
-          <Button variant="outline" onClick={loadUsers} className="flex-1 sm:flex-initial text-xs sm:text-sm">
+          <Button variant="outline" onClick={() => loadUsers()} className="flex-1 sm:flex-initial text-xs sm:text-sm">
             <RefreshCw className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">刷新</span>
           </Button>
@@ -721,8 +672,22 @@ const AdminUsers: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle className="text-base sm:text-lg">用戶列表</CardTitle>
-          <CardDescription className="text-xs sm:text-sm">
-            總共 {totalUsers} 用戶 • VIP: {stats.vipUsers} • 非VIP: {stats.totalUsers - stats.vipUsers} • 第 {currentPage} 頁 / {totalPages} 頁
+          <CardDescription className="text-xs sm:text-sm flex flex-wrap items-center gap-2">
+            <span>總共 {totalUsers} 用戶 • VIP: {stats.vipUsers} • 非VIP: {stats.totalUsers - stats.vipUsers} • 第 {currentPage} 頁 / {totalPages} 頁</span>
+            <span className="flex items-center gap-1">
+              每頁
+              <Select value={String(itemsPerPage)} onValueChange={(v) => setItemsPerPage(Number(v))}>
+                <SelectTrigger className="w-16 h-8 text-xs" />
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="200">200</SelectItem>
+                </SelectContent>
+              </Select>
+              筆
+            </span>
           </CardDescription>
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
@@ -747,7 +712,7 @@ const AdminUsers: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                                  <TableBody>
-                   {getPaginatedUsers(getFilteredUsers(allUsers, 'all'), currentPage).map((user) => (
+                   {users.map((user) => (
                     <TableRow key={user._id}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
@@ -886,7 +851,7 @@ const AdminUsers: React.FC = () => {
               </Table>
 
                              {/* No Results */}
-               {getFilteredUsers(allUsers, 'all').length === 0 && (
+               {users.length === 0 && (
                 <div className="p-8 text-center">
                   <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-gray-600 mb-2">找不到用戶</h3>
@@ -896,46 +861,35 @@ const AdminUsers: React.FC = () => {
                 </div>
               )}
 
-                             {/* Pagination */}
-               {Math.ceil(getFilteredUsers(allUsers, 'non-vip').length / 10) > 1 && (
-                 <div className="flex items-center justify-between mt-6">
+                             {/* Pagination - server-side */}
+               {totalPages > 1 && (
+                 <div className="flex items-center justify-between mt-6 flex-wrap gap-2">
                    <div className="text-sm text-gray-600">
-                     顯示 {((currentPage - 1) * 10) + 1} - {Math.min(currentPage * 10, getFilteredUsers(allUsers, 'non-vip').length)} 的 {getFilteredUsers(allUsers, 'non-vip').length} 用戶
+                     顯示 {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, totalUsers)} 的 {totalUsers} 用戶
                    </div>
                    <div className="flex items-center space-x-2">
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                       disabled={currentPage === 1}
-                     >
-                       <ChevronLeft className="h-4 w-4" />
-                       上一頁
+                     <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>第一頁</Button>
+                     <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1}>
+                       <ChevronLeft className="h-4 w-4" /> 上一頁
                      </Button>
-                     <div className="flex items-center space-x-1">
-                       {Array.from({ length: Math.min(5, Math.ceil(getFilteredUsers(allUsers, 'non-vip').length / 10)) }, (_, i) => {
-                         const page = i + 1;
-                         return (
-                           <Button
-                             key={page}
-                             variant={currentPage === page ? "default" : "outline"}
-                             size="sm"
-                             onClick={() => setCurrentPage(page)}
-                           >
-                             {page}
-                           </Button>
-                         );
-                       })}
+                     <div className="flex items-center space-x-1 flex-wrap">
+                       {(() => {
+                         const start = Math.max(1, currentPage - 2);
+                         const end = Math.min(totalPages, currentPage + 2);
+                         return Array.from({ length: end - start + 1 }, (_, i) => {
+                           const page = start + i;
+                           return (
+                             <Button key={page} variant={currentPage === page ? "default" : "outline"} size="sm" onClick={() => setCurrentPage(page)}>
+                               {page}
+                             </Button>
+                           );
+                         });
+                       })()}
                      </div>
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       onClick={() => setCurrentPage(prev => Math.min(Math.ceil(getFilteredUsers(allUsers, 'non-vip').length / 10), prev + 1))}
-                       disabled={currentPage === Math.ceil(getFilteredUsers(allUsers, 'non-vip').length / 10)}
-                     >
-                       下一頁
-                       <ChevronRight className="h-4 w-4" />
+                     <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages}>
+                       下一頁 <ChevronRight className="h-4 w-4" />
                      </Button>
+                     <Button variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>最後頁</Button>
                    </div>
                  </div>
                )}
@@ -952,7 +906,7 @@ const AdminUsers: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                                  <TableBody>
-                   {getPaginatedUsers(getFilteredUsers(allUsers, 'vip'), currentPage).map((user) => (
+                   {users.map((user) => (
                     <TableRow key={user._id}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
@@ -1091,7 +1045,7 @@ const AdminUsers: React.FC = () => {
               </Table>
 
                              {/* No Results */}
-               {getFilteredUsers(allUsers, 'vip').length === 0 && (
+               {users.length === 0 && (
                 <div className="p-8 text-center">
                   <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-gray-600 mb-2">找不到VIP用戶</h3>
@@ -1102,48 +1056,29 @@ const AdminUsers: React.FC = () => {
               )}
 
               {/* Pagination */}
-              {Math.ceil(getFilteredUsers(allUsers, 'vip').length / 10) > 1 && (
-                <div className="flex items-center justify-between mt-6">
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6 flex-wrap gap-2">
                   <div className="text-sm text-gray-600">
-                    顯示 {((currentPage - 1) * 10) + 1} - {Math.min(currentPage * 10, getFilteredUsers(allUsers, 'vip').length)} 的 {getFilteredUsers(allUsers, 'vip').length} 用戶
+                    顯示 {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, totalUsers)} 的 {totalUsers} 用戶
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      上一頁
-                    </Button>
-                    <div className="flex items-center space-x-1">
-                      {Array.from({ length: Math.min(5, Math.ceil(getFilteredUsers(allUsers, 'vip').length / 10)) }, (_, i) => {
-                        const page = i + 1;
-                        return (
-                          <Button
-                            key={page}
-                            variant={currentPage === page ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setCurrentPage(page)}
-                          >
-                            {page}
-                          </Button>
-                        );
-                      })}
+                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>第一頁</Button>
+                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /> 上一頁</Button>
+                    <div className="flex items-center space-x-1 flex-wrap">
+                      {(() => {
+                        const start = Math.max(1, currentPage - 2);
+                        const end = Math.min(totalPages, currentPage + 2);
+                        return Array.from({ length: end - start + 1 }, (_, i) => {
+                          const page = start + i;
+                          return <Button key={page} variant={currentPage === page ? "default" : "outline"} size="sm" onClick={() => setCurrentPage(page)}>{page}</Button>;
+                        });
+                      })()}
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(prev => Math.min(Math.ceil(getFilteredUsers(allUsers, 'vip').length / 10), prev + 1))}
-                      disabled={currentPage === Math.ceil(getFilteredUsers(allUsers, 'vip').length / 10)}
-                    >
-                      下一頁
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages}>下一頁 <ChevronRight className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>最後頁</Button>
                   </div>
                 </div>
-                             )}
+              )}
              </TabsContent>
              <TabsContent value="non-vip">
                <Table>
@@ -1157,7 +1092,7 @@ const AdminUsers: React.FC = () => {
                    </TableRow>
                  </TableHeader>
                  <TableBody>
-                   {getPaginatedUsers(getFilteredUsers(allUsers, 'non-vip'), currentPage).map((user) => (
+                   {users.map((user) => (
                      <TableRow key={user._id}>
                        <TableCell>
                          <div className="flex items-center space-x-3">
@@ -1258,7 +1193,7 @@ const AdminUsers: React.FC = () => {
                </Table>
 
                {/* No Results */}
-               {getFilteredUsers(allUsers, 'non-vip').length === 0 && (
+               {users.length === 0 && (
                  <div className="p-8 text-center">
                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                    <h3 className="text-lg font-semibold text-gray-600 mb-2">找不到非VIP用戶</h3>
@@ -1268,46 +1203,27 @@ const AdminUsers: React.FC = () => {
                  </div>
                )}
 
-               {/* Pagination */}
-               {Math.ceil(getFilteredUsers(allUsers, 'all').length / 10) > 1 && (
-                 <div className="flex items-center justify-between mt-6">
+               {/* Pagination - server-side */}
+               {totalPages > 1 && (
+                 <div className="flex items-center justify-between mt-6 flex-wrap gap-2">
                    <div className="text-sm text-gray-600">
-                     顯示 {((currentPage - 1) * 10) + 1} - {Math.min(currentPage * 10, getFilteredUsers(allUsers, 'all').length)} 的 {getFilteredUsers(allUsers, 'all').length} 用戶
+                     顯示 {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, totalUsers)} 的 {totalUsers} 用戶
                    </div>
                    <div className="flex items-center space-x-2">
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                       disabled={currentPage === 1}
-                     >
-                       <ChevronLeft className="h-4 w-4" />
-                       上一頁
-                     </Button>
-                     <div className="flex items-center space-x-1">
-                       {Array.from({ length: Math.min(5, Math.ceil(getFilteredUsers(allUsers, 'all').length / 10)) }, (_, i) => {
-                         const page = i + 1;
-                         return (
-                           <Button
-                             key={page}
-                             variant={currentPage === page ? "default" : "outline"}
-                             size="sm"
-                             onClick={() => setCurrentPage(page)}
-                           >
-                             {page}
-                           </Button>
-                         );
-                       })}
+                     <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>第一頁</Button>
+                     <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /> 上一頁</Button>
+                     <div className="flex items-center space-x-1 flex-wrap">
+                       {(() => {
+                         const start = Math.max(1, currentPage - 2);
+                         const end = Math.min(totalPages, currentPage + 2);
+                         return Array.from({ length: end - start + 1 }, (_, i) => {
+                           const page = start + i;
+                           return <Button key={page} variant={currentPage === page ? "default" : "outline"} size="sm" onClick={() => setCurrentPage(page)}>{page}</Button>;
+                         });
+                       })()}
                      </div>
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       onClick={() => setCurrentPage(prev => Math.min(Math.ceil(getFilteredUsers(allUsers, 'all').length / 10), prev + 1))}
-                       disabled={currentPage === Math.ceil(getFilteredUsers(allUsers, 'all').length / 10)}
-                     >
-                       下一頁
-                       <ChevronRight className="h-4 w-4" />
-                     </Button>
+                     <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages}>下一頁 <ChevronRight className="h-4 w-4" /></Button>
+                     <Button variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>最後頁</Button>
                    </div>
                  </div>
                )}

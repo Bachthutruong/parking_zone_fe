@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +32,8 @@ import { formatDateTime } from '@/lib/dateUtils';
 import type { Booking } from '@/types';
 
 const BookingsPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const searchFromUrl = searchParams.get('search') ?? '';
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -40,7 +43,7 @@ const BookingsPage: React.FC = () => {
     status: 'all',
     dateFrom: '',
     dateTo: '',
-    search: ''
+    search: searchFromUrl
   });
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
@@ -73,6 +76,13 @@ const BookingsPage: React.FC = () => {
   useEffect(() => {
     loadParkingTypes();
   }, []);
+
+  // Sync search from URL (e.g. when coming from Today Overview "編輯" link)
+  useEffect(() => {
+    if (searchFromUrl) {
+      setFilters((prev) => ({ ...prev, search: searchFromUrl }));
+    }
+  }, [searchFromUrl]);
 
   useEffect(() => {
     loadBookings();
@@ -522,11 +532,11 @@ const BookingsPage: React.FC = () => {
           </div>
         </div>
 
-        ${booking.addonServices.length > 0 ? `
+        ${booking.addonServices?.length > 0 ? `
         <div class="section">
           <h3>附加服務</h3>
           <div class="services">
-            ${booking.addonServices.map(addon => 
+            ${(booking.addonServices ?? []).map(addon => 
               `<span class="service-badge">${addon.service.icon} ${addon.service.name} - ${addon.price.toLocaleString('zh-TW')} TWD</span>`
             ).join('')}
           </div>
@@ -1382,11 +1392,11 @@ const BookingsPage: React.FC = () => {
                 </div>
               </div>
 
-              {selectedBooking.addonServices.length > 0 && (
+              {selectedBooking.addonServices?.length > 0 && (
                 <div>
                   <h4 className="font-semibold mb-2">附加服務</h4>
                   <div className="flex flex-wrap gap-2">
-                    {selectedBooking.addonServices.map((addon, index) => (
+                    {(selectedBooking.addonServices ?? []).map((addon, index) => (
                       <Badge key={index} variant="outline">
                         {addon.service.icon} {addon.service.name} - {formatCurrency(addon.price)}
                       </Badge>
