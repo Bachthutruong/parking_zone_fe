@@ -108,6 +108,7 @@ export interface Booking {
     discountType: 'percentage' | 'fixed';
     discountAmount: number;
   };
+  vehicleCount?: number;
   luggageCount: number;
   passengerCount: number;
   departurePassengerCount?: number;
@@ -138,6 +139,7 @@ export interface Booking {
   actualCheckOutTime?: string;
   createdBy?: User;
   isManualBooking: boolean;
+  isDeleted?: boolean;
   durationDays?: number;
   isOverdue?: boolean;
   dailyPrices?: Array<{

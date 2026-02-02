@@ -21,8 +21,10 @@ import {
   Printer
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getTodayBookings, updateBooking } from '@/services/admin';
-import { formatDateTime, toDateTimeLocal, fromDateTimeLocal } from '@/lib/dateUtils';
+import { getTodayBookings, updateBooking, getAllParkingTypes } from '@/services/admin';
+import { checkAvailability } from '@/services/booking';
+import { formatDateTime, formatDateWithWeekday } from '@/lib/dateUtils';
+import DateInput from '@/components/ui/date-input';
 
 interface TodayBooking {
   _id: string;
@@ -36,8 +38,10 @@ interface TodayBooking {
   status: string;
   finalAmount: number;
   parkingType: {
+    _id?: string;
     name: string;
     code: string;
+    icon?: string;
   };
   user: {
     name: string;
@@ -61,6 +65,7 @@ interface EditFormState {
   phone: string;
   email: string;
   licensePlate: string;
+  parkingTypeId: string;
   checkInTime: string;
   checkOutTime: string;
   status: string;
@@ -85,15 +90,30 @@ const AdminTodayOverview: React.FC = () => {
     phone: '',
     email: '',
     licensePlate: '',
+    parkingTypeId: '',
     checkInTime: '',
     checkOutTime: '',
     status: 'confirmed',
     notes: '',
   });
   const [saving, setSaving] = useState(false);
+  const [parkingTypes, setParkingTypes] = useState<any[]>([]);
+  const [newPriceLoading, setNewPriceLoading] = useState(false);
+  const [newPrice, setNewPrice] = useState<number | null>(null);
+  const [newPriceError, setNewPriceError] = useState<string | null>(null);
+  const [availabilityErrorDetail, setAvailabilityErrorDetail] = useState<{
+    selectedRange: { from: string; to: string };
+    fullDays: string[];
+  } | null>(null);
 
   useEffect(() => {
     loadTodayData();
+  }, []);
+
+  useEffect(() => {
+    getAllParkingTypes()
+      .then((res) => setParkingTypes(res.parkingTypes ?? []))
+      .catch(() => setParkingTypes([]));
   }, []);
 
   const loadTodayData = async () => {
@@ -141,13 +161,17 @@ const AdminTodayOverview: React.FC = () => {
 
   const openEditDialog = (booking: TodayBooking) => {
     setEditingBooking(booking);
+    setNewPrice(null);
+    setNewPriceError(null);
+    const ptId = (booking.parkingType as any)?._id ?? '';
     setEditForm({
       driverName: booking.driverName ?? '',
       phone: booking.phone ?? '',
       email: (booking as any).email ?? '',
       licensePlate: booking.licensePlate ?? '',
-      checkInTime: toDateTimeLocal(booking.checkInTime),
-      checkOutTime: toDateTimeLocal(booking.checkOutTime),
+      parkingTypeId: ptId,
+      checkInTime: booking.checkInTime ?? '',
+      checkOutTime: booking.checkOutTime ?? '',
       status: booking.status ?? 'confirmed',
       notes: (booking as any).notes ?? '',
     });
@@ -156,7 +180,68 @@ const AdminTodayOverview: React.FC = () => {
   const closeEditDialog = () => {
     setEditingBooking(null);
     setSaving(false);
+    setNewPrice(null);
+    setNewPriceError(null);
+    setAvailabilityErrorDetail(null);
   };
+
+  // When parking or dates change, fetch new price for comparison
+  useEffect(() => {
+    if (!editingBooking || !editForm.parkingTypeId || !editForm.checkInTime || !editForm.checkOutTime) {
+      setNewPrice(null);
+      setNewPriceError(null);
+      setAvailabilityErrorDetail(null);
+      return;
+    }
+    const checkIn = new Date(editForm.checkInTime);
+    const checkOut = new Date(editForm.checkOutTime);
+    if (checkOut <= checkIn) {
+      setNewPrice(null);
+      setNewPriceError('離開時間須晚於進入時間');
+      setAvailabilityErrorDetail(null);
+      return;
+    }
+    let cancelled = false;
+    setNewPriceLoading(true);
+    setNewPriceError(null);
+    checkAvailability({
+      parkingTypeId: editForm.parkingTypeId,
+      checkInTime: editForm.checkInTime,
+      checkOutTime: editForm.checkOutTime,
+      excludeBookingId: editingBooking?._id,
+      debug: true
+    })
+      .then((res: any) => {
+        if (cancelled) return;
+        if (res?.success && res?.pricing?.totalPrice != null) {
+          setNewPrice(res.pricing.totalPrice);
+          setNewPriceError(null);
+          setAvailabilityErrorDetail(null);
+        } else {
+          setNewPrice(null);
+          const msg = res?.message || '無法計算新價格';
+          const debugInfo = res?.debug
+            ? ` [Debug: 每日佔用=${JSON.stringify(res.debug.perDayOccupancy?.map((d: any) => `${d.day}:${d.occupied}`) || [])}, max=${res.debug.maxOccupied}]`
+            : '';
+          setNewPriceError(msg + debugInfo);
+          if (res?.selectedRange && Array.isArray(res?.fullDays)) {
+            setAvailabilityErrorDetail({ selectedRange: res.selectedRange, fullDays: res.fullDays });
+          } else {
+            setAvailabilityErrorDetail(null);
+          }
+        }
+      })
+      .catch((err: any) => {
+        if (cancelled) return;
+        setNewPrice(null);
+        setNewPriceError(err?.response?.data?.message || '無法計算新價格');
+        setAvailabilityErrorDetail(null);
+      })
+      .finally(() => {
+        if (!cancelled) setNewPriceLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [editingBooking, editForm.parkingTypeId, editForm.checkInTime, editForm.checkOutTime]);
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,11 +253,12 @@ const AdminTodayOverview: React.FC = () => {
         phone: editForm.phone,
         email: editForm.email || undefined,
         licensePlate: editForm.licensePlate,
-        checkInTime: fromDateTimeLocal(editForm.checkInTime),
-        checkOutTime: fromDateTimeLocal(editForm.checkOutTime),
+        parkingType: editForm.parkingTypeId || undefined,
+        checkInTime: editForm.checkInTime,
+        checkOutTime: editForm.checkOutTime,
         status: editForm.status as 'pending' | 'confirmed' | 'checked-in' | 'checked-out' | 'cancelled',
         notes: editForm.notes || undefined,
-      });
+      } as Parameters<typeof updateBooking>[1]);
       toast.success('已更新預約資訊');
       closeEditDialog();
       loadTodayData();
@@ -452,25 +538,43 @@ const AdminTodayOverview: React.FC = () => {
                 placeholder="車牌號碼"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-parkingType">停車場 *</Label>
+              <Select
+                value={editForm.parkingTypeId}
+                onValueChange={(value) => setEditForm((f) => ({ ...f, parkingTypeId: value }))}
+              >
+                <SelectTrigger id="edit-parkingType">
+                  <SelectValue placeholder="選擇停車場" />
+                </SelectTrigger>
+                <SelectContent>
+                  {parkingTypes.map((pt) => (
+                    <SelectItem key={pt._id} value={pt._id}>
+                      {pt.icon || '🏢'} {pt.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-checkInTime">進入時間 *</Label>
-                <Input
+                <DateInput
                   id="edit-checkInTime"
                   type="datetime-local"
                   value={editForm.checkInTime}
-                  onChange={(e) => setEditForm((f) => ({ ...f, checkInTime: e.target.value }))}
-                  required
+                  onChange={(value) => setEditForm((f) => ({ ...f, checkInTime: value }))}
+                  placeholder="年/月/日 00:00"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-checkOutTime">離開時間 *</Label>
-                <Input
+                <DateInput
                   id="edit-checkOutTime"
                   type="datetime-local"
                   value={editForm.checkOutTime}
-                  onChange={(e) => setEditForm((f) => ({ ...f, checkOutTime: e.target.value }))}
-                  required
+                  onChange={(value) => setEditForm((f) => ({ ...f, checkOutTime: value }))}
+                  placeholder="年/月/日 00:00"
                 />
               </div>
             </div>
@@ -501,6 +605,45 @@ const AdminTodayOverview: React.FC = () => {
                 placeholder="備註"
               />
             </div>
+            {/* 價格比較：變更停車場或日期時顯示原價 vs 新價 */}
+            {editingBooking && (
+              <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
+                <div className="text-sm font-medium text-muted-foreground">價格比較</div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <div className="text-muted-foreground">原價（目前預約）</div>
+                    <div className="font-semibold text-base">{formatCurrency(editingBooking.finalAmount)}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">新價（變更後）</div>
+                    {newPriceLoading ? (
+                      <div className="text-muted-foreground">計算中...</div>
+                    ) : newPrice != null ? (
+                      <div className={`font-semibold text-base ${newPrice !== editingBooking.finalAmount ? 'text-amber-600' : ''}`}>
+                        {formatCurrency(newPrice)}
+                        {newPrice !== editingBooking.finalAmount && (
+                          <span className="ml-1 text-xs font-normal">
+                            ({newPrice > editingBooking.finalAmount ? '+' : ''}{formatCurrency(newPrice - editingBooking.finalAmount)})
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="text-muted-foreground text-xs">{newPriceError || '變更停車場或日期後顯示'}</div>
+                        {availabilityErrorDetail && (
+                          <div className="mt-2 text-xs text-red-600 space-y-1">
+                            <p><span className="font-medium">您選擇的日期：</span>{availabilityErrorDetail.selectedRange.from} ～ {availabilityErrorDetail.selectedRange.to}</p>
+                            {availabilityErrorDetail.fullDays.length > 0 && (
+                              <p><span className="font-medium">已滿的日期：</span>{availabilityErrorDetail.fullDays.map((d) => formatDateWithWeekday(d)).join('、')}</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={closeEditDialog} disabled={saving}>
                 取消

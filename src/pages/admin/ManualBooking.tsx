@@ -33,7 +33,7 @@ import { getAllParkingTypes, getAllAddonServices, createManualBooking } from '@/
 import { checkParkingTypeMaintenance } from '@/services/maintenance';
 import { checkVIPStatus } from '@/services/auth';
 import { api } from '@/services';
-import { formatDate } from '@/lib/dateUtils';
+import { formatDate, formatDateWithWeekday } from '@/lib/dateUtils';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import ConflictNotification from '@/components/ConflictNotification';
 
@@ -58,6 +58,11 @@ const AdminManualBooking: React.FC = () => {
   const [pricing, setPricing] = useState<any>(null);
   const [discountInfo, setDiscountInfo] = useState<any>(null);
   const [conflictingDays, setConflictingDays] = useState<string[]>([]);
+  const [availabilityErrorDetail, setAvailabilityErrorDetail] = useState<{
+    message: string;
+    selectedRange: { from: string; to: string };
+    fullDays: string[];
+  } | null>(null);
   const [maintenanceDays, setMaintenanceDays] = useState<any[]>([]);
   const [isVIP, setIsVIP] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -157,16 +162,26 @@ const AdminManualBooking: React.FC = () => {
       if (data.success) {
         setAvailableSlots(data.availableSlots);
         setPricing(data.pricing);
-        setConflictingDays([]); // No conflicts if available
+        setConflictingDays([]);
+        setAvailabilityErrorDetail(null);
         
         // Calculate pricing with addon services and discounts
         await calculatePricing();
       } else {
         setAvailableSlots([]);
         setPricing(null);
-        // Calculate conflicting days
-        const conflicts = await calculateConflictingDays();
-        setConflictingDays(conflicts);
+        if (data.selectedRange && Array.isArray(data.fullDays)) {
+          setAvailabilityErrorDetail({
+            message: data.message || '停車場在此時段已無空位',
+            selectedRange: data.selectedRange,
+            fullDays: data.fullDays
+          });
+          setConflictingDays(data.fullDays);
+        } else {
+          const conflicts = await calculateConflictingDays();
+          setConflictingDays(conflicts);
+          setAvailabilityErrorDetail(null);
+        }
         toast.error(data.message || '停車場在此時段已無空位');
       }
     } catch (error) {
@@ -603,6 +618,30 @@ const AdminManualBooking: React.FC = () => {
                 checkOutTime={formData.checkOutTime}
                 vehicleCount={formData.vehicleCount}
               />
+            )}
+
+            {/* Availability full — show selected range and which days are full */}
+            {availabilityErrorDetail && (
+              <div className="p-4 sm:p-5 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center space-x-2 mb-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 shrink-0" />
+                  <h3 className="text-base font-semibold text-red-800">
+                    {availabilityErrorDetail.message}
+                  </h3>
+                </div>
+                <div className="space-y-2 text-sm text-red-800">
+                  <p>
+                    <span className="font-medium">客戶選擇的日期：</span>
+                    {availabilityErrorDetail.selectedRange.from} ～ {availabilityErrorDetail.selectedRange.to}
+                  </p>
+                  {availabilityErrorDetail.fullDays.length > 0 ? (
+                    <p>
+                      <span className="font-medium">已滿的日期：</span>
+                      {availabilityErrorDetail.fullDays.map((d) => formatDateWithWeekday(d)).join('、')}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
             )}
 
             {/* Conflict Notification */}

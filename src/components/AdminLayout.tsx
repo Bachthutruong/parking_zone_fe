@@ -2,16 +2,13 @@ import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { 
-  LayoutDashboard,
+  // LayoutDashboard, // ẩn tạm, sau xử lý xong sẽ bật lại
   Calendar,
   Users,
-  // Car,
   Building2,
   Package,
   Tag,
-  // FileText,
   MessageSquare,
-  // BarChart3,
   Settings,
   LogOut,
   Menu,
@@ -20,26 +17,34 @@ import {
   TrendingUp,
   Plus,
   Clock,
-  // Image
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
+import { getTodayAvailability, type TodayParkingAvailability } from '@/services/parking';
 
 const AdminLayout: React.FC = () => {
   const { logout, user } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [todayParking, setTodayParking] = React.useState<TodayParkingAvailability[]>([]);
+
+  React.useEffect(() => {
+    getTodayAvailability()
+      .then((res) => setTodayParking(res.parking || []))
+      .catch(() => setTodayParking([]));
+  }, []);
 
   const handleLogout = () => {
     logout();
     toast.success('登出成功');
   };
 
-  // Define menu items based on user role
+  // 今日概覽 đưa lên đầu; 儀表板 ẩn tạm (sau xử lý xong sẽ bật lại)
   const getMenuItems = () => {
     const baseItems = [
-      { path: '/admin', icon: LayoutDashboard, label: '儀表板', exact: true, roles: ['admin', 'staff'] },
+      { path: '/admin', icon: Clock, label: '今日概覽', exact: true, roles: ['admin', 'staff'], activeWhen: (p: string) => p === '/admin' || p === '/admin/today-overview' },
       { path: '/admin/bookings', icon: Calendar, label: '預約', exact: false, roles: ['admin', 'staff'] },
+      // { path: '/admin', icon: LayoutDashboard, label: '儀表板', exact: true, roles: ['admin', 'staff'] }, // ẩn
     ];
 
     const adminOnlyItems = [
@@ -47,13 +52,11 @@ const AdminLayout: React.FC = () => {
       { path: '/admin/parking-types', icon: Building2, label: '停車場', exact: false, roles: ['admin'] },
       { path: '/admin/services', icon: Package, label: '附加服務', exact: false, roles: ['admin'] },
       { path: '/admin/discounts', icon: Tag, label: '折扣碼', exact: false, roles: ['admin'] },
-      // { path: '/admin/terms', icon: FileText, label: '條款', exact: false, roles: ['admin'] },
       { path: '/admin/notifications', icon: MessageSquare, label: '通知', exact: false, roles: ['admin'] },
       { path: '/admin/maintenance', icon: Wrench, label: '維護日期', exact: false, roles: ['admin'] },
       { path: '/admin/special-pricing', icon: TrendingUp, label: '特殊價格', exact: false, roles: ['admin'] },
       { path: '/admin/auto-discounts', icon: Tag, label: '自動折扣', exact: false, roles: ['admin'] },
       { path: '/admin/manual-booking', icon: Plus, label: '手動預約', exact: false, roles: ['admin', 'staff'] },
-      { path: '/admin/today-overview', icon: Clock, label: '今日概覽', exact: false, roles: ['admin', 'staff'] },
       { path: '/admin/settings', icon: Settings, label: '系統設定', exact: false, roles: ['admin'] },
     ];
 
@@ -64,11 +67,10 @@ const AdminLayout: React.FC = () => {
 
   const menuItems = getMenuItems();
 
-  const isActive = (path: string, exact: boolean = false) => {
-    if (exact) {
-      return location.pathname === path;
-    }
-    return location.pathname.startsWith(path);
+  const isActive = (item: { path: string; exact?: boolean; activeWhen?: (pathname: string) => boolean }) => {
+    if (item.activeWhen) return item.activeWhen(location.pathname);
+    if (item.exact) return location.pathname === item.path;
+    return location.pathname.startsWith(item.path);
   };
 
   return (
@@ -112,18 +114,38 @@ const AdminLayout: React.FC = () => {
                   to={item.path}
                   className={`
                     flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
-                    ${isActive(item.path, item.exact)
+                    ${isActive(item)
                       ? 'bg-white/20 text-white border-r-2 border-white'
                       : 'text-white/70 hover:bg-white/10 hover:text-white'
                     }
                   `}
                   onClick={() => setSidebarOpen(false)}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-5 w-5 shrink-0" />
                   <span>{item.label}</span>
                 </Link>
               );
             })}
+
+            {/* 今日各停車場空位/總數 - sidebar left */}
+            {todayParking.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-white/20">
+                <div className="text-xs font-medium text-white/90 mb-2 px-1">今日車位</div>
+                <div className="space-y-1.5">
+                  {todayParking.map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between text-xs text-white/80 px-2 py-1.5 rounded bg-white/5"
+                    >
+                      <span className="truncate mr-2" title={p.name}>{p.name}</span>
+                      <span className="shrink-0 font-medium text-white">
+                        {p.availableSpaces}/{p.totalSpaces}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </nav>
 
           {/* Footer */}

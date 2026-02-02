@@ -15,21 +15,41 @@ import {
   Calendar, 
   Clock, 
   Car, 
-//   User, 
   Phone, 
-  // Edit,
   Eye,
+  Pencil,
   Printer,
   Grid3X3,
   Table as TableIcon,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getAllBookings, updateBookingStatus, deleteBooking, getAllParkingTypes, getCalendarBookings } from '@/services/admin';
+import { getAllBookings, updateBookingStatus, deleteBooking, getAllParkingTypes, getCalendarBookings, updateBooking } from '@/services/admin';
 import { Textarea } from '@/components/ui/textarea';
 import { Trash2, RotateCcw } from 'lucide-react';
 import { getSystemSettings } from '@/services/systemSettings';
-import { formatDateTime } from '@/lib/dateUtils';
+import { formatDateTime, getDateStrTaiwan, getNextDayStrTaiwan } from '@/lib/dateUtils';
+import DateInput from '@/components/ui/date-input';
 import type { Booking } from '@/types';
+
+const EDIT_STATUS_OPTIONS = [
+  { value: 'pending', label: '等待進入停車場' },
+  { value: 'confirmed', label: '預約成功' },
+  { value: 'checked-in', label: '已進入停車場' },
+  { value: 'checked-out', label: '已離開停車場' },
+  { value: 'cancelled', label: '已取消' },
+] as const;
+
+interface EditBookingForm {
+  driverName: string;
+  phone: string;
+  email: string;
+  licensePlate: string;
+  parkingTypeId: string;
+  checkInTime: string;
+  checkOutTime: string;
+  status: string;
+  notes: string;
+}
 
 const BookingsPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -68,6 +88,21 @@ const BookingsPage: React.FC = () => {
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [bookingInProcess, setBookingInProcess] = useState<{booking: Booking, status: string} | null>(null);
   const [statusReason, setStatusReason] = useState('');
+
+  // Edit Booking Dialog State
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [editForm, setEditForm] = useState<EditBookingForm>({
+    driverName: '',
+    phone: '',
+    email: '',
+    licensePlate: '',
+    parkingTypeId: '',
+    checkInTime: '',
+    checkOutTime: '',
+    status: 'confirmed',
+    notes: '',
+  });
+  const [editSaving, setEditSaving] = useState(false);
 
   // Parking Types State
   const [parkingTypes, setParkingTypes] = useState<any[]>([]);
@@ -158,40 +193,38 @@ const BookingsPage: React.FC = () => {
       // Use the new calendar-specific API
       const response = await getCalendarBookings(filterParams);
       
-      // Group bookings by date and parking type
+      // Group bookings by date and parking type. Must use Taiwan date (same as sidebar/backend).
+      // - occupiedSpaces = SUM(vehicleCount) for bookings that overlap the day
+      // - Only count status in ['pending','confirmed','checked-in'] and !isDeleted
+      const ACTIVE_STATUSES = ['pending', 'confirmed', 'checked-in'];
       const groupedData = response.bookings.reduce((acc: any, booking: Booking) => {
-        // Skip bookings without parkingType
-        if (!booking.parkingType || !booking.parkingType._id) {
-          return acc;
-        }
-        
+        if (!booking.parkingType || !booking.parkingType._id) return acc;
+
         const parkingTypeId = booking.parkingType._id;
-        const startDate = new Date(booking.checkInTime);
         const endDate = new Date(booking.checkOutTime);
-        
-        // Add booking to all dates in the range
-        const currentDate = new Date(startDate);
-        while (currentDate < endDate) {
-          const dateStr = currentDate.toISOString().split('T')[0];
-          
-          if (!acc[dateStr]) {
-            acc[dateStr] = {};
-          }
-          if (!acc[dateStr][parkingTypeId]) {
-            acc[dateStr][parkingTypeId] = {
+        const vehicles = booking.vehicleCount ?? 1;
+        const isActive = ACTIVE_STATUSES.includes(booking.status) && !booking.isDeleted;
+
+        // Iterate by Taiwan calendar days (same as backend getTodayAvailability)
+        let currentDayStr = getDateStrTaiwan(booking.checkInTime);
+        while (currentDayStr) {
+          if (!acc[currentDayStr]) acc[currentDayStr] = {};
+          if (!acc[currentDayStr][parkingTypeId]) {
+            acc[currentDayStr][parkingTypeId] = {
               parkingType: booking.parkingType,
               bookings: [],
-              totalBookings: 0
+              occupiedSpaces: 0
             };
           }
-          
-          acc[dateStr][parkingTypeId].bookings.push(booking);
-          acc[dateStr][parkingTypeId].totalBookings++;
-          
-          // Move to next day
-          currentDate.setDate(currentDate.getDate() + 1);
+          acc[currentDayStr][parkingTypeId].bookings.push(booking);
+          if (isActive) {
+            acc[currentDayStr][parkingTypeId].occupiedSpaces += vehicles;
+          }
+          // Stop when this day is the last day the booking occupies (checkOut <= end of this day in Taiwan)
+          const endOfCurrentDay = new Date(`${currentDayStr}T23:59:59.999+08:00`);
+          if (endDate <= endOfCurrentDay) break;
+          currentDayStr = getNextDayStrTaiwan(currentDayStr);
         }
-        
         return acc;
       }, {});
       
@@ -246,7 +279,54 @@ const BookingsPage: React.FC = () => {
     }
   };
 
+  const openEditDialog = (booking: Booking) => {
+    setEditingBooking(booking);
+    const ptId = typeof booking.parkingType === 'object' && booking.parkingType?._id
+      ? booking.parkingType._id
+      : (booking as any).parkingType ?? '';
+    setEditForm({
+      driverName: booking.driverName ?? '',
+      phone: booking.phone ?? '',
+      email: booking.email ?? '',
+      licensePlate: booking.licensePlate ?? '',
+      parkingTypeId: ptId,
+      checkInTime: booking.checkInTime ?? '',
+      checkOutTime: booking.checkOutTime ?? '',
+      status: booking.status ?? 'confirmed',
+      notes: (booking as any).notes ?? '',
+    });
+  };
 
+  const closeEditDialog = () => {
+    setEditingBooking(null);
+    setEditSaving(false);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBooking) return;
+    try {
+      setEditSaving(true);
+      await updateBooking(editingBooking._id, {
+        driverName: editForm.driverName,
+        phone: editForm.phone,
+        email: editForm.email || undefined,
+        licensePlate: editForm.licensePlate,
+        parkingType: editForm.parkingTypeId || undefined,
+        checkInTime: editForm.checkInTime,
+        checkOutTime: editForm.checkOutTime,
+        status: editForm.status as 'pending' | 'confirmed' | 'checked-in' | 'checked-out' | 'cancelled',
+        notes: editForm.notes || undefined,
+      } as Parameters<typeof updateBooking>[1]);
+      toast.success('已更新預約資訊');
+      closeEditDialog();
+      loadBookings();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || '更新失敗');
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   const handleRevertStatus = (booking: Booking) => {
     let newStatus = '';
@@ -808,38 +888,34 @@ const BookingsPage: React.FC = () => {
                 {day}
               </div>
               
-              {/* Show parking type statistics - filter by selected parking type */}
+              {/* Show parking type statistics - same logic as sidebar: available = totalSpaces - occupiedSpaces (sum vehicleCount) */}
               {(selectedParkingType === 'all' ? parkingTypes : parkingTypes.filter(pt => pt._id === selectedParkingType)).map(pt => {
                 const parkingData = data[pt._id];
-                const totalBookings = parkingData?.totalBookings || 0;
-                const totalSpaces = pt.totalSpaces || 50;
-                const availableSlots = totalSpaces - totalBookings;
-                const hasBookings = totalBookings > 0;
+                const occupiedSpaces = parkingData?.occupiedSpaces ?? 0;
+                const totalSpaces = pt.totalSpaces ?? 50;
+                const availableSlots = Math.max(0, totalSpaces - occupiedSpaces);
+                const hasBookings = (parkingData?.bookings?.length ?? 0) > 0;
                 
-                // Calculate occupancy percentage for color coding
-                const occupancyPercent = (totalBookings / totalSpaces) * 100;
-                let statusColor = 'bg-green-100 border-green-300 text-green-700'; // Low occupancy
-                if (occupancyPercent >= 80) {
-                  statusColor = 'bg-red-100 border-red-300 text-red-700'; // Almost full
-                } else if (occupancyPercent >= 50) {
-                  statusColor = 'bg-yellow-100 border-yellow-300 text-yellow-700'; // Medium occupancy
-                }
+                const occupancyPercent = totalSpaces > 0 ? (occupiedSpaces / totalSpaces) * 100 : 0;
+                let statusColor = 'bg-green-100 border-green-300 text-green-700';
+                if (occupancyPercent >= 80) statusColor = 'bg-red-100 border-red-300 text-red-700';
+                else if (occupancyPercent >= 50) statusColor = 'bg-yellow-100 border-yellow-300 text-yellow-700';
                 
                 return (
                   <div 
                     key={pt._id}
                     className={`mb-1 p-1.5 rounded border text-xs cursor-pointer transition-all hover:shadow-md ${statusColor}`}
                     onClick={() => handleDateBookingClick(date, pt._id)}
-                    title={hasBookings ? `點擊查看 ${totalBookings} 筆預約` : '點擊查看詳情'}
+                    title={hasBookings ? `點擊查看 ${parkingData.bookings.length} 筆預約，已佔 ${occupiedSpaces} 格` : `空: ${availableSlots}/${totalSpaces}`}
                   >
                     <div className="font-bold truncate" style={{ color: pt.color || '#3B82F6' }}>
                       {pt.icon || '🏢'} {pt.name}
                     </div>
                     <div className="flex justify-between items-center mt-0.5">
                       <span>空: <strong>{availableSlots}</strong>/{totalSpaces}</span>
-                      {hasBookings && (
+                      {occupiedSpaces > 0 && (
                         <span className="bg-blue-500 text-white px-1 rounded text-[10px]">
-                          {totalBookings} 訂
+                          {occupiedSpaces} 訂
                         </span>
                       )}
                     </div>
@@ -913,7 +989,6 @@ const BookingsPage: React.FC = () => {
                 <SelectContent>
                   <SelectItem value="all">所有狀態</SelectItem>
                   <SelectItem value="pending">等待進入停車場</SelectItem>
-                  <SelectItem value="confirmed">等待進入停車場 (舊)</SelectItem>
                   <SelectItem value="checked-in">已進入停車場</SelectItem>
                   <SelectItem value="checked-out">已離開停車場</SelectItem>
                   <SelectItem value="cancelled">已取消</SelectItem>
@@ -1089,8 +1164,17 @@ const BookingsPage: React.FC = () => {
                               setSelectedBooking(booking);
                               setShowDetailsDialog(true);
                             }}
+                            title="查看詳情"
                           >
                             <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditDialog(booking)}
+                            title="編輯預約"
+                          >
+                            <Pencil className="h-4 w-4" />
                           </Button>
                           
                           {/* Status Action Buttons */}
@@ -1472,6 +1556,136 @@ const BookingsPage: React.FC = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Booking Dialog */}
+      <Dialog open={!!editingBooking} onOpenChange={(open) => !open && closeEditDialog()}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>編輯預約</DialogTitle>
+            <DialogDescription>
+              {editingBooking && (editingBooking.bookingNumber ? `預約編號: ${editingBooking.bookingNumber}` : `預約 ID: ${editingBooking._id}`)}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-driverName">客戶姓名 *</Label>
+                <Input
+                  id="edit-driverName"
+                  value={editForm.driverName}
+                  onChange={(e) => setEditForm((f) => ({ ...f, driverName: e.target.value }))}
+                  required
+                  placeholder="客戶姓名"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">電話 *</Label>
+                <Input
+                  id="edit-phone"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                  required
+                  placeholder="電話"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="email@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-licensePlate">車牌號碼 *</Label>
+              <Input
+                id="edit-licensePlate"
+                value={editForm.licensePlate}
+                onChange={(e) => setEditForm((f) => ({ ...f, licensePlate: e.target.value }))}
+                required
+                placeholder="車牌號碼"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-parkingType">停車場 *</Label>
+              <Select
+                value={editForm.parkingTypeId}
+                onValueChange={(value) => setEditForm((f) => ({ ...f, parkingTypeId: value }))}
+              >
+                <SelectTrigger id="edit-parkingType">
+                  <SelectValue placeholder="選擇停車場" />
+                </SelectTrigger>
+                <SelectContent>
+                  {parkingTypes.map((pt) => (
+                    <SelectItem key={pt._id} value={pt._id}>
+                      {pt.icon || '🏢'} {pt.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-checkInTime">進入時間 *</Label>
+                <DateInput
+                  id="edit-checkInTime"
+                  type="datetime-local"
+                  value={editForm.checkInTime}
+                  onChange={(value) => setEditForm((f) => ({ ...f, checkInTime: value }))}
+                  placeholder="年/月/日 00:00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-checkOutTime">離開時間 *</Label>
+                <DateInput
+                  id="edit-checkOutTime"
+                  type="datetime-local"
+                  value={editForm.checkOutTime}
+                  onChange={(value) => setEditForm((f) => ({ ...f, checkOutTime: value }))}
+                  placeholder="年/月/日 00:00"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-status">狀態</Label>
+              <Select
+                value={editForm.status}
+                onValueChange={(value) => setEditForm((f) => ({ ...f, status: value }))}
+              >
+                <SelectTrigger id="edit-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {EDIT_STATUS_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-notes">備註</Label>
+              <Input
+                id="edit-notes"
+                value={editForm.notes}
+                onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
+                placeholder="備註"
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closeEditDialog} disabled={editSaving}>
+                取消
+              </Button>
+              <Button type="submit" disabled={editSaving}>
+                {editSaving ? '儲存中...' : '儲存'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>

@@ -9,7 +9,7 @@ import BookingConfirmationPage from './pages/BookingConfirmationPage'
 import LookupPage from './pages/LookupPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
-import AdminDashboard from './pages/admin/Dashboard'
+// import AdminDashboard from './pages/admin/Dashboard' // ẩn tạm, bật lại khi cần
 import AdminBookings from './pages/admin/Bookings'
 import AdminUsers from './pages/admin/Users'
 import AdminSettings from './pages/admin/Settings'
@@ -44,8 +44,9 @@ function App() {
           {/* Protected admin routes */}
           <Route path="/admin" element={<ProtectedRoute requiredRole="admin" />}>
             <Route element={<AdminLayout />}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route index element={<AdminTodayOverview />} />
+              {/* Dashboard ẩn tạm, route vẫn giữ để sau bật lại */}
+              {/* <Route path="dashboard" element={<AdminDashboard />} /> */}
               <Route path="bookings" element={<AdminBookings />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="parking-types" element={<AdminParkingTypes />} />

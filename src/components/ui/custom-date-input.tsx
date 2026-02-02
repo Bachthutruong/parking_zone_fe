@@ -189,9 +189,9 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
     String(i).padStart(2, '0')
   );
 
-  // Generate minute options (00, 05, 10, ... 55)
-  const minuteOptions = Array.from({ length: 12 }, (_, i) => 
-    String(i * 5).padStart(2, '0')
+  // Generate minute options (00-59) so displayed time always matches state
+  const minuteOptions = Array.from({ length: 60 }, (_, i) => 
+    String(i).padStart(2, '0')
   );
 
   return (
@@ -283,9 +283,11 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
                 </div>
               )}
 
-              {tempValue && (
+              {(selectedDate || tempValue) && (
                 <div className="text-xs text-gray-500 pt-2 border-t">
-                  當前選擇: {type === 'datetime-local' ? formatDateTime(tempValue) : formatDate(tempValue)}
+                  當前選擇: {type === 'datetime-local' && selectedDate
+                    ? `${selectedDate.replace(/-/g, '/')} ${selectedHours}:${selectedMinutes}`
+                    : (selectedDate ? selectedDate.replace(/-/g, '/') : (tempValue ? (type === 'datetime-local' ? formatDateTime(tempValue) : formatDate(tempValue)) : ''))}
                 </div>
               )}
             </div>
@@ -294,7 +296,7 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  setTempValue(''); // Clear temp value
+                  setTempValue('');
                   setIsOpen(false);
                 }}
                 className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
@@ -304,10 +306,12 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  if (tempValue) {
-                    onChange(tempValue);
+                  if (type === 'datetime-local' && selectedDate) {
+                    updateDateTimeValue(selectedDate, selectedHours, selectedMinutes);
+                  } else if (type === 'date' && selectedDate) {
+                    onChange(fromDateInput(selectedDate));
                   }
-                  setTempValue(''); // Clear temp value
+                  setTempValue('');
                   setIsOpen(false);
                 }}
                 className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"

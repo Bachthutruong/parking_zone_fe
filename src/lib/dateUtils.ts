@@ -180,3 +180,21 @@ export const fromDateInput = (dateInputString: string): string => {
   if (!dateInputString) return '';
   return `${dateInputString}T00:00:00.000${TAIWAN_OFFSET}`;
 };
+
+/**
+ * Get YYYY-MM-DD in Taiwan for a Date (for grouping calendar by Taiwan day = same as sidebar/backend)
+ */
+export const getDateStrTaiwan = (date: string | Date): string => {
+  if (!date) return '';
+  return toDateInput(date);
+};
+
+/**
+ * Next calendar day in Taiwan (YYYY-MM-DD). Used to iterate days in Taiwan timezone.
+ */
+export const getNextDayStrTaiwan = (dayStr: string): string => {
+  if (!dayStr) return '';
+  const d = new Date(`${dayStr}T12:00:00${TAIWAN_OFFSET}`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return toDateInput(d);
+};

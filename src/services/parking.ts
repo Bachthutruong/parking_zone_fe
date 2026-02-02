@@ -29,4 +29,17 @@ export const getParkingTypeAvailability = async (id: string, date: string) => {
 export const getAvailableParkingTypes = async (params: AvailableParkingTypesParams): Promise<ParkingType[]> => {
   const response = await api.get('/bookings/available-parking-types', { params });
   return response.data.parkingTypes;
+};
+
+// Today's availability for all parking types (sidebar)
+export interface TodayParkingAvailability {
+  id: string;
+  name: string;
+  totalSpaces: number;
+  availableSpaces: number;
+  occupiedSpaces: number;
+}
+export const getTodayAvailability = async (): Promise<{ date: string; parking: TodayParkingAvailability[] }> => {
+  const response = await api.get('/parking/today-availability');
+  return response.data;
 }; 

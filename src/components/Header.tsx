@@ -57,14 +57,14 @@ const Header: React.FC = () => {
             {user ? (
               <div className="flex items-center space-x-2 md:space-x-4">
                 {user.role === 'admin' && (
-                  <Link to="/admin/dashboard">
+                  <Link to="/admin">
                     <Button variant="outline" size="sm" className="text-white bg-[#39653f] border-white hover:bg-white/10 text-xs md:text-sm">
                       Admin Panel
                     </Button>
                   </Link>
                 )}
                 {user.role === 'staff' && (
-                  <Link to="/staff/dashboard">
+                  <Link to="/staff">
                     <Button variant="outline" size="sm" className="text-white border-white hover:bg-white/10 text-xs md:text-sm">
                       Staff Panel
                     </Button>

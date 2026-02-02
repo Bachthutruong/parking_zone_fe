@@ -130,9 +130,9 @@ const DateInput: React.FC<DateInputProps> = ({
     String(i).padStart(2, '0')
   );
 
-  // Generate minute options (00-55 in 5-minute steps)
-  const minuteOptions = Array.from({ length: 12 }, (_, i) => 
-    String(i * 5).padStart(2, '0')
+  // Generate minute options (00-59) so displayed time always matches state
+  const minuteOptions = Array.from({ length: 60 }, (_, i) => 
+    String(i).padStart(2, '0')
   );
 
   return (
@@ -223,9 +223,11 @@ const DateInput: React.FC<DateInputProps> = ({
                 </div>
               )}
 
-              {value && (
+              {(selectedDate || value) && (
                 <div className="text-xs text-gray-500 pt-2 border-t">
-                  當前選擇: {type === 'datetime-local' ? formatDateTime(value) : formatDate(value)}
+                  當前選擇: {type === 'datetime-local' && selectedDate
+                    ? `${selectedDate.replace(/-/g, '/')} ${selectedHours}:${selectedMinutes}`
+                    : (selectedDate ? selectedDate.replace(/-/g, '/') : (value ? formatDate(value) : ''))}
                 </div>
               )}
             </div>
@@ -240,7 +242,14 @@ const DateInput: React.FC<DateInputProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
+                onClick={() => {
+                  if (type === 'datetime-local' && selectedDate) {
+                    updateDateTimeValue(selectedDate, selectedHours, selectedMinutes);
+                  } else if (type === 'date' && selectedDate) {
+                    onChange(fromDateInput(selectedDate));
+                  }
+                  setIsOpen(false);
+                }}
                 className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
               >
                 完成
