@@ -33,6 +33,9 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
 
+  // Round minutes to nearest 5 (0, 5, 10, ..., 55). Cap at 55 so we don't roll to next hour.
+  const roundMinutesToStep = (m: number) => Math.min(55, Math.round(m / 5) * 5);
+
   useEffect(() => {
     if (value) {
       if (type === 'datetime-local') {
@@ -40,7 +43,7 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
         const date = new Date(value);
         setSelectedDate(toDateInput(value));
         setSelectedHours(String(date.getHours()).padStart(2, '0'));
-        setSelectedMinutes(String(date.getMinutes()).padStart(2, '0'));
+        setSelectedMinutes(String(roundMinutesToStep(date.getMinutes())).padStart(2, '0'));
       } else {
         setDisplayValue(formatDate(value));
         setSelectedDate(toDateInput(value));
@@ -84,13 +87,13 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
       setSelectedDate(toDateInput(value));
       if (type === 'datetime-local') {
         setSelectedHours(String(date.getHours()).padStart(2, '0'));
-        setSelectedMinutes(String(date.getMinutes()).padStart(2, '0'));
+        setSelectedMinutes(String(roundMinutesToStep(date.getMinutes())).padStart(2, '0'));
       }
     } else {
       const now = new Date();
       setSelectedDate(toDateInput(now.toISOString()));
       setSelectedHours(String(now.getHours()).padStart(2, '0'));
-      setSelectedMinutes(String(now.getMinutes()).padStart(2, '0'));
+      setSelectedMinutes(String(roundMinutesToStep(now.getMinutes())).padStart(2, '0'));
     }
   };
 
@@ -189,9 +192,9 @@ const CustomDateInput: React.FC<CustomDateInputProps> = ({
     String(i).padStart(2, '0')
   );
 
-  // Generate minute options (00-59) so displayed time always matches state
-  const minuteOptions = Array.from({ length: 60 }, (_, i) => 
-    String(i).padStart(2, '0')
+  // Generate minute options: 00, 05, 10, 15, ..., 55
+  const minuteOptions = Array.from({ length: 12 }, (_, i) => 
+    String(i * 5).padStart(2, '0')
   );
 
   return (

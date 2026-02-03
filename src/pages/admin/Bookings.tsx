@@ -1409,6 +1409,18 @@ const BookingsPage: React.FC = () => {
                   <Button
                     size="sm"
                     variant="outline"
+                    onClick={() => {
+                      setShowBookingsDialog(false);
+                      openEditDialog(booking);
+                    }}
+                    title="編輯預約"
+                  >
+                    <Pencil className="h-4 w-4 mr-1" />
+                    編輯
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => printBooking(booking)}
                   >
                     <Printer className="h-4 w-4 mr-1" />
