@@ -198,3 +198,19 @@ export const getNextDayStrTaiwan = (dayStr: string): string => {
   d.setUTCDate(d.getUTCDate() + 1);
   return toDateInput(d);
 };
+
+/**
+ * Start of day ISO for a Taiwan date string (YYYY-MM-DD). Use when iterating by Taiwan calendar day.
+ */
+export const startOfDayISOFromDateStr = (dayStr: string): string => {
+  if (!dayStr) return '';
+  return `${dayStr}T00:00:00.000${TAIWAN_OFFSET}`;
+};
+
+/**
+ * End of day ISO for a Taiwan date string (YYYY-MM-DD). Use when iterating by Taiwan calendar day.
+ */
+export const endOfDayISOFromDateStr = (dayStr: string): string => {
+  if (!dayStr) return '';
+  return `${dayStr}T23:59:59.999${TAIWAN_OFFSET}`;
+};

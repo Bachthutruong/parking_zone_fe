@@ -31,7 +31,7 @@ import { toast } from 'react-hot-toast';
 import { getSystemSettings, getAllParkingTypes, getAllAddonServices as getAddonServices, createBooking, api } from '@/services';
 import { checkParkingTypeMaintenance } from '@/services/maintenance';
 import { checkVIPStatus } from '@/services/auth';
-import { formatDate, formatDateWithWeekday, formatDateTime, startOfDayISO, endOfDayISO } from '@/lib/dateUtils';
+import { formatDate, formatDateWithWeekday, formatDateTime, startOfDayISO, endOfDayISO, getDateStrTaiwan, getNextDayStrTaiwan, startOfDayISOFromDateStr, endOfDayISOFromDateStr } from '@/lib/dateUtils';
 import type { SystemSettings, ParkingType, AddonService, BookingFormData } from '@/types';
 import ImageGallery from '@/components/ImageGallery';
 
@@ -308,42 +308,41 @@ const BookingPage: React.FC = () => {
     }
 
     try {
-      const startDate = new Date(formData.checkInTime);
-      const endDate = new Date(formData.checkOutTime);
-      const currentDate = new Date(startDate);
+      // Iterate by Taiwan calendar day so API and UI agree on "which day" is full
+      let dayStr = getDateStrTaiwan(formData.checkInTime);
+      const endDayStr = getDateStrTaiwan(formData.checkOutTime);
       const conflictingDates: any[] = [];
       const availableDates: any[] = [];
 
-      while (currentDate <= endDate) {
-        const dateStr = currentDate.toISOString().split('T')[0];
+      while (dayStr <= endDayStr) {
         try {
           const response = await api.post('/bookings/check-availability', {
             parkingTypeId: formData.parkingTypeId,
-            checkInTime: `${dateStr}T00:00:00.000Z`,
-            checkOutTime: `${dateStr}T23:59:59.999Z`
+            checkInTime: startOfDayISOFromDateStr(dayStr),
+            checkOutTime: endOfDayISOFromDateStr(dayStr)
           });
           
           const data = response.data;
           if (!data.success) {
             conflictingDates.push({
-              date: dateStr,
-              formattedDate: formatDateWithWeekday(currentDate)
+              date: dayStr,
+              formattedDate: formatDateWithWeekday(dayStr)
             });
           } else {
             availableDates.push({
-              date: dateStr,
-              formattedDate: formatDateWithWeekday(currentDate)
+              date: dayStr,
+              formattedDate: formatDateWithWeekday(dayStr)
             });
           }
         } catch (error) {
           console.error('Error checking day availability:', error);
           conflictingDates.push({
-            date: dateStr,
-            formattedDate: formatDateWithWeekday(currentDate)
+            date: dayStr,
+            formattedDate: formatDateWithWeekday(dayStr)
           });
         }
         
-        currentDate.setDate(currentDate.getDate() + 1);
+        dayStr = getNextDayStrTaiwan(dayStr);
       }
 
       if (conflictingDates.length > 0) {
@@ -351,7 +350,7 @@ const BookingPage: React.FC = () => {
         setConflictDetails({
           conflictingDates,
           availableDates,
-          totalDays: Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1,
+          totalDays: conflictingDates.length + availableDates.length,
           conflictingDays: conflictingDates.length,
           availableDays: availableDates.length
         });
@@ -370,29 +369,28 @@ const BookingPage: React.FC = () => {
     }
 
     const conflicts: string[] = [];
-    const startDate = new Date(formData.checkInTime);
-    const endDate = new Date(formData.checkOutTime);
-    const currentDate = new Date(startDate);
+    // Iterate by Taiwan calendar day so API and UI agree on "which day" is full
+    let dayStr = getDateStrTaiwan(formData.checkInTime);
+    const endDayStr = getDateStrTaiwan(formData.checkOutTime);
 
-    while (currentDate <= endDate) {
-      const dateStr = currentDate.toISOString().split('T')[0];
+    while (dayStr <= endDayStr) {
       try {
         const response = await api.post('/bookings/check-availability', {
           parkingTypeId: formData.parkingTypeId,
-          checkInTime: `${dateStr}T00:00:00.000Z`,
-          checkOutTime: `${dateStr}T23:59:59.999Z`
+          checkInTime: startOfDayISOFromDateStr(dayStr),
+          checkOutTime: endOfDayISOFromDateStr(dayStr)
         });
         
         const data = response.data;
         if (!data.success) {
-          conflicts.push(dateStr);
+          conflicts.push(dayStr);
         }
       } catch (error) {
         console.error('Error checking day availability:', error);
-        conflicts.push(dateStr);
+        conflicts.push(dayStr);
       }
       
-      currentDate.setDate(currentDate.getDate() + 1);
+      dayStr = getNextDayStrTaiwan(dayStr);
     }
 
     return conflicts;

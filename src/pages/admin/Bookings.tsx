@@ -750,8 +750,6 @@ const BookingsPage: React.FC = () => {
   };
 
   const renderCalendar = () => {
-    const today = new Date();
-    
     // Get first day of month and number of days
     const firstDay = new Date(currentYear, currentMonth, 1);
     const lastDay = new Date(currentYear, currentMonth + 1, 0);
@@ -871,8 +869,8 @@ const BookingsPage: React.FC = () => {
           }
           
           const { day, date, data } = dayData;
-          const isToday = date === today.toISOString().split('T')[0];
-          const isCurrentMonth = new Date(date).getMonth() === currentMonth;
+          const isToday = date === getDateStrTaiwan(new Date());
+          const isCurrentMonth = new Date(date + 'T12:00:00+08:00').getMonth() === currentMonth;
           
           return (
             <div 
