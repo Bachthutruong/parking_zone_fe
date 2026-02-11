@@ -32,13 +32,13 @@ const ContactImageUpload: React.FC<ContactImageUploadProps> = ({
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      toast.error(`${file.name} 不是有效的圖片文件`);
+      toast.error(`${file.name} 不是有效的圖片檔案`);
       return;
     }
 
     // Validate file size
     if (file.size > maxFileSize * 1024 * 1024) {
-      toast.error(`${file.name} 文件大小超過 ${maxFileSize}MB`);
+      toast.error(`${file.name} 檔案大小超過 ${maxFileSize}MB`);
       return;
     }
 

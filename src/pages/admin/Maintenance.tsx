@@ -102,7 +102,7 @@ const AdminMaintenance: React.FC = () => {
       setSelectedMaintenance(null);
       loadData();
     } catch (error: any) {
-      toast.error('Không thể xóa ngày bảo trì');
+      toast.error('無法刪除維護日期');
     }
   };
 

@@ -111,7 +111,7 @@ const AdminSpecialPricing: React.FC = () => {
       // }
     } catch (error: any) {
       console.error('Error loading parking types:', error);
-      toast.error('Không thể tải danh sách bãi đậu xe');
+      toast.error('無法載入停車場清單');
     } finally {
       setLoading(false);
     }
@@ -150,12 +150,12 @@ const AdminSpecialPricing: React.FC = () => {
     }
     
     if (!formData.startDate || !formData.price || !formData.reason.trim()) {
-      toast.error('Vui lòng điền đầy đủ thông tin bao gồm lý do');
+      toast.error('請填寫完整資訊（含原因）');
       return;
     }
 
     if (!isSingleDayMode && !formData.endDate) {
-      toast.error('Vui lòng chọn ngày kết thúc');
+      toast.error('請選擇結束日期');
       return;
     }
 
@@ -181,12 +181,12 @@ const AdminSpecialPricing: React.FC = () => {
 
   const handleBulkCreate = async () => {
     if (selectedParkingTypes.length === 0) {
-      toast.error('Vui lòng chọn ít nhất một bãi đậu xe');
+      toast.error('請至少選擇一個停車場');
       return;
     }
 
     if (!formData.startDate || !formData.price || !formData.reason.trim()) {
-      toast.error('Vui lòng điền đầy đủ thông tin bao gồm lý do');
+      toast.error('請填寫完整資訊（含原因）');
       return;
     }
 
@@ -237,7 +237,7 @@ const AdminSpecialPricing: React.FC = () => {
     if (!selectedSpecialPrice || !selectedParkingType) return;
     
     if (!formData.startDate || !formData.price || !formData.reason.trim()) {
-      toast.error('Vui lòng điền đầy đủ thông tin bao gồm lý do');
+      toast.error('請填寫完整資訊（含原因）');
       return;
     }
 
@@ -432,7 +432,7 @@ const AdminSpecialPricing: React.FC = () => {
     if (template === 'weekend') {
       // Template cuối tuần cần có ngày được chọn
       if (!formData.startDate || !formData.endDate) {
-        toast.error('Vui lòng chọn khoảng ngày trước khi sử dụng template cuối tuần');
+        toast.error('使用週末範本前請先選擇日期範圍');
         return;
       }
     }
@@ -449,19 +449,19 @@ const AdminSpecialPricing: React.FC = () => {
     } else {
       // Template cuối tuần không có dữ liệu (chưa chọn ngày)
       if (template === 'weekend') {
-        toast.error('Không tìm thấy cuối tuần nào trong khoảng ngày đã chọn');
+        toast.error('所選日期範圍內未找到週末');
       }
     }
   };
 
   const handleBulkTemplateApply = () => {
     if (selectedParkingTypes.length === 0) {
-      toast.error('Vui lòng chọn ít nhất một bãi đậu xe');
+      toast.error('請至少選擇一個停車場');
       return;
     }
     
     if (bulkTemplateData.length === 0) {
-      toast.error('Không có dữ liệu template');
+      toast.error('沒有範本資料');
       return;
     }
     
@@ -487,11 +487,11 @@ const AdminSpecialPricing: React.FC = () => {
         const failedCount = results.filter(r => !r.success).length;
         
         if (successCount > 0) {
-          toast.success(`Áp dụng thành công ${bulkTemplateData.length} template cho ${successCount} bãi đậu xe`);
+          toast.success(`已成功套用 ${bulkTemplateData.length} 個範本至 ${successCount} 個停車場`);
         }
         
         if (failedCount > 0) {
-          toast.error(`${failedCount} bãi đậu xe áp dụng thất bại`);
+          toast.error(`${failedCount} 個停車場套用失敗`);
         }
         
         setShowBulkTemplateDialog(false);
@@ -500,7 +500,7 @@ const AdminSpecialPricing: React.FC = () => {
         await loadParkingTypes();
       } catch (error: any) {
         console.error('Error applying bulk templates:', error);
-        toast.error('Không thể áp dụng template hàng loạt');
+        toast.error('無法批次套用範本');
       }
     };
     
@@ -509,7 +509,7 @@ const AdminSpecialPricing: React.FC = () => {
 
   const handleBulkDelete = async () => {
     if (selectedParkingTypes.length === 0) {
-      toast.error('Vui lòng chọn ít nhất một bãi đậu xe');
+      toast.error('請至少選擇一個停車場');
       return;
     }
     
@@ -520,7 +520,7 @@ const AdminSpecialPricing: React.FC = () => {
         .flatMap(pt => pt.specialPrices);
       
       if (allSpecialPrices.length === 0) {
-        toast.error('Không có giá đặc biệt nào để xóa');
+        toast.error('沒有可刪除的特殊價格');
         return;
       }
       
@@ -535,24 +535,24 @@ const AdminSpecialPricing: React.FC = () => {
       }
       
       await Promise.all(deletePromises);
-      toast.success(`Đã xóa ${allSpecialPrices.length} giá đặc biệt từ ${selectedParkingTypes.length} bãi đậu xe`);
+      toast.success(`已從 ${selectedParkingTypes.length} 個停車場刪除 ${allSpecialPrices.length} 筆特殊價格`);
       setShowBulkDeleteDialog(false);
       setSelectedParkingTypes([]);
       await loadParkingTypes();
     } catch (error: any) {
       console.error('Error bulk deleting special prices:', error);
-      toast.error('Không thể xóa giá đặc biệt hàng loạt');
+      toast.error('無法批次刪除特殊價格');
     }
   };
 
   const handleBulkEdit = async () => {
     if (selectedParkingTypes.length === 0) {
-      toast.error('Vui lòng chọn ít nhất một bãi đậu xe');
+      toast.error('請至少選擇一個停車場');
       return;
     }
     
     if (!formData.startDate || !formData.price || !formData.reason.trim()) {
-      toast.error('Vui lòng điền đầy đủ thông tin bao gồm lý do');
+      toast.error('請填寫完整資訊（含原因）');
       return;
     }
     
@@ -563,7 +563,7 @@ const AdminSpecialPricing: React.FC = () => {
         .flatMap(pt => pt.specialPrices);
       
       if (allSpecialPrices.length === 0) {
-        toast.error('Không có giá đặc biệt nào để sửa');
+        toast.error('沒有可修改的特殊價格');
         return;
       }
       
@@ -578,14 +578,14 @@ const AdminSpecialPricing: React.FC = () => {
       }
       
       await Promise.all(updatePromises);
-      toast.success(`Đã cập nhật ${allSpecialPrices.length} giá đặc biệt từ ${selectedParkingTypes.length} bãi đậu xe`);
+      toast.success(`已從 ${selectedParkingTypes.length} 個停車場更新 ${allSpecialPrices.length} 筆特殊價格`);
       setShowBulkEditDialog(false);
       setSelectedParkingTypes([]);
       resetForm();
       await loadParkingTypes();
     } catch (error: any) {
       console.error('Error bulk updating special prices:', error);
-      toast.error('Không thể cập nhật giá đặc biệt hàng loạt');
+      toast.error('無法批次更新特殊價格');
     }
   };
 

@@ -178,7 +178,7 @@ const AdminUsers: React.FC = () => {
         newUsersThisMonth: Math.floor(Math.random() * 20)
       });
     } catch (error: any) {
-      toast.error('無法載入用戶列表');
+      toast.error('無法載入使用者清單');
       console.error('Error loading users:', error);
     } finally {
       setLoading(false);
@@ -199,17 +199,17 @@ const AdminUsers: React.FC = () => {
   const handleCreateUser = async () => {
     try {
       if (!formData.name || !formData.email || !formData.phone) {
-        toast.error('請填寫所有必填信息');
+        toast.error('請填寫所有必填欄位');
         return;
       }
 
       await createUser(formData);
-      toast.success('創建用戶成功');
+      toast.success('建立使用者成功');
       setShowCreateDialog(false);
       resetForm();
       loadUsers();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || '無法創建用戶');
+      toast.error(error.response?.data?.message || '無法建立使用者');
       console.error('Error creating user:', error);
     }
   };
@@ -226,12 +226,12 @@ const AdminUsers: React.FC = () => {
         await updateUser(selectedUser._id, updateData);
       }
 
-      toast.success('更新用戶信息成功');
+      toast.success('更新使用者資訊成功');
       setShowEditDialog(false);
       resetForm();
       loadUsers();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || '無法更新用戶信息');
+      toast.error(error.response?.data?.message || '無法更新使用者資訊');
       console.error('Error updating user:', error);
     }
   };
@@ -241,12 +241,12 @@ const AdminUsers: React.FC = () => {
     
     try {
       await deleteUser(selectedUser._id);
-      toast.success('刪除用戶成功');
+      toast.success('刪除使用者成功');
       setShowDeleteDialog(false);
       setSelectedUser(null);
       loadUsers();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || '無法刪除用戶');
+      toast.error(error.response?.data?.message || '無法刪除使用者');
       console.error('Error deleting user:', error);
     }
   };
@@ -484,7 +484,7 @@ const AdminUsers: React.FC = () => {
 
   const handleExportUsers = () => {
     // In a real app, this would call an API to export users
-    toast.success('導出數據成功');
+    toast.success('匯出資料成功');
   };
 
   if (loading) {

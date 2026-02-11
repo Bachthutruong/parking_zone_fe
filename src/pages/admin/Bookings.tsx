@@ -8,6 +8,15 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Search, 
@@ -23,8 +32,9 @@ import {
   Table as TableIcon,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getAllBookings, updateBookingStatus, deleteBooking, getAllParkingTypes, getCalendarBookings, updateBooking } from '@/services/admin';
+import { getAllBookings, updateBookingStatus, updateBulkBookingStatus, deleteBooking, getAllParkingTypes, getCalendarBookings, updateBooking } from '@/services/admin';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2, RotateCcw } from 'lucide-react';
 import { getSystemSettings } from '@/services/systemSettings';
 import { formatDateTime, getDateStrTaiwan, getNextDayStrTaiwan } from '@/lib/dateUtils';
@@ -88,6 +98,13 @@ const BookingsPage: React.FC = () => {
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [bookingInProcess, setBookingInProcess] = useState<{booking: Booking, status: string} | null>(null);
   const [statusReason, setStatusReason] = useState('');
+
+  // Bulk selection & status
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkStatusDialogOpen, setIsBulkStatusDialogOpen] = useState(false);
+  const [bulkStatusTarget, setBulkStatusTarget] = useState<string>('');
+  const [bulkStatusReason, setBulkStatusReason] = useState('');
+  const [bulkStatusLoading, setBulkStatusLoading] = useState(false);
 
   // Edit Booking Dialog State
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
@@ -257,6 +274,57 @@ const BookingsPage: React.FC = () => {
       console.error('Status update error:', error);
       const errorMessage = error.response?.data?.message || error.message || '狀態更新失敗';
       toast.error(errorMessage);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === bookings.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(bookings.map(b => b._id)));
+    }
+  };
+
+  const toggleSelectBooking = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const openBulkStatusDialog = (status: string) => {
+    setBulkStatusTarget(status);
+    setBulkStatusReason('');
+    setIsBulkStatusDialogOpen(true);
+  };
+
+  const confirmBulkStatusChange = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      setBulkStatusLoading(true);
+      const result = await updateBulkBookingStatus(
+        Array.from(selectedIds),
+        bulkStatusTarget,
+        bulkStatusTarget === 'cancelled' ? bulkStatusReason : undefined
+      );
+      const successCount = (result as any).success?.length ?? 0;
+      const failedCount = (result as any).failed?.length ?? 0;
+      if (successCount > 0) {
+        toast.success(`已更新 ${successCount} 筆預約狀態`);
+      }
+      if (failedCount > 0) {
+        toast.error(`${failedCount} 筆更新失敗`);
+      }
+      setSelectedIds(new Set());
+      setIsBulkStatusDialogOpen(false);
+      loadBookings();
+    } catch (error: any) {
+      const msg = error.response?.data?.message || error.message || '批次更新失敗';
+      toast.error(msg);
+    } finally {
+      setBulkStatusLoading(false);
     }
   };
 
@@ -1082,9 +1150,55 @@ const BookingsPage: React.FC = () => {
             </div>
           ) : viewMode === 'table' ? (
             <>
+              {selectedIds.size > 0 && (
+                <div className="mb-4 p-3 flex flex-wrap items-center gap-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                    已選 {selectedIds.size} 筆
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setSelectedIds(new Set())}
+                    className="border-blue-300"
+                  >
+                    取消選擇
+                  </Button>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">批次變更狀態：</span>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                    onClick={() => openBulkStatusDialog('checked-in')}
+                  >
+                    已進入停車場
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => openBulkStatusDialog('checked-out')}
+                  >
+                    已離開停車場
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => openBulkStatusDialog('cancelled')}
+                  >
+                    已取消
+                  </Button>
+                </div>
+              )}
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={bookings.length > 0 && selectedIds.size === bookings.length}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="全選本頁"
+                      />
+                    </TableHead>
                     <TableHead>客戶</TableHead>
                     <TableHead>停車場</TableHead>
                     <TableHead>時間</TableHead>
@@ -1096,6 +1210,13 @@ const BookingsPage: React.FC = () => {
                 <TableBody>
                   {bookings.map((booking) => (
                     <TableRow key={booking._id}>
+                      <TableCell className="w-10">
+                        <Checkbox
+                          checked={selectedIds.has(booking._id)}
+                          onCheckedChange={() => toggleSelectBooking(booking._id)}
+                          aria-label={`選擇 ${booking.driverName}`}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="space-y-1">
                           <div className="font-medium">{booking.driverName}</div>
@@ -1733,12 +1854,53 @@ const BookingsPage: React.FC = () => {
       </Dialog>
 
 
-      {/* Status Change Confirmation Dialog */}
-      <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>確認更改狀態</DialogTitle>
-            <DialogDescription>
+      {/* Bulk Status Change Confirmation Dialog */}
+      <AlertDialog open={isBulkStatusDialogOpen} onOpenChange={setIsBulkStatusDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>批次更改狀態 - 確認</AlertDialogTitle>
+            <AlertDialogDescription>
+              {bulkStatusTarget && (
+                <>
+                  您確定要將所選 <strong>{selectedIds.size}</strong> 筆預約的狀態更改為
+                  {bulkStatusTarget === 'checked-in' ? ' 已進入停車場' :
+                   bulkStatusTarget === 'checked-out' ? ' 已離開停車場' :
+                   bulkStatusTarget === 'cancelled' ? ' 已取消' : ` ${bulkStatusTarget}`} 嗎？
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {bulkStatusTarget === 'cancelled' && (
+            <div className="py-4">
+              <Label htmlFor="bulkStatusReason" className="mb-2 block">取消原因 (可選)</Label>
+              <Textarea
+                id="bulkStatusReason"
+                placeholder="請輸入取消原因..."
+                value={bulkStatusReason}
+                onChange={(e) => setBulkStatusReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkStatusLoading}>取消</AlertDialogCancel>
+            <Button
+              variant={bulkStatusTarget === 'cancelled' ? 'destructive' : 'default'}
+              onClick={confirmBulkStatusChange}
+              disabled={bulkStatusLoading}
+            >
+              {bulkStatusLoading ? '處理中...' : '確認批次更改'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Single Booking Status Change Confirmation Dialog */}
+      <AlertDialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>確認更改狀態</AlertDialogTitle>
+            <AlertDialogDescription>
               {bookingInProcess && (
                 <>
                   您確定要將預約 <strong>{bookingInProcess.booking.driverName}</strong> 的狀態更改為
@@ -1749,9 +1911,8 @@ const BookingsPage: React.FC = () => {
                    ` ${bookingInProcess.status}`} 嗎？
                 </>
               )}
-            </DialogDescription>
-          </DialogHeader>
-          
+            </AlertDialogDescription>
+          </AlertDialogHeader>
           {bookingInProcess?.status === 'cancelled' && (
             <div className="py-4">
               <Label htmlFor="statusReason" className="mb-2 block">取消原因 (可選)</Label>
@@ -1764,20 +1925,17 @@ const BookingsPage: React.FC = () => {
               />
             </div>
           )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsStatusDialogOpen(false)}>
-              取消
-            </Button>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <Button 
               variant={bookingInProcess?.status === 'cancelled' ? 'destructive' : 'default'}
               onClick={confirmStatusChange}
             >
               確認更改
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

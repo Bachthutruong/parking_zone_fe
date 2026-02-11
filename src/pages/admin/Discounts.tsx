@@ -172,7 +172,7 @@ const AdminDiscounts: React.FC = () => {
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
-    toast.success('Đã sao chép mã giảm giá');
+    toast.success('已複製折扣碼');
   };
 
   const formatDate = (dateString: string) => {

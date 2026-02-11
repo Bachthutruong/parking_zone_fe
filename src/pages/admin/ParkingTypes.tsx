@@ -137,18 +137,18 @@ const AdminParkingTypes: React.FC = () => {
       
       // Use _id instead of code for the API call
       if (!selectedType._id) {
-        toast.error('Không tìm thấy ID bãi đậu xe');
+        toast.error('找不到停車場 ID');
         return;
       }
       
       await updateParkingType(selectedType._id, updateData);
-      toast.success('Cập nhật bãi đậu xe thành công');
+      toast.success('停車場更新成功');
       setShowEditDialog(false);
       resetForm();
       loadParkingTypes();
     } catch (error: any) {
       console.error('Error updating parking type:', error);
-      toast.error('Không thể cập nhật bãi đậu xe');
+      toast.error('無法更新停車場');
     }
   };
 
@@ -157,12 +157,12 @@ const AdminParkingTypes: React.FC = () => {
     
     try {
       await deleteParkingType(selectedType.code);
-      toast.success('Xóa bãi đậu xe thành công');
+      toast.success('刪除停車場成功');
       setShowDeleteDialog(false);
       setSelectedType(null);
       loadParkingTypes();
     } catch (error: any) {
-      toast.error('Không thể xóa bãi đậu xe');
+      toast.error('無法刪除停車場');
     }
   };
 

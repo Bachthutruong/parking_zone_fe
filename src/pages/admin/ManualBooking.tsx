@@ -434,10 +434,10 @@ const AdminManualBooking: React.FC = () => {
       setCreatedBooking(result.booking);
       setShowSuccessDialog(true);
       resetForm();
-      toast.success('手動預約創建成功');
+      toast.success('手動預約建立成功');
     } catch (error: any) {
       console.error('Error creating manual booking:', error);
-      toast.error(error.response?.data?.message || '無法創建手動預約');
+      toast.error(error.response?.data?.message || '無法建立手動預約');
     }
   };
 

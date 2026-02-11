@@ -59,14 +59,14 @@ const Header: React.FC = () => {
                 {user.role === 'admin' && (
                   <Link to="/admin">
                     <Button variant="outline" size="sm" className="text-white bg-[#39653f] border-white hover:bg-white/10 text-xs md:text-sm">
-                      Admin Panel
+                      管理員面板
                     </Button>
                   </Link>
                 )}
                 {user.role === 'staff' && (
                   <Link to="/staff">
                     <Button variant="outline" size="sm" className="text-white border-white hover:bg-white/10 text-xs md:text-sm">
-                      Staff Panel
+                      員工面板
                     </Button>
                   </Link>
                 )}
@@ -143,7 +143,7 @@ const Header: React.FC = () => {
                       className="block px-3 py-2 rounded-md text-sm font-medium text-white/70 hover:text-white hover:bg-white/10"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      Admin Panel
+                      管理員面板
                     </Link>
                   )}
                   {user.role === 'staff' && (
@@ -152,7 +152,7 @@ const Header: React.FC = () => {
                       className="block px-3 py-2 rounded-md text-sm font-medium text-white/70 hover:text-white hover:bg-white/10"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      Staff Panel
+                      員工面板
                     </Link>
                   )}
                   <button

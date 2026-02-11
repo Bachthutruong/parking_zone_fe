@@ -49,6 +49,11 @@ export const updateBookingStatus = async (bookingId: string, status: string, rea
   return response.data;
 };
 
+export const updateBulkBookingStatus = async (bookingIds: string[], status: string, reason?: string) => {
+  const response = await api.patch('/admin/bookings/bulk-status', { bookingIds, status, reason });
+  return response.data;
+};
+
 export const deleteBooking = async (bookingId: string, reason?: string) => {
   const response = await api.delete(`/admin/bookings/${bookingId}`, { data: { reason } });
   return response.data;

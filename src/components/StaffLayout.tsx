@@ -98,7 +98,7 @@ const StaffLayout: React.FC = () => {
               onClick={handleLogout}
             >
               <LogOut className="h-5 w-5 mr-3" />
-              Đăng xuất
+              登出
             </Button>
           </div>
         </div>
@@ -119,7 +119,7 @@ const StaffLayout: React.FC = () => {
           
           <div className="flex items-center space-x-2 sm:space-x-4">
             <div className="text-xs sm:text-sm text-gray-600">
-              Chào mừng, Staff
+              歡迎，員工
             </div>
           </div>
         </header>

@@ -177,7 +177,7 @@ const AdminLayout: React.FC = () => {
           
           <div className="flex items-center space-x-2 sm:space-x-4">
             <div className="text-xs sm:text-sm text-gray-600">
-              Chào mừng, {user?.role === 'admin' ? 'Admin' : 'Staff'}
+              歡迎，{user?.role === 'admin' ? '管理員' : '員工'}
             </div>
           </div>
         </header>

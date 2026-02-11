@@ -177,7 +177,7 @@ const StaffDashboard: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Staff 儀表板</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">員工儀表板</h1>
           <p className="text-gray-600 text-sm sm:text-base">停車場系統概覽</p>
         </div>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
