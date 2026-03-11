@@ -33,11 +33,12 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getAllBookings, updateBookingStatus, updateBulkBookingStatus, deleteBooking, getAllParkingTypes, getCalendarBookings, updateBooking } from '@/services/admin';
+import { calculatePrice } from '@/services/booking';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2, RotateCcw } from 'lucide-react';
 import { getSystemSettings } from '@/services/systemSettings';
-import { formatDateTime, getDateStrTaiwan, getNextDayStrTaiwan } from '@/lib/dateUtils';
+import { formatDateTime, getDateStrTaiwan, getNextDayStrTaiwan, formatDateWithWeekday } from '@/lib/dateUtils';
 import DateInput from '@/components/ui/date-input';
 import type { Booking } from '@/types';
 
@@ -59,6 +60,7 @@ interface EditBookingForm {
   checkOutTime: string;
   status: string;
   notes: string;
+  vehicleCount: number;
 }
 
 const BookingsPage: React.FC = () => {
@@ -118,12 +120,23 @@ const BookingsPage: React.FC = () => {
     checkOutTime: '',
     status: 'confirmed',
     notes: '',
+    vehicleCount: 1,
   });
   const [editSaving, setEditSaving] = useState(false);
 
   // Parking Types State
   const [parkingTypes, setParkingTypes] = useState<any[]>([]);
   // selectedParkingType already declared above
+
+  // New price preview when editing
+  const [newPriceLoading, setNewPriceLoading] = useState(false);
+  const [newPrice, setNewPrice] = useState<number | null>(null);
+  const [newPriceError, setNewPriceError] = useState<string | null>(null);
+  const [availabilityErrorDetail, setAvailabilityErrorDetail] = useState<{
+    selectedRange: { from: string; to: string };
+    fullDays: string[];
+  } | null>(null);
+  const [shouldRecalcPrice, setShouldRecalcPrice] = useState(false);
 
   useEffect(() => {
     loadParkingTypes();
@@ -352,6 +365,10 @@ const BookingsPage: React.FC = () => {
     const ptId = typeof booking.parkingType === 'object' && booking.parkingType?._id
       ? booking.parkingType._id
       : (booking as any).parkingType ?? '';
+    setNewPrice(null);
+    setNewPriceError(null);
+    setAvailabilityErrorDetail(null);
+    setShouldRecalcPrice(false);
     setEditForm({
       driverName: booking.driverName ?? '',
       phone: booking.phone ?? '',
@@ -362,20 +379,86 @@ const BookingsPage: React.FC = () => {
       checkOutTime: booking.checkOutTime ?? '',
       status: booking.status ?? 'confirmed',
       notes: (booking as any).notes ?? '',
+      vehicleCount: booking.vehicleCount ?? 1,
     });
   };
 
   const closeEditDialog = () => {
     setEditingBooking(null);
     setEditSaving(false);
+    setNewPrice(null);
+    setNewPriceError(null);
+    setAvailabilityErrorDetail(null);
+    setShouldRecalcPrice(false);
   };
+
+  // Khi chỉnh sửa: thay đổi bãi, thời gian, số lượng xe → tính lại giá dự kiến
+  useEffect(() => {
+    if (!editingBooking || !editForm.parkingTypeId || !editForm.checkInTime || !editForm.checkOutTime) {
+      setNewPrice(null);
+      setNewPriceError(null);
+      setAvailabilityErrorDetail(null);
+      return;
+    }
+    if (!shouldRecalcPrice) {
+      return;
+    }
+    const checkIn = new Date(editForm.checkInTime);
+    const checkOut = new Date(editForm.checkOutTime);
+    if (checkOut <= checkIn) {
+      setNewPrice(null);
+      setNewPriceError('離開時間須晚於進入時間');
+      setAvailabilityErrorDetail(null);
+      return;
+    }
+    let cancelled = false;
+    setNewPriceLoading(true);
+    setNewPriceError(null);
+    calculatePrice({
+      parkingTypeId: editForm.parkingTypeId,
+      checkInTime: editForm.checkInTime,
+      checkOutTime: editForm.checkOutTime,
+      addonServices: (editingBooking.addonServices || []).map((a) => (a as any).service?._id || (a as any)._id).filter(Boolean),
+      discountCode: editingBooking.discountCode?.code,
+      isVIP: editingBooking.isVIP,
+      userEmail: editingBooking.email,
+      vehicleCount: editForm.vehicleCount || 1,
+    } as any)
+      .then((res: any) => {
+        if (cancelled) return;
+        if (res?.success && res?.pricing?.finalAmount != null) {
+          setNewPrice(res.pricing.finalAmount);
+          setNewPriceError(null);
+        } else if (res?.pricing?.finalAmount != null) {
+          setNewPrice(res.pricing.finalAmount);
+          setNewPriceError(res?.message || null);
+        } else {
+          setNewPrice(null);
+          const msg = res?.message || '無法計算新價格';
+          setNewPriceError(msg);
+        }
+        setAvailabilityErrorDetail(null);
+      })
+      .catch((err: any) => {
+        if (cancelled) return;
+        setNewPrice(null);
+        setNewPriceError(err?.response?.data?.message || '無法計算新價格');
+        setAvailabilityErrorDetail(null);
+      })
+      .finally(() => {
+        if (!cancelled) setNewPriceLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [editingBooking, editForm.parkingTypeId, editForm.checkInTime, editForm.checkOutTime, editForm.vehicleCount, shouldRecalcPrice]);
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingBooking) return;
     try {
       setEditSaving(true);
-      await updateBooking(editingBooking._id, {
+      const payload: any = {
         driverName: editForm.driverName,
         phone: editForm.phone,
         email: editForm.email || undefined,
@@ -383,9 +466,40 @@ const BookingsPage: React.FC = () => {
         parkingType: editForm.parkingTypeId || undefined,
         checkInTime: editForm.checkInTime,
         checkOutTime: editForm.checkOutTime,
+        vehicleCount: editForm.vehicleCount || 1,
         status: editForm.status as 'pending' | 'confirmed' | 'checked-in' | 'checked-out' | 'cancelled',
         notes: editForm.notes || undefined,
-      } as Parameters<typeof updateBooking>[1]);
+      };
+
+      // Tính lại giá theo số lượng xe mới và các điều kiện hiện tại, gửi kèm cho backend
+      try {
+        const res: any = await calculatePrice({
+          parkingTypeId: editForm.parkingTypeId,
+          checkInTime: editForm.checkInTime,
+          checkOutTime: editForm.checkOutTime,
+          addonServices: (editingBooking.addonServices || []).map((a: any) => a.service?._id || a._id).filter(Boolean),
+          discountCode: editingBooking.discountCode?.code,
+          isVIP: editingBooking.isVIP,
+          userEmail: editingBooking.email,
+          vehicleCount: editForm.vehicleCount || 1,
+        } as any);
+        const pricing = res?.pricing;
+        if (pricing && pricing.finalAmount != null) {
+          payload.totalAmount = pricing.totalAmount ?? pricing.finalAmount;
+          payload.discountAmount = pricing.discountAmount ?? 0;
+          payload.finalAmount = pricing.finalAmount;
+          if (pricing.autoDiscountAmount != null) {
+            payload.autoDiscountAmount = pricing.autoDiscountAmount;
+          }
+          if (pricing.dailyPrices) {
+            payload.dailyPrices = pricing.dailyPrices;
+          }
+        }
+      } catch (err) {
+        console.error('Recalculate price failed in Bookings:', err);
+      }
+
+      await updateBooking(editingBooking._id, payload as Parameters<typeof updateBooking>[1]);
       toast.success('已更新預約資訊');
       closeEditDialog();
       loadBookings();
@@ -1743,7 +1857,10 @@ const BookingsPage: React.FC = () => {
               <Label htmlFor="edit-parkingType">停車場 *</Label>
               <Select
                 value={editForm.parkingTypeId}
-                onValueChange={(value) => setEditForm((f) => ({ ...f, parkingTypeId: value }))}
+                onValueChange={(value) => {
+                  setEditForm((f) => ({ ...f, parkingTypeId: value }));
+                  setShouldRecalcPrice(true);
+                }}
               >
                 <SelectTrigger id="edit-parkingType">
                   <SelectValue placeholder="選擇停車場" />
@@ -1764,7 +1881,10 @@ const BookingsPage: React.FC = () => {
                   id="edit-checkInTime"
                   type="datetime-local"
                   value={editForm.checkInTime}
-                  onChange={(value) => setEditForm((f) => ({ ...f, checkInTime: value }))}
+                onChange={(value) => {
+                  setEditForm((f) => ({ ...f, checkInTime: value }));
+                  setShouldRecalcPrice(true);
+                }}
                   placeholder="年/月/日 00:00"
                 />
               </div>
@@ -1774,10 +1894,30 @@ const BookingsPage: React.FC = () => {
                   id="edit-checkOutTime"
                   type="datetime-local"
                   value={editForm.checkOutTime}
-                  onChange={(value) => setEditForm((f) => ({ ...f, checkOutTime: value }))}
+                onChange={(value) => {
+                  setEditForm((f) => ({ ...f, checkOutTime: value }));
+                  setShouldRecalcPrice(true);
+                }}
                   placeholder="年/月/日 00:00"
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-vehicleCount">車輛數量 *</Label>
+              <Input
+                id="edit-vehicleCount"
+                type="number"
+                min={1}
+                value={editForm.vehicleCount}
+                onChange={(e) => {
+                  setEditForm((f) => ({
+                    ...f,
+                    vehicleCount: Math.max(1, Number(e.target.value) || 1),
+                  }));
+                  setShouldRecalcPrice(true);
+                }}
+                placeholder="車輛數量"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-status">狀態</Label>
@@ -1806,6 +1946,51 @@ const BookingsPage: React.FC = () => {
                 placeholder="備註"
               />
             </div>
+            {/* 價格比較：變更停車場 / 時間 / 車輛數量時顯示原價 vs 新價 */}
+            {editingBooking && (
+              <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
+                <div className="text-sm font-medium text-muted-foreground">價格比較</div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <div className="text-muted-foreground">原價（目前預約）</div>
+                    <div className="font-semibold text-base">{editingBooking.finalAmount.toLocaleString('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">新價（變更後）</div>
+                    {newPriceLoading ? (
+                      <div className="text-muted-foreground">計算中...</div>
+                    ) : newPrice != null ? (
+                      <div className={`font-semibold text-base ${newPrice !== editingBooking.finalAmount ? 'text-amber-600' : ''}`}>
+                        {newPrice.toLocaleString('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        {newPrice !== editingBooking.finalAmount && (
+                          <span className="ml-1 text-xs font-normal">
+                            ({newPrice > editingBooking.finalAmount ? '+' : ''}{(newPrice - editingBooking.finalAmount).toLocaleString('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0, maximumFractionDigits: 0 })})
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="text-muted-foreground text-xs">{newPriceError || '變更停車場、時間或車輛數量後顯示'}</div>
+                        {availabilityErrorDetail && (
+                          <div className="mt-2 text-xs text-red-600 space-y-1">
+                            <p>
+                              <span className="font-medium">您選擇的日期：</span>
+                              {availabilityErrorDetail.selectedRange.from} ～ {availabilityErrorDetail.selectedRange.to}
+                            </p>
+                            {availabilityErrorDetail.fullDays.length > 0 && (
+                              <p>
+                                <span className="font-medium">已滿的日期：</span>
+                                {availabilityErrorDetail.fullDays.map((d) => formatDateWithWeekday(d)).join('、')}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={closeEditDialog} disabled={editSaving}>
                 取消

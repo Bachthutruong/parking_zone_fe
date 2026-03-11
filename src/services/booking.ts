@@ -5,6 +5,8 @@ export interface CheckAvailabilityParams {
   parkingTypeId: string;
   checkInTime: string;
   checkOutTime: string;
+  /** Số lượng xe dùng để kiểm tra / tính giá */
+  vehicleCount?: number;
   /** When editing a booking, pass its ID so it is excluded from the count (its slot is treated as free). */
   excludeBookingId?: string;
   /** Include debug info in response (perDayOccupancy, maxOccupied) for verification. */

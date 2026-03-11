@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, XCircle, Car } from 'lucide-react';
 import { api } from '@/services';
-// formatDate import removed as it's not currently used
+import { getDateStrTaiwan } from '@/lib/dateUtils';
 
 interface AvailabilityCalendarProps {
   parkingTypeId: string;
@@ -75,14 +75,21 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
       const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
       const lastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
       
-      // Generate all days in the month
+      // Generate all days in the month (the "day string" must follow Taiwan calendar day)
       const days: DayInfo[] = [];
       const currentDate = new Date(firstDay);
       
       while (currentDate <= lastDay) {
-        const dateStr = currentDate.toISOString().split('T')[0];
-        const isInRange = checkInTime && checkOutTime && 
-          currentDate >= new Date(checkInTime) && currentDate <= new Date(checkOutTime);
+        // Use Taiwan day string instead of UTC to avoid lệch 1 ngày
+        const dateStr = getDateStrTaiwan(currentDate);
+        // So sánh theo ngày (YYYY-MM-DD), không theo giờ để tránh lệch ngày
+        const checkInDateStr = checkInTime ? checkInTime.toString().slice(0, 10) : '';
+        const checkOutDateStr = checkOutTime ? checkOutTime.toString().slice(0, 10) : '';
+        const isInRange =
+          !!checkInDateStr &&
+          !!checkOutDateStr &&
+          dateStr >= checkInDateStr &&
+          dateStr <= checkOutDateStr;
         
         // Use fallback values if parkingTypeInfo is not loaded yet
         const totalSpaces = parkingTypeInfo?.totalSpaces || 10;
@@ -193,11 +200,11 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
     
     // Check if day is in the selected booking range
     if (checkInTime && checkOutTime) {
-      const dayDate = new Date(day.date);
-      const checkInDate = new Date(checkInTime);
-      const checkOutDate = new Date(checkOutTime);
-      
-      if (dayDate >= checkInDate && dayDate <= checkOutDate) {
+      const dateStr = day.date;
+      const checkInDateStr = checkInTime.toString().slice(0, 10);
+      const checkOutDateStr = checkOutTime.toString().slice(0, 10);
+
+      if (dateStr >= checkInDateStr && dateStr <= checkOutDateStr) {
         return 'in-booking-range';
       }
     }
@@ -285,7 +292,7 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
     
     // Add all days in the month
     while (currentDate <= endDate) {
-      const dateStr = currentDate.toISOString().split('T')[0];
+      const dateStr = getDateStrTaiwan(currentDate);
       const dayInfo = availabilityData.find(day => day.date === dateStr);
       
       days.push({

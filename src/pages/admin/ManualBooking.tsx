@@ -1270,7 +1270,7 @@ const AdminManualBooking: React.FC = () => {
                         </div>
                       )}
                       
-                      <div className="border-t pt-2">
+                      <div className="border-t pt-2 space-y-1">
                         <div className="flex justify-between items-center">
                           <span className="font-bold text-lg text-gray-900">總付款：</span>
                           <span className="text-2xl font-bold text-emerald-600">
@@ -1278,6 +1278,9 @@ const AdminManualBooking: React.FC = () => {
                               discountInfo?.finalAmount ?? pricing?.finalAmount ?? 0
                             )}
                           </span>
+                        </div>
+                        <div className="text-xs text-gray-600 text-right">
+                          此金額為系統預估，實際金額以回國取車結算為主
                         </div>
                       </div>
                     </div>

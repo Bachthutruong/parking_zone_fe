@@ -1,28 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Calendar,
   Car,
   Clock,
   Pencil,
+  Eye,
+  Phone,
   AlertTriangle,
   CheckCircle,
   XCircle,
   TrendingUp,
   TrendingDown,
   RefreshCw,
-  Printer
+  Printer,
+  RotateCcw
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getTodayBookings, updateBooking, getAllParkingTypes } from '@/services/admin';
-import { checkAvailability } from '@/services/booking';
+import { getTodayBookings, updateBooking, updateBookingStatus, updateBulkBookingStatus, getAllParkingTypes } from '@/services/admin';
+import { calculatePrice } from '@/services/booking';
 import { formatDateTime, formatDateWithWeekday } from '@/lib/dateUtils';
 import DateInput from '@/components/ui/date-input';
 
@@ -37,6 +51,7 @@ interface TodayBooking {
   checkOutTime: string;
   status: string;
   finalAmount: number;
+  vehicleCount?: number;
   parkingType: {
     _id?: string;
     name: string;
@@ -70,6 +85,7 @@ interface EditFormState {
   checkOutTime: string;
   status: string;
   notes?: string;
+  vehicleCount: number;
 }
 
 const STATUS_OPTIONS = [
@@ -80,10 +96,13 @@ const STATUS_OPTIONS = [
   { value: 'cancelled', label: '已取消' },
 ] as const;
 
+// 4 tab keys: 進入車輛 | 待進入車輛 | 離開車輛 | 未離開車輛
+type TodayTabKey = 'entering' | 'alreadyEntered' | 'leaving' | 'overdue';
+
 const AdminTodayOverview: React.FC = () => {
   const [data, setData] = useState<TodaySummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'checkins' | 'checkouts' | 'overdue'>('checkins');
+  const [activeTab, setActiveTab] = useState<TodayTabKey>('entering');
   const [editingBooking, setEditingBooking] = useState<TodayBooking | null>(null);
   const [editForm, setEditForm] = useState<EditFormState>({
     driverName: '',
@@ -95,6 +114,7 @@ const AdminTodayOverview: React.FC = () => {
     checkOutTime: '',
     status: 'confirmed',
     notes: '',
+    vehicleCount: 1,
   });
   const [saving, setSaving] = useState(false);
   const [parkingTypes, setParkingTypes] = useState<any[]>([]);
@@ -105,10 +125,29 @@ const AdminTodayOverview: React.FC = () => {
     selectedRange: { from: string; to: string };
     fullDays: string[];
   } | null>(null);
+  // Chỉ tính lại giá sau khi user thực sự thay đổi dữ liệu
+  const [shouldRecalcPrice, setShouldRecalcPrice] = useState(false);
+
+  // Selection & bulk status (like Bookings)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [bookingInProcess, setBookingInProcess] = useState<{ booking: TodayBooking; status: string } | null>(null);
+  const [statusReason, setStatusReason] = useState('');
+  const [isBulkStatusDialogOpen, setIsBulkStatusDialogOpen] = useState(false);
+  const [bulkStatusTarget, setBulkStatusTarget] = useState<string>('');
+  const [bulkStatusReason, setBulkStatusReason] = useState('');
+  const [bulkStatusLoading, setBulkStatusLoading] = useState(false);
+
+  // View details
+  const [viewingBooking, setViewingBooking] = useState<TodayBooking | null>(null);
 
   useEffect(() => {
     loadTodayData();
   }, []);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [activeTab]);
 
   useEffect(() => {
     getAllParkingTypes()
@@ -141,18 +180,142 @@ const AdminTodayOverview: React.FC = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return <Badge variant="default"><CheckCircle className="h-3 w-3 mr-1" />預約成功</Badge>;
-      case 'checked-in':
-        return <Badge variant="secondary"><Car className="h-3 w-3 mr-1" />已進入停車場</Badge>;
-      case 'checked-out':
-        return <Badge variant="outline"><Clock className="h-3 w-3 mr-1" />已離開停車場</Badge>;
-      case 'cancelled':
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />已取消</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
+    const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive'; icon: React.ReactNode }> = {
+      pending: { label: '等待進入停車場', variant: 'secondary', icon: <Clock className="h-3 w-3 mr-1" /> },
+      confirmed: { label: '預約成功', variant: 'default', icon: <CheckCircle className="h-3 w-3 mr-1" /> },
+      'checked-in': { label: '已進入停車場', variant: 'secondary', icon: <Car className="h-3 w-3 mr-1" /> },
+      'checked-out': { label: '已離開停車場', variant: 'outline', icon: <Clock className="h-3 w-3 mr-1" /> },
+      cancelled: { label: '已取消', variant: 'destructive', icon: <XCircle className="h-3 w-3 mr-1" /> },
+    };
+    const config = statusConfig[status] || statusConfig.pending;
+    return <Badge variant={config.variant}>{config.icon}{config.label}</Badge>;
+  };
+
+  // 4 lists (logic chính xác):
+  // - 進入車輛: đặt hẹn hoàn thành nhưng chưa vào bãi (checkIn hôm nay, status pending/confirmed)
+  // - 待進入車輛: đã vào bãi (checkIn hôm nay, status checked-in)
+  // - 離開車輛: sẽ rời bãi vào hôm nay nhưng chưa đến giờ rời (checkOut hôm nay, còn trong bãi, checkOutTime > now)
+  // - 未離開車輛: quá hạn đến hôm nay nhưng chưa rời (overdue, status !== checked-out)
+  const { enteringList, alreadyEnteredList, leavingList, overdueList, counts } = useMemo(() => {
+    if (!data) {
+      return {
+        enteringList: [] as TodayBooking[],
+        alreadyEnteredList: [] as TodayBooking[],
+        leavingList: [] as TodayBooking[],
+        overdueList: [] as TodayBooking[],
+        counts: { entering: 0, alreadyEntered: 0, leaving: 0, overdue: 0 },
+      };
     }
+    const now = new Date();
+    // 進入車輛: checkIn hôm nay, chưa vào bãi (pending/confirmed)
+    const entering = data.checkInsToday.filter((b) => b.status === 'pending' || b.status === 'confirmed');
+    // 待進入車輛: checkIn hôm nay, đã vào bãi (checked-in)
+    const alreadyEntered = data.checkInsToday.filter((b) => b.status === 'checked-in');
+    // 離開車輛: checkOut hôm nay, vẫn còn trong bãi, chưa đến giờ rời (checkOutTime > now)
+    const leaving = data.checkOutsToday.filter(
+      (b) => b.status === 'checked-in' && new Date(b.checkOutTime) > now
+    );
+    // 未離開車輛: quá hạn (checkOut đã qua) nhưng chưa rời
+    const overdue = data.overdueBookings.filter((b) => b.status !== 'checked-out');
+    return {
+      enteringList: entering,
+      alreadyEnteredList: alreadyEntered,
+      leavingList: leaving,
+      overdueList: overdue,
+      counts: {
+        entering: entering.length,
+        alreadyEntered: alreadyEntered.length,
+        leaving: leaving.length,
+        overdue: overdue.length,
+      },
+    };
+  }, [data]);
+
+  const getCurrentData = (): TodayBooking[] => {
+    switch (activeTab) {
+      case 'entering': return enteringList;
+      case 'alreadyEntered': return alreadyEnteredList;
+      case 'leaving': return leavingList;
+      case 'overdue': return overdueList;
+      default: return enteringList;
+    }
+  };
+
+  const currentList = getCurrentData();
+
+  const openStatusDialog = (booking: TodayBooking, status: string) => {
+    setBookingInProcess({ booking, status });
+    setStatusReason('');
+    setIsStatusDialogOpen(true);
+  };
+
+  const confirmStatusChange = async () => {
+    if (!bookingInProcess) return;
+    try {
+      await updateBookingStatus(bookingInProcess.booking._id, bookingInProcess.status, statusReason);
+      toast.success('狀態更新成功');
+      loadTodayData();
+      setIsStatusDialogOpen(false);
+      setBookingInProcess(null);
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || error?.message || '狀態更新失敗';
+      toast.error(msg);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === currentList.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(currentList.map((b) => b._id)));
+    }
+  };
+
+  const toggleSelectBooking = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const openBulkStatusDialog = (status: string) => {
+    setBulkStatusTarget(status);
+    setBulkStatusReason('');
+    setIsBulkStatusDialogOpen(true);
+  };
+
+  const confirmBulkStatusChange = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      setBulkStatusLoading(true);
+      const result = await updateBulkBookingStatus(
+        Array.from(selectedIds),
+        bulkStatusTarget,
+        bulkStatusTarget === 'cancelled' ? bulkStatusReason : undefined
+      ) as { success?: string[]; failed?: string[] };
+      const successCount = result?.success?.length ?? 0;
+      const failedCount = result?.failed?.length ?? 0;
+      if (successCount > 0) toast.success(`已更新 ${successCount} 筆預約狀態`);
+      if (failedCount > 0) toast.error(`${failedCount} 筆更新失敗`);
+      setSelectedIds(new Set());
+      setIsBulkStatusDialogOpen(false);
+      loadTodayData();
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || error?.message || '批次更新失敗';
+      toast.error(msg);
+    } finally {
+      setBulkStatusLoading(false);
+    }
+  };
+
+  const handleRevertStatus = (booking: TodayBooking) => {
+    let newStatus = '';
+    if (booking.status === 'checked-in') newStatus = 'confirmed';
+    else if (booking.status === 'checked-out') newStatus = 'checked-in';
+    else if (booking.status === 'cancelled') newStatus = 'confirmed';
+    if (newStatus) openStatusDialog(booking, newStatus);
   };
 
   const handlePrint = () => {
@@ -163,6 +326,8 @@ const AdminTodayOverview: React.FC = () => {
     setEditingBooking(booking);
     setNewPrice(null);
     setNewPriceError(null);
+    setAvailabilityErrorDetail(null);
+    setShouldRecalcPrice(false);
     const ptId = (booking.parkingType as any)?._id ?? '';
     setEditForm({
       driverName: booking.driverName ?? '',
@@ -174,6 +339,7 @@ const AdminTodayOverview: React.FC = () => {
       checkOutTime: booking.checkOutTime ?? '',
       status: booking.status ?? 'confirmed',
       notes: (booking as any).notes ?? '',
+      vehicleCount: (booking as any).vehicleCount ?? 1,
     });
   };
 
@@ -183,14 +349,19 @@ const AdminTodayOverview: React.FC = () => {
     setNewPrice(null);
     setNewPriceError(null);
     setAvailabilityErrorDetail(null);
+    setShouldRecalcPrice(false);
   };
 
-  // When parking or dates change, fetch new price for comparison
+  // Khi chỉnh sửa: thay đổi bãi / thời gian / số lượng xe → ước tính lại giá mới
   useEffect(() => {
     if (!editingBooking || !editForm.parkingTypeId || !editForm.checkInTime || !editForm.checkOutTime) {
       setNewPrice(null);
       setNewPriceError(null);
       setAvailabilityErrorDetail(null);
+      return;
+    }
+    // Không gọi API khi vừa mở dialog, chỉ khi user đã sửa một trong các field liên quan
+    if (!shouldRecalcPrice) {
       return;
     }
     const checkIn = new Date(editForm.checkInTime);
@@ -204,32 +375,29 @@ const AdminTodayOverview: React.FC = () => {
     let cancelled = false;
     setNewPriceLoading(true);
     setNewPriceError(null);
-    checkAvailability({
+    calculatePrice({
       parkingTypeId: editForm.parkingTypeId,
       checkInTime: editForm.checkInTime,
       checkOutTime: editForm.checkOutTime,
-      excludeBookingId: editingBooking?._id,
-      debug: true
-    })
+      addonServices: [], // phụ dịch vụ giữ nguyên, chỉ preview giá đỗ xe
+      discountCode: (editingBooking as any)?.discountCode?.code,
+      isVIP: (editingBooking as any)?.isVIP,
+      userEmail: (editingBooking as any)?.email,
+      vehicleCount: editForm.vehicleCount || 1,
+    } as any)
       .then((res: any) => {
         if (cancelled) return;
-        if (res?.success && res?.pricing?.totalPrice != null) {
-          setNewPrice(res.pricing.totalPrice);
+        if (res?.success && res?.pricing?.finalAmount != null) {
+          setNewPrice(res.pricing.finalAmount);
           setNewPriceError(null);
-          setAvailabilityErrorDetail(null);
+        } else if (res?.pricing?.finalAmount != null) {
+          setNewPrice(res.pricing.finalAmount);
+          setNewPriceError(res?.message || null);
         } else {
           setNewPrice(null);
-          const msg = res?.message || '無法計算新價格';
-          const debugInfo = res?.debug
-            ? ` [Debug: 每日佔用=${JSON.stringify(res.debug.perDayOccupancy?.map((d: any) => `${d.day}:${d.occupied}`) || [])}, max=${res.debug.maxOccupied}]`
-            : '';
-          setNewPriceError(msg + debugInfo);
-          if (res?.selectedRange && Array.isArray(res?.fullDays)) {
-            setAvailabilityErrorDetail({ selectedRange: res.selectedRange, fullDays: res.fullDays });
-          } else {
-            setAvailabilityErrorDetail(null);
-          }
+          setNewPriceError(res?.message || '無法計算新價格');
         }
+        setAvailabilityErrorDetail(null);
       })
       .catch((err: any) => {
         if (cancelled) return;
@@ -241,14 +409,14 @@ const AdminTodayOverview: React.FC = () => {
         if (!cancelled) setNewPriceLoading(false);
       });
     return () => { cancelled = true; };
-  }, [editingBooking, editForm.parkingTypeId, editForm.checkInTime, editForm.checkOutTime]);
+  }, [editingBooking, editForm.parkingTypeId, editForm.checkInTime, editForm.checkOutTime, editForm.vehicleCount, shouldRecalcPrice]);
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingBooking) return;
     try {
       setSaving(true);
-      await updateBooking(editingBooking._id, {
+      const payload: any = {
         driverName: editForm.driverName,
         phone: editForm.phone,
         email: editForm.email || undefined,
@@ -258,7 +426,38 @@ const AdminTodayOverview: React.FC = () => {
         checkOutTime: editForm.checkOutTime,
         status: editForm.status as 'pending' | 'confirmed' | 'checked-in' | 'checked-out' | 'cancelled',
         notes: editForm.notes || undefined,
-      } as Parameters<typeof updateBooking>[1]);
+        vehicleCount: editForm.vehicleCount || 1,
+      };
+
+      // Thử tính lại giá mới với vehicleCount mới, nếu thành công thì gửi kèm các field tiền
+      try {
+        const res: any = await calculatePrice({
+          parkingTypeId: editForm.parkingTypeId,
+          checkInTime: editForm.checkInTime,
+          checkOutTime: editForm.checkOutTime,
+          addonServices: [], // TodayOverview không cho chỉnh addon, để backend giữ nguyên chi tiết nếu cần
+          discountCode: (editingBooking as any)?.discountCode?.code,
+          isVIP: (editingBooking as any)?.isVIP,
+          userEmail: (editingBooking as any)?.email,
+          vehicleCount: editForm.vehicleCount || 1,
+        } as any);
+        const pricing = res?.pricing;
+        if (pricing && pricing.finalAmount != null) {
+          payload.totalAmount = pricing.totalAmount ?? pricing.finalAmount;
+          payload.discountAmount = pricing.discountAmount ?? 0;
+          payload.finalAmount = pricing.finalAmount;
+          if (pricing.autoDiscountAmount != null) {
+            payload.autoDiscountAmount = pricing.autoDiscountAmount;
+          }
+          if (pricing.dailyPrices) {
+            payload.dailyPrices = pricing.dailyPrices;
+          }
+        }
+      } catch (err) {
+        console.error('Recalculate price failed in TodayOverview:', err);
+      }
+
+      await updateBooking(editingBooking._id, payload as Parameters<typeof updateBooking>[1]);
       toast.success('已更新預約資訊');
       closeEditDialog();
       loadTodayData();
@@ -291,19 +490,6 @@ const AdminTodayOverview: React.FC = () => {
     );
   }
 
-  const getCurrentData = () => {
-    switch (activeTab) {
-      case 'checkins':
-        return data.checkInsToday;
-      case 'checkouts':
-        return data.checkOutsToday;
-      case 'overdue':
-        return data.overdueBookings;
-      default:
-        return data.checkInsToday;
-    }
-  };
-
   return (
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4">
@@ -323,43 +509,56 @@ const AdminTodayOverview: React.FC = () => {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+      {/* Summary Cards - 4 cards for 4 tabs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-6">
-            <CardTitle className="text-xs sm:text-sm font-medium">今日進入車輛</CardTitle>
-            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
+            <CardTitle className="text-xs sm:text-sm font-medium">進入車輛</CardTitle>
+            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-amber-600" />
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
-            <div className="text-xl sm:text-2xl font-bold text-green-600">{data.summary.totalCheckIns}</div>
+            <div className="text-xl sm:text-2xl font-bold text-amber-600">{counts.entering}</div>
             <p className="text-xs text-muted-foreground">
-              今天將進入停車場的車輛
+              預約完成，尚未進入停車場
             </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">今天離開車輛</CardTitle>
-            <TrendingDown className="h-4 w-4 text-blue-600" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">待進入車輛</CardTitle>
+            <Car className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
-            <div className="text-xl sm:text-2xl font-bold text-blue-600">{data.summary.totalCheckOuts}</div>
+            <div className="text-xl sm:text-2xl font-bold text-green-600">{counts.alreadyEntered}</div>
             <p className="text-xs text-muted-foreground">
-              今天將離開停車場的車輛
+              已進入停車場
             </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">逾期車輛</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-600" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">離開車輛</CardTitle>
+            <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
-            <div className="text-xl sm:text-2xl font-bold text-red-600">{data.summary.totalOverdue}</div>
+            <div className="text-xl sm:text-2xl font-bold text-blue-600">{counts.leaving}</div>
             <p className="text-xs text-muted-foreground">
-              已超過預約時間的車輛
+              今日將離開停車場
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">未離開車輛</CardTitle>
+            <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6">
+            <div className="text-xl sm:text-2xl font-bold text-red-600">{counts.overdue}</div>
+            <p className="text-xs text-muted-foreground">
+              已逾預約離開日，尚未離開
             </p>
           </CardContent>
         </Card>
@@ -376,32 +575,71 @@ const AdminTodayOverview: React.FC = () => {
         <CardContent>
           <div className="flex flex-wrap gap-2 mb-4 sm:mb-6">
             <Button
-              variant={activeTab === 'checkins' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('checkins')}
+              variant={activeTab === 'entering' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('entering')}
+              className="text-xs sm:text-sm"
             >
-              <TrendingUp className="h-4 w-4 mr-2" />
-              進入車輛 ({data.summary.totalCheckIns})
+              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              進入車輛 ({counts.entering})
             </Button>
             <Button
-              variant={activeTab === 'checkouts' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('checkouts')}
+              variant={activeTab === 'alreadyEntered' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('alreadyEntered')}
+              className="text-xs sm:text-sm"
             >
-              <TrendingDown className="h-4 w-4 mr-2" />
-              離開車輛 ({data.summary.totalCheckOuts})
+              <Car className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              待進入車輛 ({counts.alreadyEntered})
+            </Button>
+            <Button
+              variant={activeTab === 'leaving' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('leaving')}
+              className="text-xs sm:text-sm"
+            >
+              <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              離開車輛 ({counts.leaving})
             </Button>
             <Button
               variant={activeTab === 'overdue' ? 'default' : 'outline'}
               onClick={() => setActiveTab('overdue')}
-              className="flex-1 sm:flex-initial text-xs sm:text-sm"
+              className="text-xs sm:text-sm"
             >
-              <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-              <span className="hidden sm:inline">逾期</span> ({data.summary.totalOverdue})
+              <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+              未離開車輛 ({counts.overdue})
             </Button>
           </div>
+
+          {/* Bulk actions bar */}
+          {selectedIds.size > 0 && (
+            <div className="mb-4 p-3 flex flex-wrap items-center gap-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                已選 {selectedIds.size} 筆
+              </span>
+              <Button size="sm" variant="outline" onClick={() => setSelectedIds(new Set())} className="border-blue-300">
+                取消選擇
+              </Button>
+              <span className="text-sm text-gray-600 dark:text-gray-400">批次變更狀態：</span>
+              <Button size="sm" variant="default" className="bg-yellow-500 hover:bg-yellow-600 text-white" onClick={() => openBulkStatusDialog('checked-in')}>
+                已進入停車場
+              </Button>
+              <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => openBulkStatusDialog('checked-out')}>
+                已離開停車場
+              </Button>
+              <Button size="sm" variant="destructive" onClick={() => openBulkStatusDialog('cancelled')}>
+                已取消
+              </Button>
+            </div>
+          )}
 
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10 no-print">
+                  <Checkbox
+                    checked={currentList.length > 0 && selectedIds.size === currentList.length}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="全選本頁"
+                  />
+                </TableHead>
                 <TableHead>預約編號</TableHead>
                 <TableHead>客戶</TableHead>
                 <TableHead>車牌號碼</TableHead>
@@ -413,15 +651,25 @@ const AdminTodayOverview: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {getCurrentData().map((booking) => (
+              {currentList.map((booking) => (
                 <TableRow key={booking._id}>
+                  <TableCell className="w-10 no-print">
+                    <Checkbox
+                      checked={selectedIds.has(booking._id)}
+                      onCheckedChange={() => toggleSelectBooking(booking._id)}
+                      aria-label={`選擇 ${booking.driverName}`}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="font-medium">{booking.bookingNumber}</div>
                   </TableCell>
                   <TableCell>
-                    <div>
+                    <div className="space-y-1">
                       <div className="font-medium">{booking.driverName}</div>
-                      <div className="text-sm text-gray-600">{booking.phone}</div>
+                      <div className="text-sm text-gray-600 flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        {booking.phone}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -452,39 +700,151 @@ const AdminTodayOverview: React.FC = () => {
                     </div>
                   </TableCell>
                   <TableCell className="no-print">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs sm:text-sm"
-                      onClick={() => openEditDialog(booking)}
-                      title="編輯此預約"
-                    >
-                      <Pencil className="h-3 w-3 sm:mr-1" />
-                      <span className="hidden sm:inline">編輯</span>
-                    </Button>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <Button variant="outline" size="sm" onClick={() => setViewingBooking(booking)} title="查看詳情">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => openEditDialog(booking)} title="編輯">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      {(booking.status === 'pending' || booking.status === 'confirmed') && (
+                        <>
+                          <Button size="sm" variant="default" className="bg-yellow-500 hover:bg-yellow-600 text-white" onClick={() => openStatusDialog(booking, 'checked-in')}>
+                            已進入
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => openStatusDialog(booking, 'cancelled')}>
+                            取消
+                          </Button>
+                        </>
+                      )}
+                      {booking.status === 'checked-in' && (
+                        <>
+                          <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => openStatusDialog(booking, 'checked-out')}>
+                            已離開
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => handleRevertStatus(booking)} title="返回上一狀態">
+                            <RotateCcw className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                      {booking.status === 'checked-out' && (
+                        <Button size="sm" variant="outline" onClick={() => handleRevertStatus(booking)} title="返回上一狀態">
+                          <RotateCcw className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
 
-          {getCurrentData().length === 0 && (
+          {currentList.length === 0 && (
             <div className="p-8 text-center">
               <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                {activeTab === 'checkins' && '今天沒有車輛進入'}
-                {activeTab === 'checkouts' && '今天沒有車輛離開'}
-                {activeTab === 'overdue' && '沒有逾期車輛'}
+                {activeTab === 'entering' && '尚無預約完成未進場車輛'}
+                {activeTab === 'alreadyEntered' && '尚無已進場車輛'}
+                {activeTab === 'leaving' && '今日尚無離開車輛'}
+                {activeTab === 'overdue' && '尚無未離開車輛'}
               </h3>
               <p className="text-gray-500">
-                {activeTab === 'checkins' && '今天還沒有車輛預約進入。'}
-                {activeTab === 'checkouts' && '今天還沒有車輛預約離開。'}
-                {activeTab === 'overdue' && '所有車輛都按時。'}
+                {activeTab === 'entering' && '預約完成但尚未進入停車場的車輛會顯示於此。'}
+                {activeTab === 'alreadyEntered' && '已進入停車場的車輛會顯示於此。'}
+                {activeTab === 'leaving' && '今日將離開的車輛會顯示於此。'}
+                {activeTab === 'overdue' && '已逾預約離開日但尚未離開的車輛會顯示於此。'}
               </p>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* View details dialog */}
+      <Dialog open={!!viewingBooking} onOpenChange={(open) => !open && setViewingBooking(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>預約詳情</DialogTitle>
+            <DialogDescription>{viewingBooking && `預約編號: ${viewingBooking.bookingNumber}`}</DialogDescription>
+          </DialogHeader>
+          {viewingBooking && (
+            <div className="space-y-3 text-sm">
+              <div><span className="font-medium">客戶:</span> {viewingBooking.driverName}</div>
+              <div><span className="font-medium">電話:</span> {viewingBooking.phone}</div>
+              <div><span className="font-medium">車牌:</span> {viewingBooking.licensePlate}</div>
+              <div><span className="font-medium">停車場:</span> {viewingBooking.parkingType?.name}</div>
+              <div><span className="font-medium">進入:</span> {formatDateTime(viewingBooking.checkInTime)}</div>
+              <div><span className="font-medium">離開:</span> {formatDateTime(viewingBooking.checkOutTime)}</div>
+              <div><span className="font-medium">狀態:</span> {getStatusBadge(viewingBooking.status)}</div>
+              <div><span className="font-medium">金額:</span> {formatCurrency(viewingBooking.finalAmount)}</div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Single status change confirm */}
+      <AlertDialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>確認變更狀態</AlertDialogTitle>
+            <AlertDialogDescription>
+              {bookingInProcess && (
+                <>將預約 {bookingInProcess.booking.bookingNumber} 的狀態變更為「
+                  {STATUS_OPTIONS.find((o) => o.value === bookingInProcess.status)?.label ?? bookingInProcess.status}」？
+                  {bookingInProcess.status === 'cancelled' && (
+                    <div className="mt-2">
+                      <Label>取消原因（選填）</Label>
+                      <Textarea
+                        className="mt-1"
+                        value={statusReason}
+                        onChange={(e) => setStatusReason(e.target.value)}
+                        placeholder="輸入原因..."
+                        rows={2}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <Button onClick={confirmStatusChange}>確認</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk status change confirm */}
+      <AlertDialog open={isBulkStatusDialogOpen} onOpenChange={setIsBulkStatusDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>批次變更狀態</AlertDialogTitle>
+            <AlertDialogDescription>
+              將已選取的 {selectedIds.size} 筆預約狀態變更為「{STATUS_OPTIONS.find((o) => o.value === bulkStatusTarget)?.label ?? bulkStatusTarget}」？
+              {bulkStatusTarget === 'cancelled' && (
+                <div className="mt-2">
+                  <Label>取消原因（必填）</Label>
+                  <Textarea
+                    className="mt-1"
+                    value={bulkStatusReason}
+                    onChange={(e) => setBulkStatusReason(e.target.value)}
+                    placeholder="請輸入取消原因"
+                    rows={2}
+                  />
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <Button
+              onClick={confirmBulkStatusChange}
+              disabled={bulkStatusLoading || (bulkStatusTarget === 'cancelled' && !bulkStatusReason.trim())}
+            >
+              {bulkStatusLoading ? '處理中...' : '確認'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Edit Booking Dialog */}
       <Dialog open={!!editingBooking} onOpenChange={(open) => !open && closeEditDialog()}>
@@ -542,7 +902,10 @@ const AdminTodayOverview: React.FC = () => {
               <Label htmlFor="edit-parkingType">停車場 *</Label>
               <Select
                 value={editForm.parkingTypeId}
-                onValueChange={(value) => setEditForm((f) => ({ ...f, parkingTypeId: value }))}
+                onValueChange={(value) => {
+                  setEditForm((f) => ({ ...f, parkingTypeId: value }));
+                  setShouldRecalcPrice(true);
+                }}
               >
                 <SelectTrigger id="edit-parkingType">
                   <SelectValue placeholder="選擇停車場" />
@@ -563,7 +926,10 @@ const AdminTodayOverview: React.FC = () => {
                   id="edit-checkInTime"
                   type="datetime-local"
                   value={editForm.checkInTime}
-                  onChange={(value) => setEditForm((f) => ({ ...f, checkInTime: value }))}
+                  onChange={(value) => {
+                    setEditForm((f) => ({ ...f, checkInTime: value }));
+                    setShouldRecalcPrice(true);
+                  }}
                   placeholder="年/月/日 00:00"
                 />
               </div>
@@ -573,10 +939,30 @@ const AdminTodayOverview: React.FC = () => {
                   id="edit-checkOutTime"
                   type="datetime-local"
                   value={editForm.checkOutTime}
-                  onChange={(value) => setEditForm((f) => ({ ...f, checkOutTime: value }))}
+                  onChange={(value) => {
+                    setEditForm((f) => ({ ...f, checkOutTime: value }));
+                    setShouldRecalcPrice(true);
+                  }}
                   placeholder="年/月/日 00:00"
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-vehicleCount">車輛數量 *</Label>
+              <Input
+                id="edit-vehicleCount"
+                type="number"
+                min={1}
+                value={editForm.vehicleCount}
+                onChange={(e) => {
+                  setEditForm((f) => ({
+                    ...f,
+                    vehicleCount: Math.max(1, Number(e.target.value) || 1),
+                  }));
+                  setShouldRecalcPrice(true);
+                }}
+                placeholder="車輛數量"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-status">狀態</Label>
