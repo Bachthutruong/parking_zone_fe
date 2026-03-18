@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Input } from './input';
-import { formatDate, formatDateTime, toDateInput, fromDateInput } from '@/lib/dateUtils';
+import { formatDate, formatDateTime, toDateInput, fromDateInput, fromDateTimeLocal, getTaiwanHourMinute } from '@/lib/dateUtils';
 import { Calendar, Clock } from 'lucide-react';
 
 interface DateInputProps {
@@ -39,10 +39,10 @@ const DateInput: React.FC<DateInputProps> = ({
     if (value) {
       if (type === 'datetime-local') {
         setDisplayValue(formatDateTime(value));
-        const date = new Date(value);
         setSelectedDate(toDateInput(value));
-        setSelectedHours(String(date.getHours()).padStart(2, '0'));
-        setSelectedMinutes(String(roundMinutesToStep(date.getMinutes())).padStart(2, '0'));
+        const { hours, minutes } = getTaiwanHourMinute(value);
+        setSelectedHours(hours);
+        setSelectedMinutes(String(roundMinutesToStep(parseInt(minutes, 10))).padStart(2, '0'));
       } else {
         setDisplayValue(formatDate(value));
         setSelectedDate(toDateInput(value));
@@ -72,11 +72,11 @@ const DateInput: React.FC<DateInputProps> = ({
   const handleInputClick = () => {
     setIsOpen(true);
     if (value) {
-      const date = new Date(value);
       setSelectedDate(toDateInput(value));
       if (type === 'datetime-local') {
-        setSelectedHours(String(date.getHours()).padStart(2, '0'));
-        setSelectedMinutes(String(roundMinutesToStep(date.getMinutes())).padStart(2, '0'));
+        const { hours, minutes } = getTaiwanHourMinute(value);
+        setSelectedHours(hours);
+        setSelectedMinutes(String(roundMinutesToStep(parseInt(minutes, 10))).padStart(2, '0'));
       }
     } else {
       const now = new Date();
@@ -102,15 +102,8 @@ const DateInput: React.FC<DateInputProps> = ({
     if (!date) return;
     
     if (type === 'datetime-local') {
-      const [year, month, day] = date.split('-');
-      const dateObj = new Date(
-        parseInt(year),
-        parseInt(month) - 1,
-        parseInt(day),
-        parseInt(hours),
-        parseInt(minutes)
-      );
-      const isoValue = dateObj.toISOString();
+      // Emit Taiwan-offset ISO so calendar/APIs get correct calendar day (no UTC shift before 08:00)
+      const isoValue = fromDateTimeLocal(`${date}T${hours}:${minutes}`);
       onChange(isoValue);
     } else {
       const isoValue = fromDateInput(date);

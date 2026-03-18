@@ -161,6 +161,24 @@ export const toDateInput = (dateString: string | Date): string => {
 };
 
 /**
+ * Get hour and minute in Taiwan 24h for use in time pickers
+ */
+export const getTaiwanHourMinute = (dateString: string | Date): { hours: string; minutes: string } => {
+  if (!dateString) return { hours: '00', minutes: '00' };
+  const date = new Date(dateString);
+  const fmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: TAIWAN_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  });
+  const parts = fmt.formatToParts(date);
+  const hour = parts.find(p => p.type === 'hour')?.value ?? '00';
+  const minute = parts.find(p => p.type === 'minute')?.value ?? '00';
+  return { hours: hour, minutes: minute };
+};
+
+/**
  * Convert datetime-local input value to ISO string with Taiwan offset
  */
 export const fromDateTimeLocal = (dateTimeLocalString: string): string => {

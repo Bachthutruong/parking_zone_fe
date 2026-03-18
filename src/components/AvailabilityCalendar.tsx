@@ -82,9 +82,9 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
       while (currentDate <= lastDay) {
         // Use Taiwan day string instead of UTC to avoid lệch 1 ngày
         const dateStr = getDateStrTaiwan(currentDate);
-        // So sánh theo ngày (YYYY-MM-DD), không theo giờ để tránh lệch ngày
-        const checkInDateStr = checkInTime ? checkInTime.toString().slice(0, 10) : '';
-        const checkOutDateStr = checkOutTime ? checkOutTime.toString().slice(0, 10) : '';
+        // Use Taiwan calendar date so 19/3 07:40 (UTC+8) is not treated as 18 (UTC)
+        const checkInDateStr = checkInTime ? getDateStrTaiwan(checkInTime) : '';
+        const checkOutDateStr = checkOutTime ? getDateStrTaiwan(checkOutTime) : '';
         const isInRange =
           !!checkInDateStr &&
           !!checkOutDateStr &&
@@ -198,11 +198,11 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
       return 'unavailable';
     }
     
-    // Check if day is in the selected booking range
+    // Check if day is in the selected booking range (Taiwan calendar date)
     if (checkInTime && checkOutTime) {
       const dateStr = day.date;
-      const checkInDateStr = checkInTime.toString().slice(0, 10);
-      const checkOutDateStr = checkOutTime.toString().slice(0, 10);
+      const checkInDateStr = getDateStrTaiwan(checkInTime);
+      const checkOutDateStr = getDateStrTaiwan(checkOutTime);
 
       if (dateStr >= checkInDateStr && dateStr <= checkOutDateStr) {
         return 'in-booking-range';

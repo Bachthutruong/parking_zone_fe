@@ -39,6 +39,12 @@ import { getTodayBookings, updateBooking, updateBookingStatus, updateBulkBooking
 import { calculatePrice } from '@/services/booking';
 import { formatDateTime, formatDateWithWeekday } from '@/lib/dateUtils';
 import DateInput from '@/components/ui/date-input';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface TodayBooking {
   _id: string;
@@ -96,7 +102,7 @@ const STATUS_OPTIONS = [
   { value: 'cancelled', label: '已取消' },
 ] as const;
 
-// 4 tab keys: 進入車輛 | 待進入車輛 | 離開車輛 | 未離開車輛
+// 4 tab keys: 預計進場車輛 | 已進場車輛 | 預計離場車輛 | 逾期離場車輛
 type TodayTabKey = 'entering' | 'alreadyEntered' | 'leaving' | 'overdue';
 
 const AdminTodayOverview: React.FC = () => {
@@ -511,57 +517,79 @@ const AdminTodayOverview: React.FC = () => {
 
       {/* Summary Cards - 4 cards for 4 tabs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-6">
-            <CardTitle className="text-xs sm:text-sm font-medium">進入車輛</CardTitle>
-            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-amber-600" />
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            <div className="text-xl sm:text-2xl font-bold text-amber-600">{counts.entering}</div>
-            <p className="text-xs text-muted-foreground">
-              預約完成，尚未進入停車場
-            </p>
-          </CardContent>
-        </Card>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium">預計進場車輛</CardTitle>
+                  <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-amber-600" />
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="text-xl sm:text-2xl font-bold text-amber-600">{counts.entering}</div>
+                  <p className="text-xs text-muted-foreground">
+                    預約完成，尚未進入停車場
+                  </p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent><p>今日預計進場車輛總數</p></TooltipContent>
+          </Tooltip>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-6">
-            <CardTitle className="text-xs sm:text-sm font-medium">待進入車輛</CardTitle>
-            <Car className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            <div className="text-xl sm:text-2xl font-bold text-green-600">{counts.alreadyEntered}</div>
-            <p className="text-xs text-muted-foreground">
-              已進入停車場
-            </p>
-          </CardContent>
-        </Card>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium">已進場車輛</CardTitle>
+                  <Car className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="text-xl sm:text-2xl font-bold text-green-600">{counts.alreadyEntered}</div>
+                  <p className="text-xs text-muted-foreground">
+                    已進入停車場
+                  </p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent><p>確定已進場車輛總數</p></TooltipContent>
+          </Tooltip>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-6">
-            <CardTitle className="text-xs sm:text-sm font-medium">離開車輛</CardTitle>
-            <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            <div className="text-xl sm:text-2xl font-bold text-blue-600">{counts.leaving}</div>
-            <p className="text-xs text-muted-foreground">
-              今日將離開停車場
-            </p>
-          </CardContent>
-        </Card>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium">預計離場車輛</CardTitle>
+                  <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="text-xl sm:text-2xl font-bold text-blue-600">{counts.leaving}</div>
+                  <p className="text-xs text-muted-foreground">
+                    今日將離開停車場
+                  </p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent><p>今日預計離場車輛總數</p></TooltipContent>
+          </Tooltip>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-6">
-            <CardTitle className="text-xs sm:text-sm font-medium">未離開車輛</CardTitle>
-            <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            <div className="text-xl sm:text-2xl font-bold text-red-600">{counts.overdue}</div>
-            <p className="text-xs text-muted-foreground">
-              已逾預約離開日，尚未離開
-            </p>
-          </CardContent>
-        </Card>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium">逾期離場車輛</CardTitle>
+                  <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="text-xl sm:text-2xl font-bold text-red-600">{counts.overdue}</div>
+                  <p className="text-xs text-muted-foreground">
+                    已逾預約離開日，尚未離開
+                  </p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent><p>總數</p></TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {/* Tabs */}
@@ -573,40 +601,62 @@ const AdminTodayOverview: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-2 mb-4 sm:mb-6">
-            <Button
-              variant={activeTab === 'entering' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('entering')}
-              className="text-xs sm:text-sm"
-            >
-              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-              進入車輛 ({counts.entering})
-            </Button>
-            <Button
-              variant={activeTab === 'alreadyEntered' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('alreadyEntered')}
-              className="text-xs sm:text-sm"
-            >
-              <Car className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-              待進入車輛 ({counts.alreadyEntered})
-            </Button>
-            <Button
-              variant={activeTab === 'leaving' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('leaving')}
-              className="text-xs sm:text-sm"
-            >
-              <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-              離開車輛 ({counts.leaving})
-            </Button>
-            <Button
-              variant={activeTab === 'overdue' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('overdue')}
-              className="text-xs sm:text-sm"
-            >
-              <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-              未離開車輛 ({counts.overdue})
-            </Button>
-          </div>
+          <TooltipProvider>
+            <div className="flex flex-wrap gap-2 mb-4 sm:mb-6">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activeTab === 'entering' ? 'default' : 'outline'}
+                    onClick={() => setActiveTab('entering')}
+                    className="text-xs sm:text-sm"
+                  >
+                    <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                    預計進場車輛 ({counts.entering})
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>今日預計進場車輛總數</p></TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activeTab === 'alreadyEntered' ? 'default' : 'outline'}
+                    onClick={() => setActiveTab('alreadyEntered')}
+                    className="text-xs sm:text-sm"
+                  >
+                    <Car className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                    已進場車輛 ({counts.alreadyEntered})
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>確定已進場車輛總數</p></TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activeTab === 'leaving' ? 'default' : 'outline'}
+                    onClick={() => setActiveTab('leaving')}
+                    className="text-xs sm:text-sm"
+                  >
+                    <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                    預計離場車輛 ({counts.leaving})
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>今日預計離場車輛總數</p></TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activeTab === 'overdue' ? 'default' : 'outline'}
+                    onClick={() => setActiveTab('overdue')}
+                    className="text-xs sm:text-sm"
+                  >
+                    <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                    逾期離場車輛 ({counts.overdue})
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>總數</p></TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
 
           {/* Bulk actions bar */}
           {selectedIds.size > 0 && (
@@ -743,16 +793,16 @@ const AdminTodayOverview: React.FC = () => {
             <div className="p-8 text-center">
               <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                {activeTab === 'entering' && '尚無預約完成未進場車輛'}
+                {activeTab === 'entering' && '尚無預計進場車輛'}
                 {activeTab === 'alreadyEntered' && '尚無已進場車輛'}
-                {activeTab === 'leaving' && '今日尚無離開車輛'}
-                {activeTab === 'overdue' && '尚無未離開車輛'}
+                {activeTab === 'leaving' && '今日尚無預計離場車輛'}
+                {activeTab === 'overdue' && '尚無逾期離場車輛'}
               </h3>
               <p className="text-gray-500">
-                {activeTab === 'entering' && '預約完成但尚未進入停車場的車輛會顯示於此。'}
-                {activeTab === 'alreadyEntered' && '已進入停車場的車輛會顯示於此。'}
-                {activeTab === 'leaving' && '今日將離開的車輛會顯示於此。'}
-                {activeTab === 'overdue' && '已逾預約離開日但尚未離開的車輛會顯示於此。'}
+                {activeTab === 'entering' && '今日預計進場車輛總數，預約完成但尚未進入停車場的車輛會顯示於此。'}
+                {activeTab === 'alreadyEntered' && '確定已進場車輛總數，已進入停車場的車輛會顯示於此。'}
+                {activeTab === 'leaving' && '今日預計離場車輛總數，今日將離開的車輛會顯示於此。'}
+                {activeTab === 'overdue' && '逾期離場車輛總數，已逾預約離開日但尚未離開的車輛會顯示於此。'}
               </p>
             </div>
           )}
