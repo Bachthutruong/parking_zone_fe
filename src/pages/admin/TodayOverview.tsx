@@ -74,10 +74,12 @@ interface TodaySummary {
   checkInsToday: TodayBooking[];
   checkOutsToday: TodayBooking[];
   overdueBookings: TodayBooking[];
+  expectedNotEnteredBookings: TodayBooking[];
   summary: {
     totalCheckIns: number;
     totalCheckOuts: number;
     totalOverdue: number;
+    totalExpectedNotEntered: number;
   };
 }
 
@@ -102,8 +104,8 @@ const STATUS_OPTIONS = [
   { value: 'cancelled', label: '已取消' },
 ] as const;
 
-// 4 tab keys: 預計進場車輛 | 已進場車輛 | 預計離場車輛 | 逾期離場車輛
-type TodayTabKey = 'entering' | 'alreadyEntered' | 'leaving' | 'overdue';
+// 5 tab keys: 預計進場車輛 | 已進場車輛 | 預計離場車輛 | 逾期離場車輛 | 預期未進場
+type TodayTabKey = 'entering' | 'alreadyEntered' | 'leaving' | 'overdue' | 'expectedNotEntered';
 
 const AdminTodayOverview: React.FC = () => {
   const [data, setData] = useState<TodaySummary | null>(null);
@@ -197,19 +199,21 @@ const AdminTodayOverview: React.FC = () => {
     return <Badge variant={config.variant}>{config.icon}{config.label}</Badge>;
   };
 
-  // 4 lists (logic chính xác):
+  // 5 lists:
   // - 進入車輛: đặt hẹn hoàn thành nhưng chưa vào bãi (checkIn hôm nay, status pending/confirmed)
   // - 待進入車輛: đã vào bãi (checkIn hôm nay, status checked-in)
   // - 離開車輛: sẽ rời bãi vào hôm nay nhưng chưa đến giờ rời (checkOut hôm nay, còn trong bãi, checkOutTime > now)
   // - 未離開車輛: quá hạn đến hôm nay nhưng chưa rời (overdue, status !== checked-out)
-  const { enteringList, alreadyEnteredList, leavingList, overdueList, counts } = useMemo(() => {
+  // - 預期未進場: expected checkIn was in the past, but hasn't entered (pending/confirmed)
+  const { enteringList, alreadyEnteredList, leavingList, overdueList, expectedNotEnteredList, counts } = useMemo(() => {
     if (!data) {
       return {
         enteringList: [] as TodayBooking[],
         alreadyEnteredList: [] as TodayBooking[],
         leavingList: [] as TodayBooking[],
         overdueList: [] as TodayBooking[],
-        counts: { entering: 0, alreadyEntered: 0, leaving: 0, overdue: 0 },
+        expectedNotEnteredList: [] as TodayBooking[],
+        counts: { entering: 0, alreadyEntered: 0, leaving: 0, overdue: 0, expectedNotEntered: 0 },
       };
     }
     const now = new Date();
@@ -223,16 +227,21 @@ const AdminTodayOverview: React.FC = () => {
     );
     // 未離開車輛: quá hạn (checkOut đã qua) nhưng chưa rời
     const overdue = data.overdueBookings.filter((b) => b.status !== 'checked-out');
+    // 預期未進場: overdue checkIn
+    const expectedNotEntered = data.expectedNotEnteredBookings || [];
+
     return {
       enteringList: entering,
       alreadyEnteredList: alreadyEntered,
       leavingList: leaving,
       overdueList: overdue,
+      expectedNotEnteredList: expectedNotEntered,
       counts: {
         entering: entering.length,
         alreadyEntered: alreadyEntered.length,
         leaving: leaving.length,
         overdue: overdue.length,
+        expectedNotEntered: expectedNotEntered.length,
       },
     };
   }, [data]);
@@ -243,6 +252,7 @@ const AdminTodayOverview: React.FC = () => {
       case 'alreadyEntered': return alreadyEnteredList;
       case 'leaving': return leavingList;
       case 'overdue': return overdueList;
+      case 'expectedNotEntered': return expectedNotEnteredList;
       default: return enteringList;
     }
   };
@@ -515,8 +525,8 @@ const AdminTodayOverview: React.FC = () => {
         </div>
       </div>
 
-      {/* Summary Cards - 4 cards for 4 tabs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+      {/* Summary Cards - 5 cards for 5 tabs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -534,6 +544,24 @@ const AdminTodayOverview: React.FC = () => {
               </Card>
             </TooltipTrigger>
             <TooltipContent><p>今日預計進場車輛總數</p></TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium">預期未進場</CardTitle>
+                  <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="text-xl sm:text-2xl font-bold text-orange-600">{counts.expectedNotEntered}</div>
+                  <p className="text-xs text-muted-foreground">
+                    已過預計進場時間，尚未進入
+                  </p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent><p>預期未進場總數</p></TooltipContent>
           </Tooltip>
 
           <Tooltip>
@@ -654,6 +682,19 @@ const AdminTodayOverview: React.FC = () => {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent><p>總數</p></TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activeTab === 'expectedNotEntered' ? 'default' : 'outline'}
+                    onClick={() => setActiveTab('expectedNotEntered')}
+                    className="text-xs sm:text-sm"
+                  >
+                    <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                    預期未進場 ({counts.expectedNotEntered})
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>預期未進場總數</p></TooltipContent>
               </Tooltip>
             </div>
           </TooltipProvider>
@@ -797,6 +838,7 @@ const AdminTodayOverview: React.FC = () => {
                 {activeTab === 'alreadyEntered' && '尚無已進場車輛'}
                 {activeTab === 'leaving' && '今日尚無預計離場車輛'}
                 {activeTab === 'overdue' && '尚無逾期離場車輛'}
+                {activeTab === 'expectedNotEntered' && '尚無預期未進場車輛'}
               </h3>
               <p className="text-gray-500">
                 {activeTab === 'entering' && '今日預計進場車輛總數，預約完成但尚未進入停車場的車輛會顯示於此。'}

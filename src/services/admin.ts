@@ -398,4 +398,30 @@ export const getSpecialPrices = async (parkingTypeId: string) => {
 export const getTodayBookings = async () => {
   const response = await api.get('/bookings/today/summary');
   return response.data;
-}; 
+};
+
+// Blacklist
+export const getAllBlacklist = async () => {
+  const response = await api.get('/admin/blacklist');
+  return response.data;
+};
+
+export const createBlacklist = async (data: { phone?: string; licensePlate?: string; reason: string }) => {
+  const response = await api.post('/admin/blacklist', data);
+  return response.data;
+};
+
+export const updateBlacklist = async (id: string, data: { phone?: string; licensePlate?: string; reason: string; isActive?: boolean }) => {
+  const response = await api.put(`/admin/blacklist/${id}`, data);
+  return response.data;
+};
+
+export const deleteBlacklist = async (id: string) => {
+  const response = await api.delete(`/admin/blacklist/${id}`);
+  return response.data;
+};
+
+export const checkBlacklist = async (data: { phone?: string; licensePlate?: string }) => {
+  const response = await api.post('/admin/blacklist/check', data);
+  return response.data;
+};

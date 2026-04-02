@@ -735,6 +735,12 @@ const AdminUsers: React.FC = () => {
                                 {user.licensePlate}
                               </div>
                             )}
+                            {user.notes && (
+                              <div className="mt-2 text-[10px] sm:text-xs p-1.5 bg-amber-50 text-amber-900 rounded border border-amber-200/60 shadow-sm flex items-start gap-1 max-w-[200px]" title={user.notes}>
+                                <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0 text-amber-500" />
+                                <div className="line-clamp-2 leading-relaxed">{user.notes}</div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </TableCell>
@@ -929,6 +935,12 @@ const AdminUsers: React.FC = () => {
                                 {user.licensePlate}
                               </div>
                             )}
+                            {user.notes && (
+                              <div className="mt-2 text-[10px] sm:text-xs p-1.5 bg-amber-50 text-amber-900 rounded border border-amber-200/60 shadow-sm flex items-start gap-1 max-w-[200px]" title={user.notes}>
+                                <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0 text-amber-500" />
+                                <div className="line-clamp-2 leading-relaxed">{user.notes}</div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </TableCell>
@@ -1113,6 +1125,12 @@ const AdminUsers: React.FC = () => {
                                <div className="text-sm text-gray-600 flex items-center">
                                  <Car className="h-3 w-3 mr-1" />
                                  {user.licensePlate}
+                               </div>
+                             )}
+                             {user.notes && (
+                               <div className="mt-2 text-[10px] sm:text-xs p-1.5 bg-amber-50 text-amber-900 rounded border border-amber-200/60 shadow-sm flex items-start gap-1 max-w-[200px]" title={user.notes}>
+                                 <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0 text-amber-500" />
+                                 <div className="line-clamp-2 leading-relaxed">{user.notes}</div>
                                </div>
                              )}
                            </div>

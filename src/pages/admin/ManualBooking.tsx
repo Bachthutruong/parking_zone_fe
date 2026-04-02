@@ -27,7 +27,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getAllParkingTypes, getAllAddonServices, createManualBooking } from '@/services/admin';
+import { getAllParkingTypes, getAllAddonServices, createManualBooking, checkBlacklist } from '@/services/admin';
 // import { calculatePrice } from '@/services/booking';
 // import { validateDiscountCode } from '@/services/discountCodes';
 import { checkParkingTypeMaintenance } from '@/services/maintenance';
@@ -66,6 +66,7 @@ const AdminManualBooking: React.FC = () => {
   const [maintenanceDays, setMaintenanceDays] = useState<any[]>([]);
   const [isVIP, setIsVIP] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [blacklistWarning, setBlacklistWarning] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     parkingTypeId: '',
@@ -129,6 +130,30 @@ const AdminManualBooking: React.FC = () => {
       calculatePricing();
     }
   }, [formData.selectedAddonServices, formData.discountCode, isVIP, formData.vehicleCount]);
+
+  const handleBlacklistCheck = async () => {
+    if (!formData.phone && !formData.licensePlate) return;
+    try {
+      const response = await checkBlacklist({
+        phone: formData.phone,
+        licensePlate: formData.licensePlate
+      });
+      if (response.isBlacklisted) {
+        setBlacklistWarning(`注意：此客戶已被列入黑名單（原因：${response.reason || '未提供'}）`);
+      } else {
+        setBlacklistWarning(null);
+      }
+    } catch (error) {
+      console.error('Error checking blacklist:', error);
+    }
+  };
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      handleBlacklistCheck();
+    }, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [formData.phone, formData.licensePlate]);
 
   const loadData = async () => {
     try {
@@ -473,6 +498,7 @@ const AdminManualBooking: React.FC = () => {
     setAvailableSlots([]);
     setConflictingDays([]);
     setMaintenanceDays([]);
+    setBlacklistWarning(null);
   };
 
   const handleAddonServiceToggle = (serviceId: string) => {
@@ -680,10 +706,18 @@ const AdminManualBooking: React.FC = () => {
 
             {/* Customer Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center">
-                <User className="h-4 w-4 mr-2" />
-                客戶資訊
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold flex items-center">
+                  <User className="h-4 w-4 mr-2" />
+                  客戶資訊
+                </h3>
+                {blacklistWarning && (
+                  <Badge variant="destructive" className="flex items-center">
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    {blacklistWarning}
+                  </Badge>
+                )}
+              </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
