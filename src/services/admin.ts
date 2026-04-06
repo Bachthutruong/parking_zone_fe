@@ -425,3 +425,8 @@ export const checkBlacklist = async (data: { phone?: string; licensePlate?: stri
   const response = await api.post('/admin/blacklist/check', data);
   return response.data;
 };
+
+export const importBlacklist = async (data: Array<{ phone?: string; licensePlate?: string; reason?: string }>) => {
+  const response = await api.post('/admin/blacklist/import', { data });
+  return response.data;
+};

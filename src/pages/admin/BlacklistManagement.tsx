@@ -15,10 +15,11 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from '@/components/ui/alert-dialog';
-import { Trash2, Plus, Pencil } from 'lucide-react';
+import { Trash2, Plus, Pencil, Download, Upload } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getAllBlacklist, createBlacklist, deleteBlacklist, updateBlacklist } from '@/services/admin';
+import { getAllBlacklist, createBlacklist, deleteBlacklist, updateBlacklist, importBlacklist } from '@/services/admin';
 import { formatDateTime } from '@/lib/dateUtils';
+import * as xlsx from 'xlsx';
 
 interface BlacklistItem {
   _id: string;
@@ -36,6 +37,7 @@ const BlacklistManagement: React.FC = () => {
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<BlacklistItem | null>(null);
   const [formData, setFormData] = useState({ phone: '', licensePlate: '', reason: '' });
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const fetchBlacklist = async () => {
     try {
@@ -72,10 +74,6 @@ const BlacklistManagement: React.FC = () => {
   const handleSubmit = async () => {
     if (!formData.phone.trim() && !formData.licensePlate.trim()) {
       toast.error('必須提供電話或車牌號碼');
-      return;
-    }
-    if (!formData.reason.trim()) {
-      toast.error('請填寫原因');
       return;
     }
 
@@ -115,6 +113,53 @@ const BlacklistManagement: React.FC = () => {
     }
   };
 
+  const handleDownloadTemplate = () => {
+    const ws = xlsx.utils.json_to_sheet([
+      { phone: '0912345678', licensePlate: 'ABC-1234', reason: '經常取消' }
+    ]);
+    const wb = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(wb, ws, 'BlacklistTemplate');
+    xlsx.writeFile(wb, 'blacklist_template.xlsx');
+  };
+
+  const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = xlsx.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = xlsx.utils.sheet_to_json<{ phone?: string; licensePlate?: string; reason?: string }>(ws);
+
+        if (data.length === 0) {
+          toast.error('表格為空');
+          return;
+        }
+
+        const formattedData = data.map(item => ({
+          phone: item.phone ? String(item.phone) : undefined,
+          licensePlate: item.licensePlate ? String(item.licensePlate) : undefined,
+          reason: item.reason ? String(item.reason) : ''
+        }));
+
+        const res = await importBlacklist(formattedData);
+        toast.success(res.message || '匯入完成');
+        fetchBlacklist();
+      } catch (error: any) {
+        toast.error('匯入失敗，請檢查表格格式');
+      } finally {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
@@ -122,10 +167,27 @@ const BlacklistManagement: React.FC = () => {
           <h1 className="text-2xl font-bold">黑名單管理</h1>
           <p className="text-gray-500">管理禁止預約的電話號碼或車牌</p>
         </div>
-        <Button onClick={handleOpenAddDialog}>
-          <Plus className="h-4 w-4 mr-2" />
-          新增黑名單
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleDownloadTemplate}>
+            <Download className="h-4 w-4 mr-2" />
+            下載範例格式
+          </Button>
+          <input
+            type="file"
+            accept=".xlsx, .xls"
+            onChange={handleExcelImport}
+            ref={fileInputRef}
+            className="hidden"
+          />
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="h-4 w-4 mr-2" />
+            匯入
+          </Button>
+          <Button onClick={handleOpenAddDialog}>
+            <Plus className="h-4 w-4 mr-2" />
+            新增黑名單
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -206,7 +268,7 @@ const BlacklistManagement: React.FC = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>原因 (必填)</Label>
+              <Label>原因</Label>
               <Input
                 placeholder="請輸入原因"
                 value={formData.reason}
