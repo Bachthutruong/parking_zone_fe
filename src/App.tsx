@@ -21,6 +21,7 @@ import AdminMaintenance from './pages/admin/Maintenance'
 import AdminSpecialPricing from './pages/admin/SpecialPricing'
 import AdminManualBooking from './pages/admin/ManualBooking'
 import AdminTodayOverview from './pages/admin/TodayOverview'
+import AdminParkingSlotMap from './pages/admin/ParkingSlotMap'
 import AdminAutoDiscounts from './pages/admin/AutoDiscounts'
 import AdminBlacklist from './pages/admin/BlacklistManagement'
 import StaffDashboard from './pages/staff/Dashboard'
@@ -61,6 +62,7 @@ function App() {
               <Route path="blacklist" element={<AdminBlacklist />} />
               <Route path="manual-booking" element={<AdminManualBooking />} />
               <Route path="today-overview" element={<AdminTodayOverview />} />
+              <Route path="parking-slots" element={<AdminParkingSlotMap />} />
             </Route>
           </Route>
 

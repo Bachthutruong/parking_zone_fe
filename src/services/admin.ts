@@ -44,8 +44,17 @@ export const getAllBookings = async (params?: {
   return response.data;
 };
 
-export const updateBookingStatus = async (bookingId: string, status: string, reason?: string) => {
-  const response = await api.patch(`/admin/bookings/${bookingId}/status`, { status, reason });
+export const updateBookingStatus = async (
+  bookingId: string,
+  status: string,
+  reason?: string,
+  parkingSlotNumbers?: number[]
+) => {
+  const response = await api.patch(`/admin/bookings/${bookingId}/status`, {
+    status,
+    reason,
+    ...(parkingSlotNumbers && parkingSlotNumbers.length > 0 ? { parkingSlotNumbers } : {}),
+  });
   return response.data;
 };
 
@@ -395,8 +404,8 @@ export const getSpecialPrices = async (parkingTypeId: string) => {
 };
 
 // Today's bookings
-export const getTodayBookings = async () => {
-  const response = await api.get('/bookings/today/summary');
+export const getTodayBookings = async (params?: { search?: string }) => {
+  const response = await api.get('/bookings/today/summary', { params });
   return response.data;
 };
 

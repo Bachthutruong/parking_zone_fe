@@ -120,21 +120,12 @@ const AdminParkingTypes: React.FC = () => {
     try {
       // Remove type from formData since it's no longer user-selectable
       const { type, ...updateData } = formData;
-      
-      // Only include code if it exists
-      if (selectedType.code || formData.code) {
-        updateData.code = selectedType.code || formData.code;
+      updateData.code = String(formData.code ?? '').trim();
+      if (!updateData.code) {
+        toast.error('請填寫停車場代碼');
+        return;
       }
-      
-      console.log('🔍 Updating parking type:', {
-        selectedType,
-        _id: selectedType._id,
-        selectedTypeCode: selectedType.code,
-        formDataCode: formData.code,
-        finalCode: updateData.code,
-        updateData
-      });
-      
+
       // Use _id instead of code for the API call
       if (!selectedType._id) {
         toast.error('找不到停車場 ID');

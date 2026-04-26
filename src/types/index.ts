@@ -137,6 +137,8 @@ export interface Booking {
   paymentMethod: 'cash' | 'credit_card' | 'online';
   actualCheckInTime?: string;
   actualCheckOutTime?: string;
+  /** Physical bay numbers 1..N when status is checked-in */
+  parkingSlotNumbers?: number[];
   createdBy?: User;
   isManualBooking: boolean;
   isDeleted?: boolean;

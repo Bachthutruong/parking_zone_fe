@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,10 +32,12 @@ import {
   TrendingDown,
   RefreshCw,
   Printer,
-  RotateCcw
+  RotateCcw,
+  Search
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getTodayBookings, updateBooking, updateBookingStatus, updateBulkBookingStatus, getAllParkingTypes } from '@/services/admin';
+import ParkingSlotPicker from '@/components/admin/ParkingSlotPicker';
 import { calculatePrice } from '@/services/booking';
 import { formatDateTime, formatDateWithWeekday } from '@/lib/dateUtils';
 import DateInput from '@/components/ui/date-input';
@@ -45,6 +47,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+
+function escapeHtml(s: string) {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
 interface TodayBooking {
   _id: string;
@@ -94,6 +104,7 @@ interface EditFormState {
   status: string;
   notes?: string;
   vehicleCount: number;
+  parkingSlotNumbers: number[];
 }
 
 const STATUS_OPTIONS = [
@@ -123,6 +134,7 @@ const AdminTodayOverview: React.FC = () => {
     status: 'confirmed',
     notes: '',
     vehicleCount: 1,
+    parkingSlotNumbers: [],
   });
   const [saving, setSaving] = useState(false);
   const [parkingTypes, setParkingTypes] = useState<any[]>([]);
@@ -141,6 +153,7 @@ const AdminTodayOverview: React.FC = () => {
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [bookingInProcess, setBookingInProcess] = useState<{ booking: TodayBooking; status: string } | null>(null);
   const [statusReason, setStatusReason] = useState('');
+  const [checkInSlots, setCheckInSlots] = useState<number[]>([]);
   const [isBulkStatusDialogOpen, setIsBulkStatusDialogOpen] = useState(false);
   const [bulkStatusTarget, setBulkStatusTarget] = useState<string>('');
   const [bulkStatusReason, setBulkStatusReason] = useState('');
@@ -149,9 +162,13 @@ const AdminTodayOverview: React.FC = () => {
   // View details
   const [viewingBooking, setViewingBooking] = useState<TodayBooking | null>(null);
 
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
   useEffect(() => {
-    loadTodayData();
-  }, []);
+    const t = setTimeout(() => setDebouncedSearch(searchInput.trim()), 400);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   useEffect(() => {
     setSelectedIds(new Set());
@@ -163,10 +180,12 @@ const AdminTodayOverview: React.FC = () => {
       .catch(() => setParkingTypes([]));
   }, []);
 
-  const loadTodayData = async () => {
+  const loadTodayData = useCallback(async () => {
     try {
       setLoading(true);
-      const result = await getTodayBookings();
+      const result = await getTodayBookings({
+        search: debouncedSearch || undefined,
+      });
       setData(result);
     } catch (error: any) {
       console.error('Error loading today data:', error);
@@ -174,7 +193,11 @@ const AdminTodayOverview: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    loadTodayData();
+  }, [loadTodayData]);
 
   // Date formatting function is now imported from dateUtils
 
@@ -262,17 +285,33 @@ const AdminTodayOverview: React.FC = () => {
   const openStatusDialog = (booking: TodayBooking, status: string) => {
     setBookingInProcess({ booking, status });
     setStatusReason('');
+    const ex = (booking as TodayBooking & { parkingSlotNumbers?: number[] }).parkingSlotNumbers;
+    setCheckInSlots(status === 'checked-in' && Array.isArray(ex) ? [...ex] : []);
     setIsStatusDialogOpen(true);
   };
 
   const confirmStatusChange = async () => {
     if (!bookingInProcess) return;
+    const { booking, status } = bookingInProcess;
+    const vc = Math.max(1, (booking as TodayBooking & { vehicleCount?: number }).vehicleCount || 1);
+    if (status === 'checked-in') {
+      if (checkInSlots.length !== vc) {
+        toast.error(`入場須選擇 ${vc} 個空車位`);
+        return;
+      }
+    }
     try {
-      await updateBookingStatus(bookingInProcess.booking._id, bookingInProcess.status, statusReason);
+      await updateBookingStatus(
+        booking._id,
+        status,
+        statusReason,
+        status === 'checked-in' ? checkInSlots : undefined
+      );
       toast.success('狀態更新成功');
       loadTodayData();
       setIsStatusDialogOpen(false);
       setBookingInProcess(null);
+      setCheckInSlots([]);
     } catch (error: any) {
       const msg = error?.response?.data?.message || error?.message || '狀態更新失敗';
       toast.error(msg);
@@ -338,6 +377,69 @@ const AdminTodayOverview: React.FC = () => {
     window.print();
   };
 
+  const printInvoice = (booking: TodayBooking) => {
+    const w = window.open('', '_blank', 'width=480,height=720');
+    if (!w) {
+      toast.error('請允許彈出視窗以列印單據');
+      return;
+    }
+    const amount = formatCurrency(booking.finalAmount);
+    const parkingLabel = [booking.parkingType?.name, booking.parkingType?.code].filter(Boolean).join(' ');
+    const title = '停車預約單據';
+    const statusLabel =
+      booking.status === 'pending'
+        ? '待確認'
+        : booking.status === 'confirmed'
+          ? '預約成功'
+          : booking.status === 'checked-in'
+            ? '已進入停車場'
+            : booking.status === 'checked-out'
+              ? '已離開停車場'
+              : booking.status === 'cancelled'
+                ? '已取消'
+                : booking.status;
+
+    w.document.write(`<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8"/>
+  <title>${title} — ${booking.bookingNumber}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; padding: 24px; max-width: 420px; margin: 0 auto; color: #111; }
+    h1 { font-size: 1.25rem; margin: 0 0 8px; text-align: center; }
+    .sub { text-align: center; color: #666; font-size: 0.85rem; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th { text-align: left; width: 6.5em; color: #444; font-weight: 600; padding: 6px 0; vertical-align: top; }
+    td { padding: 6px 0; border-bottom: 1px solid #eee; }
+    .amount { font-size: 1.1rem; font-weight: 700; color: #16a34a; }
+    @media print { body { padding: 16px; } }
+  </style>
+</head>
+<body>
+  <h1>${title}</h1>
+  <div class="sub">${new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })} 列印</div>
+  <table>
+    <tr><th>預約編號</th><td>${escapeHtml(String(booking.bookingNumber))}</td></tr>
+    <tr><th>客戶</th><td>${escapeHtml(String(booking.driverName || ''))}</td></tr>
+    <tr><th>電話</th><td>${escapeHtml(String(booking.phone || ''))}</td></tr>
+    <tr><th>車牌</th><td>${escapeHtml(String(booking.licensePlate || ''))}</td></tr>
+    <tr><th>停車場</th><td>${escapeHtml(parkingLabel || '—')}</td></tr>
+    <tr><th>進入</th><td>${escapeHtml(formatDateTime(booking.checkInTime))}</td></tr>
+    <tr><th>離開</th><td>${escapeHtml(formatDateTime(booking.checkOutTime))}</td></tr>
+    <tr><th>狀態</th><td>${escapeHtml(statusLabel)}</td></tr>
+    <tr><th>金額</th><td class="amount">${escapeHtml(amount)}</td></tr>
+  </table>
+</body>
+</html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => {
+      w.print();
+      w.close();
+    }, 250);
+  };
+
   const openEditDialog = (booking: TodayBooking) => {
     setEditingBooking(booking);
     setNewPrice(null);
@@ -356,6 +458,9 @@ const AdminTodayOverview: React.FC = () => {
       status: booking.status ?? 'confirmed',
       notes: (booking as any).notes ?? '',
       vehicleCount: (booking as any).vehicleCount ?? 1,
+      parkingSlotNumbers: Array.isArray((booking as any).parkingSlotNumbers)
+        ? ([...(booking as any).parkingSlotNumbers] as number[])
+        : [],
     });
   };
 
@@ -430,6 +535,11 @@ const AdminTodayOverview: React.FC = () => {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingBooking) return;
+    const vc = Math.max(1, editForm.vehicleCount || 1);
+    if (editForm.status === 'checked-in' && editForm.parkingSlotNumbers.length !== vc) {
+      toast.error(`狀態為「已進入停車場」時須選好 ${vc} 個實體車位`);
+      return;
+    }
     try {
       setSaving(true);
       const payload: any = {
@@ -443,6 +553,9 @@ const AdminTodayOverview: React.FC = () => {
         status: editForm.status as 'pending' | 'confirmed' | 'checked-in' | 'checked-out' | 'cancelled',
         notes: editForm.notes || undefined,
         vehicleCount: editForm.vehicleCount || 1,
+        ...(editForm.status === 'checked-in' && editForm.parkingSlotNumbers.length > 0
+          ? { parkingSlotNumbers: editForm.parkingSlotNumbers }
+          : {}),
       };
 
       // Thử tính lại giá mới với vehicleCount mới, nếu thành công thì gửi kèm các field tiền
@@ -512,6 +625,11 @@ const AdminTodayOverview: React.FC = () => {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">今日概覽</h1>
           <p className="text-gray-600 text-sm sm:text-base">今日停車場進出車輛統計</p>
+          {debouncedSearch ? (
+            <p className="text-sm text-amber-800 dark:text-amber-200 mt-1">
+              搜尋「{debouncedSearch}」：下方分類數字與列表僅顯示符合的預約
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <Button variant="outline" onClick={loadTodayData} className="flex-1 sm:flex-initial text-xs sm:text-sm">
@@ -629,6 +747,23 @@ const AdminTodayOverview: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
+            <div className="relative w-full sm:max-w-md">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                className="pl-9"
+                placeholder="搜尋預約編號、姓名、電話、車牌、停車場…"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                aria-label="搜尋今日預約"
+              />
+            </div>
+            {searchInput ? (
+              <Button type="button" variant="ghost" size="sm" className="self-start sm:self-center shrink-0" onClick={() => setSearchInput('')}>
+                清除
+              </Button>
+            ) : null}
+          </div>
           <TooltipProvider>
             <div className="flex flex-wrap gap-2 mb-4 sm:mb-6">
               <Tooltip>
@@ -709,7 +844,12 @@ const AdminTodayOverview: React.FC = () => {
                 取消選擇
               </Button>
               <span className="text-sm text-gray-600 dark:text-gray-400">批次變更狀態：</span>
-              <Button size="sm" variant="default" className="bg-yellow-500 hover:bg-yellow-600 text-white" onClick={() => openBulkStatusDialog('checked-in')}>
+              <Button
+                size="sm"
+                variant="default"
+                className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                onClick={() => toast.error('入場需逐筆選擇車位，無法批次操作')}
+              >
                 已進入停車場
               </Button>
               <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => openBulkStatusDialog('checked-out')}>
@@ -798,6 +938,9 @@ const AdminTodayOverview: React.FC = () => {
                       <Button variant="outline" size="sm" onClick={() => openEditDialog(booking)} title="編輯">
                         <Pencil className="h-4 w-4" />
                       </Button>
+                      <Button variant="outline" size="sm" onClick={() => printInvoice(booking)} title="列印單據">
+                        <Printer className="h-4 w-4" />
+                      </Button>
                       {(booking.status === 'pending' || booking.status === 'confirmed') && (
                         <>
                           <Button size="sm" variant="default" className="bg-yellow-500 hover:bg-yellow-600 text-white" onClick={() => openStatusDialog(booking, 'checked-in')}>
@@ -846,6 +989,9 @@ const AdminTodayOverview: React.FC = () => {
                 {activeTab === 'leaving' && '今日預計離場車輛總數，今日將離開的車輛會顯示於此。'}
                 {activeTab === 'overdue' && '逾期離場車輛總數，已逾預約離開日但尚未離開的車輛會顯示於此。'}
               </p>
+              {debouncedSearch ? (
+                <p className="text-sm text-muted-foreground mt-2">嘗試修改搜尋關鍵字，或按「清除」以顯示全部。</p>
+              ) : null}
             </div>
           )}
         </CardContent>
@@ -898,6 +1044,26 @@ const AdminTodayOverview: React.FC = () => {
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {bookingInProcess?.status === 'checked-in' && (() => {
+            const b = bookingInProcess.booking;
+            const ptId = (b.parkingType as { _id?: string })?._id ?? '';
+            return (
+              <div className="space-y-2 px-1 pb-2 border-t pt-3">
+                <Label>選擇實體車位（必選）</Label>
+                {ptId ? (
+                  <ParkingSlotPicker
+                    parkingTypeId={ptId}
+                    excludeBookingId={b._id}
+                    vehicleCount={Math.max(1, (b as { vehicleCount?: number }).vehicleCount || 1)}
+                    value={checkInSlots}
+                    onChange={setCheckInSlots}
+                  />
+                ) : (
+                  <p className="text-sm text-destructive">找不到停車場，無法選位</p>
+                )}
+              </div>
+            );
+          })()}
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
             <Button onClick={confirmStatusChange}>確認</Button>
@@ -1050,6 +1216,7 @@ const AdminTodayOverview: React.FC = () => {
                   setEditForm((f) => ({
                     ...f,
                     vehicleCount: Math.max(1, Number(e.target.value) || 1),
+                    parkingSlotNumbers: [],
                   }));
                   setShouldRecalcPrice(true);
                 }}
@@ -1074,6 +1241,19 @@ const AdminTodayOverview: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+            {editForm.status === 'checked-in' && editForm.parkingTypeId && editingBooking && (
+              <div className="space-y-2 rounded-md border p-3 bg-amber-50/50">
+                <Label>實體車位（{editForm.vehicleCount || 1} 格 · 在場用）</Label>
+                <ParkingSlotPicker
+                  key={`${editingBooking._id}-${editForm.parkingTypeId}`}
+                  parkingTypeId={editForm.parkingTypeId}
+                  excludeBookingId={editingBooking._id}
+                  vehicleCount={Math.max(1, editForm.vehicleCount || 1)}
+                  value={editForm.parkingSlotNumbers}
+                  onChange={(parkingSlotNumbers) => setEditForm((f) => ({ ...f, parkingSlotNumbers }))}
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="edit-notes">備註</Label>
               <Input

@@ -30,6 +30,7 @@ import {
   Printer,
   Grid3X3,
   Table as TableIcon,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getAllBookings, updateBookingStatus, updateBulkBookingStatus, deleteBooking, getAllParkingTypes, getCalendarBookings, updateBooking } from '@/services/admin';
@@ -41,6 +42,26 @@ import { getSystemSettings } from '@/services/systemSettings';
 import { formatDateTime, getDateStrTaiwan, getNextDayStrTaiwan, formatDateWithWeekday } from '@/lib/dateUtils';
 import DateInput from '@/components/ui/date-input';
 import type { Booking } from '@/types';
+import { BookingImportDialog } from '@/components/admin/BookingImportDialog';
+import ParkingSlotPicker from '@/components/admin/ParkingSlotPicker';
+
+/** Taiwan calendar month bounds (YYYY-MM-DD) intersected with optional filter range — limits calendar API payload. */
+function getCalendarQueryDateRange(
+  y: number,
+  month0: number,
+  filterFrom: string,
+  filterTo: string
+): { dateFrom: string; dateTo: string } {
+  const lastD = new Date(y, month0 + 1, 0).getDate();
+  const p = (n: number) => String(n).padStart(2, '0');
+  const monthStart = `${y}-${p(month0 + 1)}-01`;
+  const monthEnd = `${y}-${p(month0 + 1)}-${p(lastD)}`;
+  let from = monthStart;
+  let to = monthEnd;
+  if (filterFrom && filterFrom > from) from = filterFrom;
+  if (filterTo && filterTo < to) to = filterTo;
+  return { dateFrom: from, dateTo: to };
+}
 
 const EDIT_STATUS_OPTIONS = [
   { value: 'pending', label: '等待進入停車場' },
@@ -61,6 +82,7 @@ interface EditBookingForm {
   status: string;
   notes: string;
   vehicleCount: number;
+  parkingSlotNumbers: number[];
 }
 
 const BookingsPage: React.FC = () => {
@@ -100,6 +122,7 @@ const BookingsPage: React.FC = () => {
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [bookingInProcess, setBookingInProcess] = useState<{booking: Booking, status: string} | null>(null);
   const [statusReason, setStatusReason] = useState('');
+  const [checkInSlots, setCheckInSlots] = useState<number[]>([]);
 
   // Bulk selection & status
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -121,6 +144,7 @@ const BookingsPage: React.FC = () => {
     status: 'confirmed',
     notes: '',
     vehicleCount: 1,
+    parkingSlotNumbers: [],
   });
   const [editSaving, setEditSaving] = useState(false);
 
@@ -138,6 +162,10 @@ const BookingsPage: React.FC = () => {
   } | null>(null);
   const [shouldRecalcPrice, setShouldRecalcPrice] = useState(false);
 
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+
+  const [calendarLoading, setCalendarLoading] = useState(false);
+
   useEffect(() => {
     loadParkingTypes();
   }, []);
@@ -150,9 +178,13 @@ const BookingsPage: React.FC = () => {
   }, [searchFromUrl]);
 
   useEffect(() => {
-    loadBookings();
-    loadSettings();
-  }, [page, filters, activeTab, itemsPerPage, selectedParkingType]);
+    void loadSettings();
+  }, []);
+
+  useEffect(() => {
+    if (viewMode === 'calendar') return;
+    void loadBookings();
+  }, [page, filters, activeTab, itemsPerPage, selectedParkingType, viewMode]);
 
   const loadParkingTypes = async () => {
     try {
@@ -204,22 +236,32 @@ const BookingsPage: React.FC = () => {
 
   const loadCalendarData = async () => {
     try {
-      setLoading(true);
-      
-      // Build filter params for calendar API (no pagination needed)
+      setCalendarLoading(true);
+      const { dateFrom, dateTo } = getCalendarQueryDateRange(
+        currentYear,
+        currentMonth,
+        filters.dateFrom,
+        filters.dateTo
+      );
+      if (dateFrom > dateTo) {
+        setCalendarData({});
+        return;
+      }
+
+      // Build filter params for calendar API: always scope to the visible month (± filter range).
       const filterParams: any = {
         status: filters.status === 'all' ? undefined : filters.status,
-        dateFrom: filters.dateFrom || undefined,
-        dateTo: filters.dateTo || undefined,
+        dateFrom,
+        dateTo,
         search: filters.search || undefined,
         isDeleted: activeTab === 'deleted'
       };
-      
+
       // Add parking type filter if not 'all'
       if (selectedParkingType && selectedParkingType !== 'all') {
         filterParams.parkingTypeId = selectedParkingType;
       }
-      
+
       // Use the new calendar-specific API
       const response = await getCalendarBookings(filterParams);
       
@@ -263,26 +305,48 @@ const BookingsPage: React.FC = () => {
       console.error('Error loading calendar data:', error);
       toast.error('無法載入日曆數據');
     } finally {
-      setLoading(false);
+      setCalendarLoading(false);
     }
   };
 
-
+  const refreshAfterMutation = () => {
+    if (viewMode === 'calendar') {
+      void loadCalendarData();
+    } else {
+      void loadBookings();
+    }
+  };
 
   const openStatusDialog = (booking: Booking, status: string) => {
     setBookingInProcess({ booking, status });
     setStatusReason('');
+    const existing = (booking as Booking & { parkingSlotNumbers?: number[] }).parkingSlotNumbers;
+    setCheckInSlots(status === 'checked-in' && Array.isArray(existing) ? [...existing] : []);
     setIsStatusDialogOpen(true);
   };
 
   const confirmStatusChange = async () => {
     if (!bookingInProcess) return;
+    const { booking, status } = bookingInProcess;
+    const vc = Math.max(1, booking.vehicleCount || 1);
+    if (status === 'checked-in') {
+      if (checkInSlots.length !== vc) {
+        toast.error(`入場須選擇 ${vc} 個空車位`);
+        return;
+      }
+    }
     try {
-      await updateBookingStatus(bookingInProcess.booking._id, bookingInProcess.status, statusReason);
+      await updateBookingStatus(
+        booking._id,
+        status,
+        statusReason,
+        status === 'checked-in' ? checkInSlots : undefined
+      );
       toast.success('狀態更新成功');
-      loadBookings();
+      refreshAfterMutation();
       setIsStatusDialogOpen(false);
       setBookingInProcess(null);
+      setCheckInSlots([]);
     } catch (error: any) {
       console.error('Status update error:', error);
       const errorMessage = error.response?.data?.message || error.message || '狀態更新失敗';
@@ -332,7 +396,7 @@ const BookingsPage: React.FC = () => {
       }
       setSelectedIds(new Set());
       setIsBulkStatusDialogOpen(false);
-      loadBookings();
+      refreshAfterMutation();
     } catch (error: any) {
       const msg = error.response?.data?.message || error.message || '批次更新失敗';
       toast.error(msg);
@@ -354,7 +418,7 @@ const BookingsPage: React.FC = () => {
       toast.success('預約已刪除');
       setIsDeleteDialogOpen(false);
       setBookingToDelete(null);
-      loadBookings();
+      refreshAfterMutation();
     } catch (error: any) {
       toast.error(error.message || '刪除失敗');
     }
@@ -380,6 +444,9 @@ const BookingsPage: React.FC = () => {
       status: booking.status ?? 'confirmed',
       notes: (booking as any).notes ?? '',
       vehicleCount: booking.vehicleCount ?? 1,
+      parkingSlotNumbers: Array.isArray((booking as Booking & { parkingSlotNumbers?: number[] }).parkingSlotNumbers)
+        ? ([...(booking as Booking & { parkingSlotNumbers: number[] }).parkingSlotNumbers] as number[])
+        : [],
     });
   };
 
@@ -456,6 +523,13 @@ const BookingsPage: React.FC = () => {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingBooking) return;
+    const vc = Math.max(1, editForm.vehicleCount || 1);
+    if (editForm.status === 'checked-in') {
+      if (editForm.parkingSlotNumbers.length !== vc) {
+        toast.error(`狀態為「已進入停車場」時須選好 ${vc} 個實體車位`);
+        return;
+      }
+    }
     try {
       setEditSaving(true);
       const payload: any = {
@@ -469,6 +543,9 @@ const BookingsPage: React.FC = () => {
         vehicleCount: editForm.vehicleCount || 1,
         status: editForm.status as 'pending' | 'confirmed' | 'checked-in' | 'checked-out' | 'cancelled',
         notes: editForm.notes || undefined,
+        ...(editForm.status === 'checked-in' && editForm.parkingSlotNumbers.length > 0
+          ? { parkingSlotNumbers: editForm.parkingSlotNumbers }
+          : {}),
       };
 
       // Tính lại giá theo số lượng xe mới và các điều kiện hiện tại, gửi kèm cho backend
@@ -502,7 +579,7 @@ const BookingsPage: React.FC = () => {
       await updateBooking(editingBooking._id, payload as Parameters<typeof updateBooking>[1]);
       toast.success('已更新預約資訊');
       closeEditDialog();
-      loadBookings();
+      refreshAfterMutation();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || '更新失敗');
     } finally {
@@ -582,37 +659,18 @@ const BookingsPage: React.FC = () => {
       }
     }
     
-    console.log('🔍 Print debug - systemSettings:', systemSettings);
-    console.log('🔍 Print debug - settings:', settings);
-    console.log('🔍 Print debug - contractTerms:', settings?.contractTerms);
-    console.log('🔍 Print debug - contractTerms length:', settings?.contractTerms?.length);
-    console.log('🔍 Print debug - contractTerms preview:', settings?.contractTerms?.substring(0, 100));
-
-    // Create a backup text version of contract terms for better print compatibility
-    const contractTermsText = settings?.contractTerms ? 
-      settings.contractTerms
-        .replace(/<h2[^>]*>/g, '\n\n')
-        .replace(/<\/h2>/g, '\n')
-        .replace(/<p[^>]*>/g, '')
-        .replace(/<\/p>/g, '\n')
-        .replace(/<strong[^>]*>/g, '【')
-        .replace(/<\/strong>/g, '】')
-        .replace(/<[^>]*>/g, '')
-        .replace(/\n\s*\n/g, '\n')
-        .trim() : '';
-
-    // Create a simple HTML version without complex styling
-    const contractTermsSimple = settings?.contractTerms ? 
-      settings.contractTerms
-        .replace(/<h2[^>]*>/g, '<div style="font-weight: bold; font-size: 14px; margin: 10px 0;">')
-        .replace(/<\/h2>/g, '</div>')
-        .replace(/<p[^>]*>/g, '<div style="margin: 5px 0; line-height: 1.4;">')
-        .replace(/<\/p>/g, '</div>')
-        .replace(/<strong[^>]*>/g, '<span style="font-weight: bold;">')
-        .replace(/<\/strong>/g, '</span>') : '';
-
-    console.log('🔍 Print debug - contractTermsSimple:', contractTermsSimple?.substring(0, 100));
-    console.log('🔍 Print debug - contractTermsText:', contractTermsText?.substring(0, 100));
+    const contractTermsText = settings?.contractTerms
+      ? settings.contractTerms
+          .replace(/<h2[^>]*>/g, '\n\n')
+          .replace(/<\/h2>/g, '\n')
+          .replace(/<p[^>]*>/g, '')
+          .replace(/<\/p>/g, '\n')
+          .replace(/<strong[^>]*>/g, '【')
+          .replace(/<\/strong>/g, '】')
+          .replace(/<[^>]*>/g, '')
+          .replace(/\n\s*\n/g, '\n')
+          .trim()
+      : '';
 
     const printContent = `
       <!DOCTYPE html>
@@ -637,15 +695,17 @@ const BookingsPage: React.FC = () => {
           .service-badge { background-color: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
           .total { font-size: 18px; font-weight: bold; color: #333; }
           .contract-terms { 
-            border-top: 2px solid #333; 
-            padding-top: 20px; 
-            margin-top: 30px; 
             font-size: 12px; 
             line-height: 1.6; 
             color: #000; 
             font-family: Arial, sans-serif; 
             white-space: normal; 
             word-wrap: break-word; 
+          }
+          .contract-terms--lead {
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+            margin-bottom: 24px;
           }
           .contract-terms h2 { 
             font-size: 16px; 
@@ -729,6 +789,18 @@ const BookingsPage: React.FC = () => {
         </style>
       </head>
       <body>
+        ${settings?.contractTerms ? `
+        <div class="section contract-terms contract-terms--lead">
+          <h3>合約條款</h3>
+          <div style="padding: 15px; border: 1px solid #000; background: #f9f9f9; font-family: Arial, sans-serif; font-size: 12px; line-height: 1.6; color: #000;">
+            <div style="font-weight: bold; font-size: 14px; margin-bottom: 15px; text-align: center;">停車場使用合約條款</div>
+            <div style="white-space: pre-line; font-size: 11px;">
+              ${contractTermsText}
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
         <div class="header">
           <h1>預約詳細資訊</h1>
           <p>預約編號: ${booking.bookingNumber || booking._id}</p>
@@ -749,6 +821,8 @@ const BookingsPage: React.FC = () => {
             <div class="info-item">
               <span class="label">車牌號碼:</span> ${booking.licensePlate}
             </div>
+          </div>
+        </div>
         <div class="section">
           <h3>接駁與行李信息</h3>
           <div class="info-grid">
@@ -763,37 +837,6 @@ const BookingsPage: React.FC = () => {
           </div>
         </div>
 
-        <div class="section">
-          <h3>預約資訊</h3>
-          <div class="info-grid">
-            <div class="info-item">
-              <span class="label">停車場:</span> ${booking.parkingType.name}
-            </div>
-            <div class="info-item">
-              <span class="label">類型:</span> ${(booking.parkingType.type || 'indoor') === 'indoor' ? '室內' : 
-                (booking.parkingType.type || 'indoor') === 'outdoor' ? '戶外' : '無障礙'}
-            </div>
-            <div class="info-item">
-              <span class="label">進場停車時間:</span> ${formatDateTime(booking.checkInTime)}
-            </div>
-            <div class="info-item">
-              <span class="label">回國時間:</span> ${formatDateTime(booking.checkOutTime)}
-            </div>
-            <div class="info-item">
-              <span class="label">狀態:</span> 
-              <span class="status status-${booking.status}">
-                ${booking.status === 'pending' ? '等待進入停車場' :
-                  booking.status === 'confirmed' ? '等待進入停車場 (舊)' :
-                  booking.status === 'checked-in' ? '已進入停車場' :
-                  booking.status === 'checked-out' ? '已離開停車場' : '已取消'}
-              </span>
-            </div>
-            <div class="info-item">
-              <span class="label">VIP:</span> ${booking.isVIP ? '是' : '否'}
-            </div>
-          </div>
-        </div>
-
         ${booking.addonServices?.length > 0 ? `
         <div class="section">
           <h3>附加服務</h3>
@@ -804,36 +847,6 @@ const BookingsPage: React.FC = () => {
           </div>
         </div>
         ` : ''}
-
-        <div class="section">
-          <h3>每日價格明細</h3>
-          <div class="info-grid">
-            ${booking.dailyPrices && booking.dailyPrices.length > 0 ? 
-              booking.dailyPrices.map(dayPrice => `
-                <div class="info-item">
-                  <span class="label">${new Date(dayPrice.date).toLocaleDateString('zh-TW')}:</span> 
-                  ${dayPrice.price.toLocaleString('zh-TW')} TWD
-                  ${dayPrice.isSpecialPrice ? ` (特殊價格: ${dayPrice.specialPriceReason || '特殊定價'})` : ''}
-                  ${dayPrice.isMaintenanceDay ? ' 🔧 保養日' : ''}
-                </div>
-              `).join('') :
-              `
-              <div class="info-item">
-                <span class="label">總金額:</span> 
-                ${booking.totalAmount.toLocaleString('zh-TW')} TWD
-              </div>
-              <div class="info-item">
-                <span class="label">天數:</span> 
-                ${booking.durationDays || '未知'} 天
-              </div>
-              <div class="info-item">
-                <span class="label">每日平均:</span> 
-                ${booking.durationDays ? Math.round(booking.totalAmount / booking.durationDays).toLocaleString('zh-TW') : '未知'} TWD
-              </div>
-              `
-            }
-          </div>
-        </div>
 
         <div class="section">
           <h3>付款資訊</h3>
@@ -871,24 +884,36 @@ const BookingsPage: React.FC = () => {
           </div>
         </div>
 
-        ${booking.notes ? `
         <div class="section">
-          <h3>備註</h3>
-          <p>${booking.notes}</p>
-        </div>
-        ` : ''}
-
-        ${settings?.contractTerms ? `
-        <div class="section contract-terms">
-          <h3>合約條款</h3>
-          <div style="padding: 15px; border: 1px solid #000; background: #f9f9f9; font-family: Arial, sans-serif; font-size: 12px; line-height: 1.6; color: #000;">
-            <div style="font-weight: bold; font-size: 14px; margin-bottom: 15px; text-align: center;">停車場使用合約條款</div>
-            <div style="white-space: pre-line; font-size: 11px;">
-              ${contractTermsText}
+          <h3>預約資訊</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">停車場:</span> ${booking.parkingType.name}
+            </div>
+            <div class="info-item">
+              <span class="label">類型:</span> ${(booking.parkingType.type || 'indoor') === 'indoor' ? '室內' : 
+                (booking.parkingType.type || 'indoor') === 'outdoor' ? '戶外' : '無障礙'}
+            </div>
+            <div class="info-item">
+              <span class="label">進場停車時間:</span> ${formatDateTime(booking.checkInTime)}
+            </div>
+            <div class="info-item">
+              <span class="label">回國時間:</span> ${formatDateTime(booking.checkOutTime)}
+            </div>
+            <div class="info-item">
+              <span class="label">狀態:</span> 
+              <span class="status status-${booking.status}">
+                ${booking.status === 'pending' ? '等待進入停車場' :
+                  booking.status === 'confirmed' ? '等待進入停車場 (舊)' :
+                  booking.status === 'checked-in' ? '已進入停車場' :
+                  booking.status === 'checked-out' ? '已離開停車場' : '已取消'}
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="label">VIP:</span> ${booking.isVIP ? '是' : '否'}
             </div>
           </div>
         </div>
-        ` : ''}
 
         <div class="no-print" style="margin-top: 30px; text-align: center;">
           <button onclick="window.print()">列印</button>
@@ -1113,8 +1138,8 @@ const BookingsPage: React.FC = () => {
   // Ensure filters.status is always a valid value
   const currentStatus = filters.status || 'all';
 
-  // Don't render until state is ready
-  if (loading && bookings.length === 0) {
+  // First paint for list view only — calendar view can render immediately.
+  if (viewMode === 'table' && loading && bookings.length === 0) {
     return (
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="flex items-center justify-center h-64">
@@ -1126,10 +1151,38 @@ const BookingsPage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold">預約管理</h1>
-        <p className="text-gray-600 text-sm sm:text-base">管理系統中的所有預約</p>
+      <div className="mb-6 sm:mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">預約管理</h1>
+          <p className="text-gray-600 text-sm sm:text-base">管理系統中的所有預約</p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full sm:w-auto shrink-0 gap-2 border-blue-200 text-blue-700 hover:bg-blue-50"
+          onClick={() => setImportDialogOpen(true)}
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+          匯入預約（Excel）
+        </Button>
       </div>
+
+      <BookingImportDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        parkingTypes={parkingTypes.map((pt) => ({
+          _id: pt._id,
+          name: pt.name ?? '',
+          totalSpaces: pt.totalSpaces,
+        }))}
+        onFinished={() => {
+          if (viewMode === 'calendar') {
+            void loadCalendarData();
+          } else {
+            void loadBookings();
+          }
+        }}
+      />
 
       {/* Filters */}
       <Card className="mb-4 sm:mb-6">
@@ -1197,7 +1250,11 @@ const BookingsPage: React.FC = () => {
             </div>
 
             <div className="flex items-end">
-              <Button onClick={loadBookings} className="w-full">
+              <Button
+                type="button"
+                onClick={() => (viewMode === 'calendar' ? void loadCalendarData() : void loadBookings())}
+                className="w-full"
+              >
                 篩選
               </Button>
             </div>
@@ -1258,7 +1315,7 @@ const BookingsPage: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
-          {loading ? (
+          {viewMode === 'table' && loading ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
             </div>
@@ -1282,7 +1339,7 @@ const BookingsPage: React.FC = () => {
                     size="sm"
                     variant="default"
                     className="bg-yellow-500 hover:bg-yellow-600 text-white"
-                    onClick={() => openBulkStatusDialog('checked-in')}
+                    onClick={() => toast.error('入場需逐筆選擇車位，無法批次操作')}
                   >
                     已進入停車場
                   </Button>
@@ -1531,7 +1588,16 @@ const BookingsPage: React.FC = () => {
               )}
             </>
           ) : (
-            <div className="space-y-3 sm:space-y-4">
+            <div className="relative min-h-[240px] space-y-3 sm:space-y-4">
+              {calendarLoading && (
+                <div
+                  className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70 dark:bg-background/70"
+                  aria-busy
+                  aria-label="載入日曆"
+                >
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500" />
+                </div>
+              )}
               <div className="text-center">
                 <h3 className="text-base sm:text-lg font-semibold mb-2">停車場使用情況日曆</h3>
                 <p className="text-gray-600 text-sm">點擊數字查看該日期的詳細預約</p>
@@ -1785,7 +1851,7 @@ const BookingsPage: React.FC = () => {
               </div>
 
               {selectedBooking.notes && (
-                <div>
+                <div className="print:hidden">
                   <h4 className="font-semibold mb-2">備註</h4>
                   <p className="text-sm bg-gray-50 p-3 rounded">{selectedBooking.notes}</p>
                 </div>
@@ -1913,6 +1979,7 @@ const BookingsPage: React.FC = () => {
                   setEditForm((f) => ({
                     ...f,
                     vehicleCount: Math.max(1, Number(e.target.value) || 1),
+                    parkingSlotNumbers: [],
                   }));
                   setShouldRecalcPrice(true);
                 }}
@@ -1937,6 +2004,19 @@ const BookingsPage: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+            {editForm.status === 'checked-in' && editForm.parkingTypeId && editingBooking && (
+              <div className="space-y-2 rounded-md border p-3 bg-amber-50/50">
+                <Label>實體車位（{editForm.vehicleCount || 1} 格 · 在場用）</Label>
+                <ParkingSlotPicker
+                  key={`${editingBooking._id}-${editForm.parkingTypeId}`}
+                  parkingTypeId={editForm.parkingTypeId}
+                  excludeBookingId={editingBooking._id}
+                  vehicleCount={Math.max(1, editForm.vehicleCount || 1)}
+                  value={editForm.parkingSlotNumbers}
+                  onChange={(parkingSlotNumbers) => setEditForm((f) => ({ ...f, parkingSlotNumbers }))}
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="edit-notes">備註</Label>
               <Input
@@ -2110,6 +2190,29 @@ const BookingsPage: React.FC = () => {
               />
             </div>
           )}
+          {bookingInProcess?.status === 'checked-in' && (() => {
+            const b = bookingInProcess.booking;
+            const ptId =
+              typeof b.parkingType === 'object' && b.parkingType && '_id' in b.parkingType
+                ? (b.parkingType as { _id: string })._id
+                : String((b as { parkingType?: string }).parkingType || '');
+            return (
+              <div className="py-2 space-y-2 border-t">
+                <Label>選擇實體車位（必選）</Label>
+                {ptId ? (
+                  <ParkingSlotPicker
+                    parkingTypeId={ptId}
+                    excludeBookingId={b._id}
+                    vehicleCount={Math.max(1, b.vehicleCount || 1)}
+                    value={checkInSlots}
+                    onChange={setCheckInSlots}
+                  />
+                ) : (
+                  <p className="text-sm text-destructive">找不到停車場，無法選位</p>
+                )}
+              </div>
+            );
+          })()}
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
             <Button 

@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Plus,
   Clock,
+  LayoutGrid,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -43,6 +44,7 @@ const AdminLayout: React.FC = () => {
   const getMenuItems = () => {
     const baseItems = [
       { path: '/admin', icon: Clock, label: '今日概覽', exact: true, roles: ['admin', 'staff'], activeWhen: (p: string) => p === '/admin' || p === '/admin/today-overview' },
+      { path: '/admin/parking-slots', icon: LayoutGrid, label: '即時車位圖', exact: true, roles: ['admin', 'staff'] },
       { path: '/admin/bookings', icon: Calendar, label: '預約', exact: false, roles: ['admin', 'staff'] },
       // { path: '/admin', icon: LayoutDashboard, label: '儀表板', exact: true, roles: ['admin', 'staff'] }, // ẩn
     ];

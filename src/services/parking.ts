@@ -42,4 +42,51 @@ export interface TodayParkingAvailability {
 export const getTodayAvailability = async (): Promise<{ date: string; parking: TodayParkingAvailability[] }> => {
   const response = await api.get('/parking/today-availability');
   return response.data;
-}; 
+};
+
+export type SlotSnapshotLot = {
+  parkingType: {
+    _id: string;
+    name: string;
+    code: string;
+    icon: string;
+    color: string;
+    totalSpaces: number;
+  };
+  at: string;
+  slots: { slotNumber: number; booking: {
+    _id: string;
+    createdAt?: string;
+    licensePlate: string;
+    driverName: string;
+    phone: string;
+    checkInTime: string;
+    checkOutTime: string;
+    finalAmount: number;
+    status: string;
+    vehicleCount?: number;
+    actualCheckInTime?: string;
+  } | null }[];
+  unassignedCheckedIn: Array<{
+    _id: string;
+    licensePlate: string;
+    driverName: string;
+    phone: string;
+  }>;
+};
+
+export const getParkingSlotSnapshot = async (at?: string): Promise<{ serverTime: string; lots: SlotSnapshotLot[] }> => {
+  const response = await api.get('/parking/slot-snapshot', { params: at ? { at } : undefined });
+  return response.data;
+};
+
+export const getCheckinFreeSlots = async (parkingTypeId: string, excludeBookingId?: string): Promise<{
+  totalSpaces: number;
+  freeSlots: number[];
+  takenCount: number;
+}> => {
+  const response = await api.get(`/parking/${parkingTypeId}/checkin-free-slots`, {
+    params: excludeBookingId ? { excludeBookingId } : undefined,
+  });
+  return response.data;
+};
