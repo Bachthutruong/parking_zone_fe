@@ -72,6 +72,8 @@ export type SlotSnapshotLot = {
     licensePlate: string;
     driverName: string;
     phone: string;
+    checkInTime?: string;
+    checkOutTime?: string;
   }>;
 };
 

@@ -14,6 +14,7 @@ import {
   Plus,
   // Calendar,
   Car,
+  Loader2,
   User,
   // Phone,
   // Mail,
@@ -49,12 +50,12 @@ const AdminManualBooking: React.FC = () => {
   const [parkingTypes, setParkingTypes] = useState<any[]>([]);
   const [addonServices, setAddonServices] = useState<AddonService[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [createdBooking, setCreatedBooking] = useState<any>(null);
   
   // New state variables for availability and pricing
-  const [availableSlots, setAvailableSlots] = useState<any[]>([]);
-  console.log(availableSlots);
+  const [, setAvailableSlots] = useState<any[]>([]);
   const [pricing, setPricing] = useState<any>(null);
   const [discountInfo, setDiscountInfo] = useState<any>(null);
   const [conflictingDays, setConflictingDays] = useState<string[]>([]);
@@ -67,6 +68,8 @@ const AdminManualBooking: React.FC = () => {
   const [isVIP, setIsVIP] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [blacklistWarning, setBlacklistWarning] = useState<string | null>(null);
+  /** Member profile 備註 — same as Users admin, not booking.notes */
+  const [userNotes, setUserNotes] = useState('');
   
   const [formData, setFormData] = useState({
     parkingTypeId: '',
@@ -113,16 +116,52 @@ const AdminManualBooking: React.FC = () => {
     }
   }, [formData.parkingTypeId, formData.checkInTime, formData.checkOutTime]);
 
-  // Check VIP status when phone changes
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (formData.phone && formData.phone.length >= 8) {
-        checkVIPStatusByPhone(formData.phone);
+      const p = formData.phone.trim();
+      const e = formData.email.trim();
+      const plate = formData.licensePlate.trim();
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+      const hasLookup = p.length >= 8 || emailOk || plate.length >= 2;
+
+      if (!hasLookup) {
+        setCurrentUser(null);
+        setIsVIP(false);
+        return;
       }
-    }, 1000); // Debounce 1 second
+
+      const payload: { phone?: string; email?: string; licensePlate?: string } = {};
+      if (p.length >= 8) payload.phone = p;
+      if (emailOk) payload.email = e;
+      if (plate.length >= 2) payload.licensePlate = plate;
+
+      (async () => {
+        try {
+          const response = await checkVIPStatus(payload);
+
+          if (response.success && response.user) {
+            setUserNotes(response.user.notes ?? '');
+            if (response.user.isVIP) {
+              setCurrentUser(response.user);
+              setIsVIP(true);
+              toast.success(`🎉 歡迎VIP會員！您享有 ${response.user.vipDiscount || 0}% 折扣！`);
+            } else {
+              setCurrentUser(null);
+              setIsVIP(false);
+            }
+          } else {
+            setUserNotes('');
+            setCurrentUser(null);
+            setIsVIP(false);
+          }
+        } catch (error) {
+          console.error('Error loading member profile:', error);
+        }
+      })();
+    }, 900);
 
     return () => clearTimeout(timeoutId);
-  }, [formData.phone]);
+  }, [formData.phone, formData.email, formData.licensePlate]);
 
   // Recalculate pricing when addon services change
   useEffect(() => {
@@ -311,39 +350,6 @@ const AdminManualBooking: React.FC = () => {
     return conflicts;
   };
 
-  const checkVIPStatusByPhone = async (phone: string) => {
-    if (!phone) return;
-    
-    try {
-      // First try to get user info from localStorage
-      const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-      if (storedUser.phone === phone && storedUser.isVIP) {
-        setCurrentUser(storedUser);
-        setIsVIP(true);
-        toast.success(`🎉 歡迎VIP會員！您享有 ${storedUser.vipDiscount || 0}% 折扣！`);
-        return;
-      }
-      
-      // Check VIP status from backend
-      const response = await checkVIPStatus(phone);
-      
-      if (response.success && response.user && response.user.isVIP) {
-        setCurrentUser(response.user);
-        setIsVIP(true);
-        toast.success(`🎉 歡迎VIP會員！您享有 ${response.user.vipDiscount || 0}% 折扣！`);
-      } else {
-        // Only clear if we are switching to non-VIP
-        if (isVIP) {
-          setCurrentUser(null);
-          setIsVIP(false);
-        }
-      }
-    } catch (error) {
-      console.error('Error checking VIP status:', error);
-      // Don't clear on error
-    }
-  };
-
   const handleDiscountCodeApply = async () => {
     if (!formData.discountCode?.trim()) {
       toast.error('請輸入折扣碼');
@@ -390,6 +396,7 @@ const AdminManualBooking: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    if (submitting) return;
     if (!formData.parkingTypeId) {
       toast.error('請選擇停車場');
       return;
@@ -411,6 +418,7 @@ const AdminManualBooking: React.FC = () => {
       return;
     }
 
+    setSubmitting(true);
     try {
       const bookingData = {
         parkingTypeId: formData.parkingTypeId,
@@ -432,6 +440,7 @@ const AdminManualBooking: React.FC = () => {
         estimatedArrivalTime: formData.estimatedArrivalTime,
         flightNumber: formData.flightNumber,
         notes: formData.notes,
+        userProfileNotes: userNotes,
         paymentStatus: formData.paymentStatus,
         paymentMethod: formData.paymentMethod,
         status: formData.status,
@@ -463,6 +472,8 @@ const AdminManualBooking: React.FC = () => {
     } catch (error: any) {
       console.error('Error creating manual booking:', error);
       toast.error(error.response?.data?.message || '無法建立手動預約');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -499,6 +510,9 @@ const AdminManualBooking: React.FC = () => {
     setConflictingDays([]);
     setMaintenanceDays([]);
     setBlacklistWarning(null);
+    setUserNotes('');
+    setIsVIP(false);
+    setCurrentUser(null);
   };
 
   const handleAddonServiceToggle = (serviceId: string) => {
@@ -777,6 +791,24 @@ const AdminManualBooking: React.FC = () => {
                 </div>
               </div>
 
+              <div className="rounded-md border-2 border-amber-300 bg-amber-50 p-3 space-y-2 shadow-sm">
+                <Label htmlFor="member-profile-notes" className="text-base font-semibold text-amber-950">
+                  用戶備註（會員檔案）
+                </Label>
+                <p className="text-xs text-gray-700 leading-relaxed">
+                  與「用戶管理」備註為同一欄位。系統會依 <strong>電話（至少 8 碼）</strong>、<strong>Email（須含 @）</strong>、<strong>車牌（至少 2 字）</strong> 自動查詢；符合則帶入現有備註。
+                  <span className="block mt-1">查無會員時仍可在此輸入；送出手動預約後會寫入該客戶會員檔案（與下方「預約備註」不同）。</span>
+                </p>
+                <Textarea
+                  id="member-profile-notes"
+                  value={userNotes}
+                  onChange={(e) => setUserNotes(e.target.value)}
+                  placeholder="輸入或編輯會員備註（選填）— 無論是否已註冊皆可填寫"
+                  rows={4}
+                  className="bg-white min-h-[100px] border-amber-200"
+                />
+              </div>
+
               <div className="space-y-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
                 <div className="flex items-center space-x-2">
                   <span className="text-blue-800 font-medium">✈️ 接駁和行李資訊</span>
@@ -907,22 +939,33 @@ const AdminManualBooking: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="notes">備註</Label>
+              <div className="rounded-md border border-gray-200 bg-gray-50/80 p-3 space-y-2">
+                <Label htmlFor="booking-notes">預約備註（本筆訂單）</Label>
+                <p className="text-xs text-gray-600">
+                  僅附加於此筆手動預約；會顯示於預約詳情與列表。列印預約單不顯示此欄。
+                </p>
                 <Textarea
-                  id="notes"
+                  id="booking-notes"
                   value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="附加備註..."
+                  onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
+                  placeholder="此筆預約專用備註（選填）…"
                   rows={3}
+                  className="bg-white"
                 />
               </div>
             </div>
 
 
 
-            <Button onClick={handleSubmit} className="w-full">
-              創建手動預約
+            <Button onClick={handleSubmit} className="w-full" disabled={submitting}>
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  建立中…
+                </>
+              ) : (
+                '創建手動預約'
+              )}
             </Button>
           </CardContent>
         </Card>

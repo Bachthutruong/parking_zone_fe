@@ -49,38 +49,72 @@ const SlotGrid: React.FC<{
     [lot.slots, cols]
   );
   const accent = lot.parkingType.color || '#39653f';
-  const occupied = lot.slots.filter((s) => s.booking).length;
-  const free = lot.slots.length - occupied;
+  const onGrid = lot.slots.filter((s) => s.booking).length;
+  const unassigned = lot.unassignedCheckedIn ?? [];
+  const inLot = onGrid + unassigned.length;
+  const free = lot.slots.length - onGrid;
 
   return (
-    <div className="space-y-4">
-      {lot.unassignedCheckedIn && lot.unassignedCheckedIn.length > 0 && (
-        <div className="text-sm text-amber-900 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-xl px-3 py-2.5 shadow-sm">
-          有 {lot.unassignedCheckedIn.length} 輛在場但尚未分配車位（請於「預約」內分步入場或編輯補上）。
+    <div className="space-y-4 w-full">
+      {unassigned.length > 0 && (
+        <div className="rounded-2xl border-2 border-amber-300/80 bg-gradient-to-br from-amber-50 via-orange-50/90 to-amber-100/50 p-4 sm:p-5 shadow-sm">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <h3 className="text-sm font-bold text-amber-900 sm:text-base">
+              在場但尚未分配編號車位
+              <span className="ml-2 font-mono text-base tabular-nums sm:text-lg">（{unassigned.length} 輛）</span>
+            </h3>
+            <p className="text-xs leading-snug text-amber-800/90 sm:max-w-xl sm:text-right sm:text-sm">
+              入場時若未選格，不會出現在下方格子。請至「預約」編輯補車位，或改回狀態再入場並選格。
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {unassigned.map((b) => (
+              <button
+                key={b._id}
+                type="button"
+                onClick={() => onSelectBooking(b._id)}
+                className="group inline-flex min-h-[2.75rem] min-w-[7rem] flex-1 flex-col items-center justify-center rounded-xl border-2 border-amber-500/60 bg-white/90 px-3 py-2 text-left shadow transition hover:border-amber-600 hover:shadow-md sm:max-w-[11rem] sm:flex-initial"
+              >
+                <span className="text-xs text-amber-800/80">未編號 · 在場</span>
+                <span className="font-mono text-sm font-bold text-amber-950 sm:text-base">{b.licensePlate}</span>
+                <span className="w-full truncate text-center text-[11px] text-slate-600">{b.driverName || '—'}</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-xs sm:text-sm">
+      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs sm:text-sm">
         <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-800">
           <span className="h-2 w-2 rounded-full bg-emerald-500" />
-          空位 <strong className="font-semibold tabular-nums">{free}</strong>
+          空編號格 <strong className="font-semibold tabular-nums">{free}</strong>
         </div>
         <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-slate-800">
-          <span className="h-2 w-2 rounded-full bg-amber-500" />
-          已佔 <strong className="font-semibold tabular-nums">{occupied}</strong>
+          <span className="h-2 w-2 rounded-full bg-violet-500" />
+          圖上已顯示 <strong className="font-semibold tabular-nums">{onGrid}</strong>
         </div>
-        <div className="text-muted-foreground">
-          共 <span className="font-medium text-foreground tabular-nums">{lot.slots.length}</span> 格
+        {unassigned.length > 0 && (
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-amber-900">
+            <span className="h-2 w-2 rounded-full bg-amber-500" />
+            在場未編號 <strong className="font-semibold tabular-nums">{unassigned.length}</strong>
+          </div>
+        )}
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-[#39653f]/30 bg-[#39653f]/8 px-2.5 py-1 text-[#1d4b32]">
+          <Car className="h-3.5 w-3.5" />
+          本場在場 <strong className="font-semibold tabular-nums">{inLot}</strong>
+        </div>
+        <div className="text-muted-foreground pl-1">
+          編號格共 <span className="font-medium text-foreground tabular-nums">{lot.slots.length}</span> 格
         </div>
       </div>
 
       <div
-        className="rounded-2xl border border-slate-200/80 bg-gradient-to-b from-slate-50/90 to-slate-100/50 p-4 sm:p-6 shadow-sm"
+        className="w-full rounded-2xl border border-slate-200/80 bg-gradient-to-b from-slate-50/90 to-slate-100/50 p-3 sm:p-6 shadow-sm"
         style={{ boxShadow: `inset 0 0 0 1px ${accent}18` }}
       >
-        <div className="flex flex-col items-center gap-1.5 mb-4 sm:mb-5">
+        <div className="mb-4 flex flex-col items-center gap-1.5 sm:mb-5">
           <div
-            className="w-full max-w-2xl rounded-t-xl py-2.5 px-4 text-center text-xs sm:text-sm font-semibold tracking-wide text-white shadow-md flex items-center justify-center gap-2 ring-1 ring-white/20"
+            className="w-full max-w-4xl rounded-t-xl py-2.5 px-4 text-center text-xs sm:text-sm font-semibold tracking-wide text-white shadow-md flex items-center justify-center gap-2 ring-1 ring-white/20"
             style={{
               background: `linear-gradient(180deg, ${accent} 0%, #0f172a 100%)`,
             }}
@@ -108,7 +142,7 @@ const SlotGrid: React.FC<{
               {ri + 1}
             </span>
             <div
-              className="grid w-full min-w-0 max-w-2xl flex-1 gap-1.5 sm:gap-2"
+              className="grid w-full min-w-0 flex-1 gap-1.5 sm:gap-2"
               style={{ gridTemplateColumns: `repeat(${row.length}, minmax(0, 1fr))` }}
             >
             {row.map(({ slotNumber, booking }) => {
@@ -119,10 +153,10 @@ const SlotGrid: React.FC<{
                 type="button"
                 onClick={() => onSelectBooking(booking._id)}
                 className={cn(
-                    'group relative flex min-h-[3.5rem] w-full flex-col items-center justify-between rounded-xl border-2 border-amber-400/90 bg-gradient-to-b from-slate-600 to-slate-900 px-0.5 py-1.5',
+                    'group relative flex min-h-[3.5rem] w-full max-w-[5.25rem] flex-col items-center justify-between justify-self-center rounded-xl border-2 border-amber-400/90 bg-gradient-to-b from-slate-600 to-slate-900 px-0.5 py-1.5',
                     'text-white shadow-md transition-all hover:z-[1] hover:scale-[1.02] hover:shadow-lg hover:ring-2 hover:ring-amber-400/70',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2',
-                    'sm:min-h-[4.25rem] sm:px-1'
+                    'sm:min-h-[4.25rem] sm:max-w-[5.5rem] sm:px-1'
                 )}
                 title={`車位 ${slotNumber} — ${booking.licensePlate}，點擊看明細`}
                 aria-label={`車位 ${slotNumber}，車牌 ${booking.licensePlate}，點擊看預約明細`}
@@ -147,8 +181,8 @@ const SlotGrid: React.FC<{
                 <div
                   key={slotNumber}
                   className={cn(
-                    'flex min-h-[3.5rem] w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300/90',
-                    'bg-white/60 text-slate-400 sm:min-h-[4.25rem]',
+                    'flex min-h-[3.5rem] w-full max-w-[5.25rem] flex-col items-center justify-center justify-self-center rounded-xl border-2 border-dashed border-slate-300/90',
+                    'bg-white/60 text-slate-400 sm:min-h-[4.25rem] sm:max-w-[5.5rem]',
                     'pointer-events-none select-none'
                   )}
                   title={`空位 ${slotNumber}`}
@@ -224,7 +258,7 @@ const ParkingSlotMap: React.FC = () => {
 
   if (!loading && (!lots || lots.length === 0)) {
     return (
-      <div className="max-w-5xl mx-auto text-center text-muted-foreground py-12">
+      <div className="w-full max-w-full text-center text-muted-foreground py-12">
         <p>沒有啟用中的停車場類型</p>
         <Button variant="outline" className="mt-4" onClick={() => void load()}>
           重新整理
@@ -234,14 +268,14 @@ const ParkingSlotMap: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto px-0">
+    <div className="w-full max-w-full space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-border/60 pb-4">
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
             即時車位圖
           </h1>
-          <p className="text-sm text-muted-foreground mt-1.5 max-w-xl leading-relaxed">
-            以平面格狀顯示各格編號；空位與已佔用者有不同外觀。伺服器時間：{' '}
+          <p className="text-sm text-muted-foreground mt-1.5 max-w-4xl leading-relaxed">
+            有分配編號的車輛顯示在格內；入場時未選位者顯示於上方黃色區。伺服器時間：{' '}
             <time dateTime={serverTime || undefined} className="font-medium text-foreground/80 tabular-nums">
               {serverTime ? formatDateTime(serverTime) : '—'}
             </time>

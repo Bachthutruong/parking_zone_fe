@@ -599,7 +599,7 @@ const AdminTodayOverview: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <div className="w-full max-w-full mx-auto px-2 sm:px-4 py-4 sm:py-8">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -609,7 +609,7 @@ const AdminTodayOverview: React.FC = () => {
 
   if (!data) {
     return (
-      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <div className="w-full max-w-full mx-auto px-2 sm:px-4 py-4 sm:py-8">
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-600 mb-2">沒有資料</h3>
@@ -620,7 +620,7 @@ const AdminTodayOverview: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+    <div className="w-full max-w-full mx-auto px-2 sm:px-4 py-4 sm:py-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">今日概覽</h1>

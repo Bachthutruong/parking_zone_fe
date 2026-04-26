@@ -1141,7 +1141,7 @@ const BookingsPage: React.FC = () => {
   // First paint for list view only — calendar view can render immediately.
   if (viewMode === 'table' && loading && bookings.length === 0) {
     return (
-      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <div className="w-full max-w-full mx-auto px-2 sm:px-4 py-4 sm:py-8">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
         </div>
@@ -1150,7 +1150,7 @@ const BookingsPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+    <div className="w-full max-w-full mx-auto px-2 sm:px-4 py-4 sm:py-8">
       <div className="mb-6 sm:mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">預約管理</h1>
@@ -2192,11 +2192,12 @@ const BookingsPage: React.FC = () => {
           )}
           {bookingInProcess?.status === 'checked-in' && (() => {
             const b = bookingInProcess.booking;
-            const pt = b.parkingType;
             const ptId =
-              typeof pt === 'object' && pt && '_id' in pt
-                ? (pt as { _id: string })._id
-                : String(typeof pt === 'string' ? pt : '');
+              typeof b.parkingType === 'object' && b.parkingType && '_id' in b.parkingType
+                ? (b.parkingType as { _id: string })._id
+                : typeof b.parkingType === 'string'
+                  ? b.parkingType
+                  : '';
             return (
               <div className="py-2 space-y-2 border-t">
                 <Label>選擇實體車位（必選）</Label>

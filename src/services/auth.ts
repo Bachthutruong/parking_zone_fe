@@ -34,9 +34,14 @@ export const getBookingTerms = async (): Promise<{ terms: string }> => {
   return response.data;
 };
 
-// Check VIP status by phone
-export const checkVIPStatus = async (phone: string) => {
-  const response = await api.post('/auth/check-vip', { phone });
+export type CheckVIPParams = { phone?: string; email?: string; licensePlate?: string };
+
+export const checkVIPStatus = async (
+  phoneOrParams: string | CheckVIPParams
+) => {
+  const body =
+    typeof phoneOrParams === 'string' ? { phone: phoneOrParams } : phoneOrParams;
+  const response = await api.post('/auth/check-vip', body);
   return response.data;
 };
 
