@@ -102,7 +102,7 @@ const BookingsPage: React.FC = () => {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
-  const [calendarData, setCalendarData] = useState<any[]>([]);
+  const [calendarData, setCalendarData] = useState<Record<string, any>>({});
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedParkingType, setSelectedParkingType] = useState<string>('all');
   const [showBookingsDialog, setShowBookingsDialog] = useState(false);
@@ -2192,10 +2192,11 @@ const BookingsPage: React.FC = () => {
           )}
           {bookingInProcess?.status === 'checked-in' && (() => {
             const b = bookingInProcess.booking;
+            const pt = b.parkingType;
             const ptId =
-              typeof b.parkingType === 'object' && b.parkingType && '_id' in b.parkingType
-                ? (b.parkingType as { _id: string })._id
-                : String((b as { parkingType?: string }).parkingType || '');
+              typeof pt === 'object' && pt && '_id' in pt
+                ? (pt as { _id: string })._id
+                : String(typeof pt === 'string' ? pt : '');
             return (
               <div className="py-2 space-y-2 border-t">
                 <Label>選擇實體車位（必選）</Label>
