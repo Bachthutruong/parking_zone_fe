@@ -890,6 +890,11 @@ const BookingsPage: React.FC = () => {
             <div class="info-item">
               <span class="label">停車場:</span> ${booking.parkingType.name}
             </div>
+            ${booking.parkingSlotNumbers && booking.parkingSlotNumbers.length > 0 ? `
+            <div class="info-item">
+              <span class="label">車位:</span> ${booking.parkingSlotNumbers.join('、')}
+            </div>
+            ` : ''}
             <div class="info-item">
               <span class="label">類型:</span> ${(booking.parkingType.type || 'indoor') === 'indoor' ? '室內' : 
                 (booking.parkingType.type || 'indoor') === 'outdoor' ? '戶外' : '無障礙'}
@@ -1404,10 +1409,15 @@ const BookingsPage: React.FC = () => {
                       <TableCell>
                         <div className="space-y-1">
                           <div className="font-medium">{booking.parkingType?.name || '未知停車場'}</div>
-                          {/* <div className="text-sm text-gray-600">
-                            {booking.parkingType?.icon || '🏢'} {(booking.parkingType?.type || 'indoor') === 'indoor' ? '室內' : 
-                             (booking.parkingType?.type || 'indoor') === 'outdoor' ? '戶外' : '無障礙'}
-                          </div> */}
+                          {booking.parkingSlotNumbers && booking.parkingSlotNumbers.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {booking.parkingSlotNumbers.map((slot, idx) => (
+                                <span key={idx} className="inline-flex items-center justify-center rounded-md bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800 border border-amber-200">
+                                  {slot}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -1778,6 +1788,18 @@ const BookingsPage: React.FC = () => {
                   <h4 className="font-semibold mb-2">預約資訊</h4>
                   <div className="space-y-2 text-sm">
                     <div><strong>停車場:</strong> {selectedBooking.parkingType?.name || '未知停車場'}</div>
+                    {selectedBooking.parkingSlotNumbers && selectedBooking.parkingSlotNumbers.length > 0 && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <strong>車位:</strong>
+                        <div className="flex flex-wrap gap-1">
+                          {selectedBooking.parkingSlotNumbers.map((slot, idx) => (
+                            <span key={idx} className="inline-flex items-center justify-center rounded-md bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800 border border-amber-200">
+                              {slot}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div><strong>類型:</strong> {selectedBooking.parkingType?.type || 'indoor'}</div>
                     <div><strong>進入:</strong> {formatDateTime(selectedBooking.checkInTime)}</div>
                     <div><strong>離開:</strong> {formatDateTime(selectedBooking.checkOutTime)}</div>

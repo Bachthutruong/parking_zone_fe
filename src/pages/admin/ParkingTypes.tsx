@@ -101,6 +101,9 @@ const AdminParkingTypes: React.FC = () => {
       // Remove type from formData since it's no longer user-selectable
       const { type, ...createData } = formData;
       
+      // Filter out empty features
+      createData.features = createData.features.filter(f => f.trim() !== '');
+
       console.log('🔍 Creating parking type:', createData);
       
       await createParkingType(createData);
@@ -125,6 +128,9 @@ const AdminParkingTypes: React.FC = () => {
         toast.error('請填寫停車場代碼');
         return;
       }
+
+      // Filter out empty features
+      updateData.features = updateData.features.filter(f => f.trim() !== '');
 
       // Use _id instead of code for the API call
       if (!selectedType._id) {
@@ -574,7 +580,7 @@ const AdminParkingTypes: React.FC = () => {
             </div>
 
             <div>
-              <Label htmlFor="description">描述</Label>
+              <Label htmlFor="description">描述 (選填)</Label>
               <Textarea
                 id="description"
                 value={formData.description}

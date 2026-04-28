@@ -401,7 +401,18 @@ const Dashboard: React.FC = () => {
                         </div>
                         <div>
                           <p className="font-medium">{booking.driverName}</p>
-                          <p className="text-sm text-gray-600">{booking.licensePlate}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-sm text-gray-600">{booking.licensePlate}</p>
+                            {booking.parkingSlotNumbers && booking.parkingSlotNumbers.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {booking.parkingSlotNumbers.map((slot, idx) => (
+                                  <span key={idx} className="inline-flex items-center justify-center rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 border border-amber-200">
+                                    {slot}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="text-right">
@@ -745,7 +756,18 @@ const Dashboard: React.FC = () => {
                         <CheckCircle className="h-4 w-4 text-green-600" />
                       </div>
                       <div className="text-xs sm:text-sm text-gray-600 space-y-1">
-                        <div>{booking.licensePlate}</div>
+                        <div className="flex items-center gap-2">
+                          <span>{booking.licensePlate}</span>
+                          {booking.parkingSlotNumbers && booking.parkingSlotNumbers.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {booking.parkingSlotNumbers.map((slot, idx) => (
+                                <span key={idx} className="inline-flex items-center justify-center rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 border border-amber-200">
+                                  {slot}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         <div>進入: {formatDateTime(booking.actualCheckInTime || booking.checkInTime)}</div>
                         <div>預計離開: {formatDateTime(booking.checkOutTime)}</div>
                       </div>
@@ -775,7 +797,18 @@ const Dashboard: React.FC = () => {
                         <AlertCircle className="h-4 w-4 text-yellow-600" />
                       </div>
                       <div className="text-xs sm:text-sm text-gray-600 space-y-1">
-                        <div>{booking.licensePlate}</div>
+                        <div className="flex items-center gap-2">
+                          <span>{booking.licensePlate}</span>
+                          {booking.parkingSlotNumbers && booking.parkingSlotNumbers.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {booking.parkingSlotNumbers.map((slot, idx) => (
+                                <span key={idx} className="inline-flex items-center justify-center rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 border border-amber-200">
+                                  {slot}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         <div>預計: {formatDateTime(booking.estimatedArrivalTime || booking.checkInTime)}</div>
                         <div>航班: {booking.flightNumber || 'N/A'}</div>
                       </div>
@@ -805,7 +838,18 @@ const Dashboard: React.FC = () => {
                         <XCircle className="h-4 w-4 text-red-600" />
                       </div>
                       <div className="text-sm text-gray-600 space-y-1">
-                        <div>{booking.licensePlate}</div>
+                        <div className="flex items-center gap-2">
+                          <span>{booking.licensePlate}</span>
+                          {booking.parkingSlotNumbers && booking.parkingSlotNumbers.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {booking.parkingSlotNumbers.map((slot, idx) => (
+                                <span key={idx} className="inline-flex items-center justify-center rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 border border-amber-200">
+                                  {slot}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         <div>預計離開: {formatDateTime(booking.checkOutTime)}</div>
                         <div>已停車: {formatDateTime(booking.actualCheckInTime || booking.checkInTime)}</div>
                       </div>

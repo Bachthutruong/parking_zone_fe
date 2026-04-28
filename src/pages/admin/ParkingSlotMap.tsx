@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getParkingSlotSnapshot, type SlotSnapshotLot } from '@/services/parking';
 import { getBookingDetails } from '@/services/booking';
+import { updateBooking } from '@/services/admin';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -214,6 +216,9 @@ const ParkingSlotMap: React.FC = () => {
   const [detail, setDetail] = useState<Booking | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [editingSlot, setEditingSlot] = useState(false);
+  const [slotNumbersInput, setSlotNumbersInput] = useState('');
+  const [savingSlot, setSavingSlot] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -239,11 +244,57 @@ const ParkingSlotMap: React.FC = () => {
     try {
       const b = await getBookingDetails(id);
       setDetail(b);
+      setSlotNumbersInput(b.parkingSlotNumbers?.join(', ') || '');
+      setEditingSlot(false);
     } catch (e: unknown) {
       toast.error((e as { response?: { data?: { message?: string } } })?.response?.data?.message || '無法載入明細');
       setDetailOpen(false);
     } finally {
       setLoadingDetail(false);
+    }
+  };
+
+  const handleUpdateSlot = async () => {
+    if (!detail) return;
+    setSavingSlot(true);
+    try {
+      const newSlots = slotNumbersInput.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+      await updateBooking(detail._id, { parkingSlotNumbers: newSlots });
+      toast.success('車位更新成功');
+      setDetail({ ...detail, parkingSlotNumbers: newSlots });
+      setEditingSlot(false);
+      void load();
+    } catch (e: unknown) {
+      toast.error('無法更新車位');
+    } finally {
+      setSavingSlot(false);
+    }
+  };
+
+  const allSlots = useMemo(() => {
+    if (!detail || !lots) return [];
+    const lot = lots.find((l) => l.parkingType._id === detail.parkingType._id);
+    if (!lot) return [];
+    
+    return lot.slots;
+  }, [detail, lots]);
+
+  const toggleSlot = (slot: string) => {
+    const current = slotNumbersInput.split(',').map(s => s.trim()).filter(Boolean);
+    const maxSlots = detail?.vehicleCount || 1;
+
+    if (current.includes(slot)) {
+      setSlotNumbersInput(current.filter(s => s !== slot).join(', '));
+    } else {
+      if (maxSlots === 1) {
+        setSlotNumbersInput(slot);
+      } else {
+        if (current.length >= maxSlots) {
+          toast.error(`此預約最多只能分配 ${maxSlots} 個車位`);
+          return;
+        }
+        setSlotNumbersInput([...current, slot].join(', '));
+      }
     }
   };
 
@@ -378,12 +429,83 @@ const ParkingSlotMap: React.FC = () => {
                   <dt className="text-muted-foreground">預定離場</dt>
                   <dd className="tabular-nums">{formatDateTime(detail.checkOutTime)}</dd>
                 </div>
-                {detail.parkingSlotNumbers && detail.parkingSlotNumbers.length > 0 && (
-                  <div className="grid grid-cols-[5.5rem_1fr] gap-x-2">
-                    <dt className="text-muted-foreground">車位</dt>
-                    <dd className="font-medium tabular-nums">{detail.parkingSlotNumbers.join('、')}</dd>
-                  </div>
-                )}
+                <div className="grid grid-cols-[5.5rem_1fr] gap-x-2">
+                  <dt className="text-muted-foreground mt-1">車位</dt>
+                  <dd>
+                    {editingSlot ? (
+                      <div className="flex flex-col gap-2">
+                        <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto p-1 border rounded-md bg-slate-50">
+                          {allSlots.length > 0 ? allSlots.map(slotObj => {
+                            const slotStr = String(slotObj.slotNumber);
+                            const isSelected = slotNumbersInput.split(',').map(s => s.trim()).filter(Boolean).includes(slotStr);
+                            const isOccupiedByOther = slotObj.booking && slotObj.booking._id !== detail._id;
+                            return (
+                              <button
+                                key={slotStr}
+                                type="button"
+                                onClick={() => {
+                                  if (!isOccupiedByOther) toggleSlot(slotStr);
+                                }}
+                                disabled={Boolean(isOccupiedByOther)}
+                                className={cn(
+                                  "px-2 py-1 text-xs rounded border font-medium transition-colors",
+                                  isSelected 
+                                    ? "bg-[#39653f] text-white border-[#2c4e30]" 
+                                    : isOccupiedByOther
+                                      ? "bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed opacity-60"
+                                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
+                                )}
+                                title={isOccupiedByOther ? `已被 ${slotObj.booking?.licensePlate} 佔用` : `選擇車位 ${slotStr}`}
+                              >
+                                {slotStr}
+                              </button>
+                            );
+                          }) : (
+                            <span className="text-xs text-muted-foreground p-1">無車位資料</span>
+                          )}
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          <Button 
+                            size="sm" 
+                            onClick={handleUpdateSlot} 
+                            disabled={savingSlot}
+                            className="h-8 shrink-0 bg-[#39653f] hover:bg-[#2c4e30]"
+                          >
+                            {savingSlot ? '儲存中...' : '儲存車位'}
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={() => {
+                              setEditingSlot(false);
+                              setSlotNumbersInput(detail.parkingSlotNumbers?.join(', ') || '');
+                            }}
+                            disabled={savingSlot}
+                            className="h-8 shrink-0"
+                          >
+                            取消
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-center group">
+                        <span className="font-medium tabular-nums">
+                          {detail.parkingSlotNumbers && detail.parkingSlotNumbers.length > 0 
+                            ? detail.parkingSlotNumbers.join('、') 
+                            : '尚未分配'}
+                        </span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-6 text-xs text-[#39653f] hover:text-[#2c4e30] opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => setEditingSlot(true)}
+                        >
+                          更改車位
+                        </Button>
+                      </div>
+                    )}
+                  </dd>
+                </div>
                 <div className="grid grid-cols-[5.5rem_1fr] gap-x-2">
                   <dt className="text-muted-foreground">金額</dt>
                   <dd className="font-semibold tabular-nums text-[#39653f]">
