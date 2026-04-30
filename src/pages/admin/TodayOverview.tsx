@@ -68,6 +68,7 @@ interface TodayBooking {
   status: string;
   finalAmount: number;
   vehicleCount?: number;
+  parkingSlotNumbers?: number[];
   parkingType: {
     _id?: string;
     name: string;
@@ -907,9 +908,18 @@ const AdminTodayOverview: React.FC = () => {
                     <div className="font-medium">{booking.licensePlate}</div>
                   </TableCell>
                   <TableCell>
-                    <div>
+                    <div className="space-y-1">
                       <div className="font-medium">{booking.parkingType?.name || '未知停車場'}</div>
                       <div className="text-sm text-gray-600">{booking.parkingType?.code || '-'}</div>
+                      {booking.parkingSlotNumbers && booking.parkingSlotNumbers.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {booking.parkingSlotNumbers.map((slot, idx) => (
+                            <span key={idx} className="inline-flex items-center justify-center rounded-md bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800 border border-amber-200">
+                              {slot}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>

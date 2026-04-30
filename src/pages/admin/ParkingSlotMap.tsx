@@ -1,25 +1,41 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getParkingSlotSnapshot, type SlotSnapshotLot } from '@/services/parking';
-import { getBookingDetails } from '@/services/booking';
-import { updateBooking } from '@/services/admin';
+import { getBookingDetails, calculatePrice } from '@/services/booking';
+import { updateBooking, updateBookingStatus, getAllParkingTypes } from '@/services/admin';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import DateInput from '@/components/ui/date-input';
+import ParkingSlotPicker from '@/components/admin/ParkingSlotPicker';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Textarea } from '@/components/ui/textarea';
+
 import {
   Car,
   RefreshCw,
   MapPin,
   Film,
   ParkingCircle,
+  RotateCcw,
 } from 'lucide-react';
 import { formatDateTime } from '@/lib/dateUtils';
 import type { Booking } from '@/types';
@@ -209,6 +225,28 @@ const SlotGrid: React.FC<{
   );
 };
 
+const EDIT_STATUS_OPTIONS = [
+  { value: 'pending', label: '等待進入停車場' },
+  { value: 'confirmed', label: '預約成功' },
+  { value: 'checked-in', label: '已進入停車場' },
+  { value: 'checked-out', label: '已離開停車場' },
+  { value: 'cancelled', label: '已取消' },
+] as const;
+
+interface EditBookingForm {
+  driverName: string;
+  phone: string;
+  email: string;
+  licensePlate: string;
+  parkingTypeId: string;
+  checkInTime: string;
+  checkOutTime: string;
+  status: string;
+  notes: string;
+  vehicleCount: number;
+  parkingSlotNumbers: number[];
+}
+
 const ParkingSlotMap: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [serverTime, setServerTime] = useState<string>('');
@@ -216,9 +254,26 @@ const ParkingSlotMap: React.FC = () => {
   const [detail, setDetail] = useState<Booking | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
-  const [editingSlot, setEditingSlot] = useState(false);
-  const [slotNumbersInput, setSlotNumbersInput] = useState('');
-  const [savingSlot, setSavingSlot] = useState(false);
+
+  // Edit form states
+  const [editForm, setEditForm] = useState<EditBookingForm>({
+    driverName: '', phone: '', email: '', licensePlate: '',
+    parkingTypeId: '', checkInTime: '', checkOutTime: '',
+    status: 'confirmed', notes: '', vehicleCount: 1, parkingSlotNumbers: [],
+  });
+  const [editSaving, setEditSaving] = useState(false);
+  const [parkingTypes, setParkingTypes] = useState<any[]>([]);
+  const [newPriceLoading, setNewPriceLoading] = useState(false);
+  const [newPrice, setNewPrice] = useState<number | null>(null);
+  const [newPriceError, setNewPriceError] = useState<string | null>(null);
+  const [shouldRecalcPrice, setShouldRecalcPrice] = useState(false);
+
+  // Status change dialog states
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [statusChangeTarget, setStatusChangeTarget] = useState<{ bookingId: string; status: string; licensePlate: string } | null>(null);
+  const [statusReason, setStatusReason] = useState('');
+  const [checkInSlots, setCheckInSlots] = useState<number[]>([]);
+  const [statusChangeParkingTypeId, setStatusChangeParkingTypeId] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -237,6 +292,18 @@ const ParkingSlotMap: React.FC = () => {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    const loadParkingTypes = async () => {
+      try {
+        const data = await getAllParkingTypes();
+        setParkingTypes(data.parkingTypes || []);
+      } catch (error) {
+        console.error('Failed to load parking types:', error);
+      }
+    };
+    loadParkingTypes();
+  }, []);
+
   const openDetails = async (id: string) => {
     setDetailOpen(true);
     setDetail(null);
@@ -244,8 +311,24 @@ const ParkingSlotMap: React.FC = () => {
     try {
       const b = await getBookingDetails(id);
       setDetail(b);
-      setSlotNumbersInput(b.parkingSlotNumbers?.join(', ') || '');
-      setEditingSlot(false);
+      const ptId = typeof b.parkingType === 'object' && b.parkingType?._id
+        ? b.parkingType._id : (b as any).parkingType ?? '';
+      setEditForm({
+        driverName: b.driverName ?? '',
+        phone: b.phone ?? '',
+        email: b.email ?? '',
+        licensePlate: b.licensePlate ?? '',
+        parkingTypeId: ptId,
+        checkInTime: b.checkInTime ?? '',
+        checkOutTime: b.checkOutTime ?? '',
+        status: b.status ?? 'confirmed',
+        notes: (b as any).notes ?? '',
+        vehicleCount: b.vehicleCount ?? 1,
+        parkingSlotNumbers: Array.isArray(b.parkingSlotNumbers) ? [...b.parkingSlotNumbers] : [],
+      });
+      setNewPrice(null);
+      setNewPriceError(null);
+      setShouldRecalcPrice(false);
     } catch (e: unknown) {
       toast.error((e as { response?: { data?: { message?: string } } })?.response?.data?.message || '無法載入明細');
       setDetailOpen(false);
@@ -254,48 +337,170 @@ const ParkingSlotMap: React.FC = () => {
     }
   };
 
-  const handleUpdateSlot = async () => {
+  const closeEditDialog = () => {
+    setDetailOpen(false);
+    setDetail(null);
+    setEditSaving(false);
+    setNewPrice(null);
+    setNewPriceError(null);
+    setShouldRecalcPrice(false);
+  };
+
+  // Recalculate price when relevant fields change
+  useEffect(() => {
+    if (!detail || !editForm.parkingTypeId || !editForm.checkInTime || !editForm.checkOutTime) {
+      setNewPrice(null);
+      setNewPriceError(null);
+      return;
+    }
+    if (!shouldRecalcPrice) return;
+    const checkIn = new Date(editForm.checkInTime);
+    const checkOut = new Date(editForm.checkOutTime);
+    if (checkOut <= checkIn) {
+      setNewPrice(null);
+      setNewPriceError('離開時間須晚於進入時間');
+      return;
+    }
+    let cancelled = false;
+    setNewPriceLoading(true);
+    setNewPriceError(null);
+    calculatePrice({
+      parkingTypeId: editForm.parkingTypeId,
+      checkInTime: editForm.checkInTime,
+      checkOutTime: editForm.checkOutTime,
+      addonServices: (detail.addonServices || []).map((a) => (a as any).service?._id || (a as any)._id).filter(Boolean),
+      discountCode: detail.discountCode?.code,
+      isVIP: detail.isVIP,
+      userEmail: detail.email,
+      vehicleCount: editForm.vehicleCount || 1,
+    } as any)
+      .then((res: any) => {
+        if (cancelled) return;
+        if (res?.pricing?.finalAmount != null) {
+          setNewPrice(res.pricing.finalAmount);
+          setNewPriceError(null);
+        } else {
+          setNewPrice(null);
+          setNewPriceError(res?.message || '無法計算新價格');
+        }
+      })
+      .catch((err: any) => {
+        if (cancelled) return;
+        setNewPrice(null);
+        setNewPriceError(err?.response?.data?.message || '無法計算新價格');
+      })
+      .finally(() => { if (!cancelled) setNewPriceLoading(false); });
+    return () => { cancelled = true; };
+  }, [detail, editForm.parkingTypeId, editForm.checkInTime, editForm.checkOutTime, editForm.vehicleCount, shouldRecalcPrice]);
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!detail) return;
-    setSavingSlot(true);
+    const vc = Math.max(1, editForm.vehicleCount || 1);
+    if (editForm.status === 'checked-in') {
+      if (editForm.parkingSlotNumbers.length !== vc) {
+        toast.error(`狀態為「已進入停車場」時須選好 ${vc} 個實體車位`);
+        return;
+      }
+    }
     try {
-      const newSlots = slotNumbersInput.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
-      await updateBooking(detail._id, { parkingSlotNumbers: newSlots });
-      toast.success('車位更新成功');
-      setDetail({ ...detail, parkingSlotNumbers: newSlots });
-      setEditingSlot(false);
+      setEditSaving(true);
+      const payload: any = {
+        driverName: editForm.driverName,
+        phone: editForm.phone,
+        email: editForm.email || undefined,
+        licensePlate: editForm.licensePlate,
+        parkingType: editForm.parkingTypeId || undefined,
+        checkInTime: editForm.checkInTime,
+        checkOutTime: editForm.checkOutTime,
+        vehicleCount: editForm.vehicleCount || 1,
+        status: editForm.status,
+        notes: editForm.notes || undefined,
+        ...(editForm.status === 'checked-in' && editForm.parkingSlotNumbers.length > 0
+          ? { parkingSlotNumbers: editForm.parkingSlotNumbers }
+          : {}),
+      };
+      // Recalculate price
+      try {
+        const res: any = await calculatePrice({
+          parkingTypeId: editForm.parkingTypeId,
+          checkInTime: editForm.checkInTime,
+          checkOutTime: editForm.checkOutTime,
+          addonServices: (detail.addonServices || []).map((a: any) => a.service?._id || a._id).filter(Boolean),
+          discountCode: detail.discountCode?.code,
+          isVIP: detail.isVIP,
+          userEmail: detail.email,
+          vehicleCount: editForm.vehicleCount || 1,
+        } as any);
+        const pricing = res?.pricing;
+        if (pricing && pricing.finalAmount != null) {
+          payload.totalAmount = pricing.totalAmount ?? pricing.finalAmount;
+          payload.discountAmount = pricing.discountAmount ?? 0;
+          payload.finalAmount = pricing.finalAmount;
+          if (pricing.autoDiscountAmount != null) payload.autoDiscountAmount = pricing.autoDiscountAmount;
+          if (pricing.dailyPrices) payload.dailyPrices = pricing.dailyPrices;
+        }
+      } catch (err) {
+        console.error('Recalculate price failed:', err);
+      }
+      await updateBooking(detail._id, payload as Parameters<typeof updateBooking>[1]);
+      toast.success('已更新預約資訊');
+      closeEditDialog();
       void load();
-    } catch (e: unknown) {
-      toast.error('無法更新車位');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || '更新失敗');
     } finally {
-      setSavingSlot(false);
+      setEditSaving(false);
     }
   };
 
-  const allSlots = useMemo(() => {
-    if (!detail || !lots) return [];
-    const lot = lots.find((l) => l.parkingType._id === detail.parkingType._id);
-    if (!lot) return [];
-    
-    return lot.slots;
-  }, [detail, lots]);
+  const openStatusChangeDialog = (booking: Booking, newStatus: string) => {
+    const ptId = typeof booking.parkingType === 'object' && booking.parkingType?._id
+      ? booking.parkingType._id : '';
+    setStatusChangeTarget({ bookingId: booking._id, status: newStatus, licensePlate: booking.licensePlate });
+    setStatusReason('');
+    setStatusChangeParkingTypeId(ptId);
+    setCheckInSlots(newStatus === 'checked-in' && Array.isArray(booking.parkingSlotNumbers) ? [...booking.parkingSlotNumbers] : []);
+    setIsStatusDialogOpen(true);
+  };
 
-  const toggleSlot = (slot: string) => {
-    const current = slotNumbersInput.split(',').map(s => s.trim()).filter(Boolean);
-    const maxSlots = detail?.vehicleCount || 1;
-
-    if (current.includes(slot)) {
-      setSlotNumbersInput(current.filter(s => s !== slot).join(', '));
-    } else {
-      if (maxSlots === 1) {
-        setSlotNumbersInput(slot);
-      } else {
-        if (current.length >= maxSlots) {
-          toast.error(`此預約最多只能分配 ${maxSlots} 個車位`);
-          return;
-        }
-        setSlotNumbersInput([...current, slot].join(', '));
+  const confirmStatusChange = async () => {
+    if (!statusChangeTarget) return;
+    const vc = Math.max(1, detail?.vehicleCount || 1);
+    if (statusChangeTarget.status === 'checked-in') {
+      if (checkInSlots.length !== vc) {
+        toast.error(`入場須選擇 ${vc} 個空車位`);
+        return;
       }
     }
+    try {
+      await updateBookingStatus(
+        statusChangeTarget.bookingId,
+        statusChangeTarget.status,
+        statusReason,
+        statusChangeTarget.status === 'checked-in' ? checkInSlots : undefined
+      );
+      toast.success('狀態更新成功');
+      setIsStatusDialogOpen(false);
+      setStatusChangeTarget(null);
+      setCheckInSlots([]);
+      
+      // Delay closing the outer dialog to allow Radix UI to properly remove body pointer-events lock
+      setTimeout(() => {
+        closeEditDialog();
+        void load();
+      }, 300);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || error?.message || '狀態更新失敗');
+    }
+  };
+
+  const handleRevertStatus = (booking: Booking) => {
+    let newStatus = '';
+    if (booking.status === 'checked-in') newStatus = 'confirmed';
+    else if (booking.status === 'checked-out') newStatus = 'checked-in';
+    else if (booking.status === 'cancelled') newStatus = 'confirmed';
+    if (newStatus) openStatusChangeDialog(booking, newStatus);
   };
 
   if (loading && !lots.length) {
@@ -384,12 +589,16 @@ const ParkingSlotMap: React.FC = () => {
         ))}
       </Tabs>
 
-      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-md max-h-[90vh] flex flex-col gap-0 sm:max-w-md">
-          <DialogHeader className="space-y-1 border-b border-border/60 pb-3 text-left">
-            <DialogTitle className="text-lg">租賃 / 預約明細</DialogTitle>
+      <Dialog open={detailOpen} onOpenChange={(open) => !open && closeEditDialog()}>
+        <DialogContent 
+          className="max-w-lg max-h-[90vh] overflow-y-auto"
+          onInteractOutside={(e) => { if (isStatusDialogOpen) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (isStatusDialogOpen) e.preventDefault(); }}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-lg">編輯預約</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              由車位圖點選開啟，資料來自預約記錄。
+              {detail && (detail.bookingNumber ? `預約編號: ${detail.bookingNumber}` : `預約 ID: ${detail._id}`)}
             </DialogDescription>
           </DialogHeader>
           {loadingDetail && (
@@ -399,134 +608,285 @@ const ParkingSlotMap: React.FC = () => {
             </div>
           )}
           {!loadingDetail && detail && (
-            <ScrollArea className="max-h-[60vh] pr-2">
-              <dl className="space-y-3 text-sm">
-                <div className="grid grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1">
-                  <dt className="text-muted-foreground">預約 ID</dt>
-                  <dd className="font-mono text-xs break-all text-foreground">{String(detail._id)}</dd>
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="slot-edit-driverName">客戶姓名 *</Label>
+                  <Input
+                    id="slot-edit-driverName"
+                    value={editForm.driverName}
+                    onChange={(e) => setEditForm((f) => ({ ...f, driverName: e.target.value }))}
+                    required
+                    placeholder="客戶姓名"
+                  />
                 </div>
-                <div className="grid grid-cols-[5.5rem_1fr] gap-x-2">
-                  <dt className="text-muted-foreground">車牌</dt>
-                  <dd className="font-semibold text-foreground">{detail.licensePlate}</dd>
+                <div className="space-y-2">
+                  <Label htmlFor="slot-edit-phone">電話 *</Label>
+                  <Input
+                    id="slot-edit-phone"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                    required
+                    placeholder="電話"
+                  />
                 </div>
-                <div className="grid grid-cols-[5.5rem_1fr] gap-x-2">
-                  <dt className="text-muted-foreground">聯絡人</dt>
-                  <dd>{detail.driverName}</dd>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="slot-edit-email">Email</Label>
+                <Input
+                  id="slot-edit-email"
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                  placeholder="email@example.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="slot-edit-licensePlate">車牌號碼 *</Label>
+                <Input
+                  id="slot-edit-licensePlate"
+                  value={editForm.licensePlate}
+                  onChange={(e) => setEditForm((f) => ({ ...f, licensePlate: e.target.value }))}
+                  required
+                  placeholder="車牌號碼"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="slot-edit-parkingType">停車場 *</Label>
+                <Select
+                  value={editForm.parkingTypeId}
+                  onValueChange={(value) => {
+                    setEditForm((f) => ({ ...f, parkingTypeId: value }));
+                    setShouldRecalcPrice(true);
+                  }}
+                >
+                  <SelectTrigger id="slot-edit-parkingType">
+                    <SelectValue placeholder="選擇停車場" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {parkingTypes.map((pt) => (
+                      <SelectItem key={pt._id} value={pt._id}>
+                        {pt.icon || '🏢'} {pt.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="slot-edit-checkInTime">進入時間 *</Label>
+                  <DateInput
+                    id="slot-edit-checkInTime"
+                    type="datetime-local"
+                    value={editForm.checkInTime}
+                    onChange={(value) => {
+                      setEditForm((f) => ({ ...f, checkInTime: value }));
+                      setShouldRecalcPrice(true);
+                    }}
+                    placeholder="年/月/日 00:00"
+                  />
                 </div>
-                <div className="grid grid-cols-[5.5rem_1fr] gap-x-2">
-                  <dt className="text-muted-foreground">電話</dt>
-                  <dd className="tabular-nums">{detail.phone}</dd>
+                <div className="space-y-2">
+                  <Label htmlFor="slot-edit-checkOutTime">離開時間 *</Label>
+                  <DateInput
+                    id="slot-edit-checkOutTime"
+                    type="datetime-local"
+                    value={editForm.checkOutTime}
+                    onChange={(value) => {
+                      setEditForm((f) => ({ ...f, checkOutTime: value }));
+                      setShouldRecalcPrice(true);
+                    }}
+                    placeholder="年/月/日 00:00"
+                  />
                 </div>
-                <div className="grid grid-cols-[5.5rem_1fr] gap-x-2">
-                  <dt className="text-muted-foreground">狀態</dt>
-                  <dd><span className="inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium">{detail.status}</span></dd>
-                </div>
-                <div className="grid grid-cols-[5.5rem_1fr] gap-x-2">
-                  <dt className="text-muted-foreground">預定進場</dt>
-                  <dd className="tabular-nums">{formatDateTime(detail.checkInTime)}</dd>
-                </div>
-                <div className="grid grid-cols-[5.5rem_1fr] gap-x-2">
-                  <dt className="text-muted-foreground">預定離場</dt>
-                  <dd className="tabular-nums">{formatDateTime(detail.checkOutTime)}</dd>
-                </div>
-                <div className="grid grid-cols-[5.5rem_1fr] gap-x-2">
-                  <dt className="text-muted-foreground mt-1">車位</dt>
-                  <dd>
-                    {editingSlot ? (
-                      <div className="flex flex-col gap-2">
-                        <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto p-1 border rounded-md bg-slate-50">
-                          {allSlots.length > 0 ? allSlots.map(slotObj => {
-                            const slotStr = String(slotObj.slotNumber);
-                            const isSelected = slotNumbersInput.split(',').map(s => s.trim()).filter(Boolean).includes(slotStr);
-                            const isOccupiedByOther = slotObj.booking && slotObj.booking._id !== detail._id;
-                            return (
-                              <button
-                                key={slotStr}
-                                type="button"
-                                onClick={() => {
-                                  if (!isOccupiedByOther) toggleSlot(slotStr);
-                                }}
-                                disabled={Boolean(isOccupiedByOther)}
-                                className={cn(
-                                  "px-2 py-1 text-xs rounded border font-medium transition-colors",
-                                  isSelected 
-                                    ? "bg-[#39653f] text-white border-[#2c4e30]" 
-                                    : isOccupiedByOther
-                                      ? "bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed opacity-60"
-                                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
-                                )}
-                                title={isOccupiedByOther ? `已被 ${slotObj.booking?.licensePlate} 佔用` : `選擇車位 ${slotStr}`}
-                              >
-                                {slotStr}
-                              </button>
-                            );
-                          }) : (
-                            <span className="text-xs text-muted-foreground p-1">無車位資料</span>
-                          )}
-                        </div>
-                        <div className="flex gap-2 items-center">
-                          <Button 
-                            size="sm" 
-                            onClick={handleUpdateSlot} 
-                            disabled={savingSlot}
-                            className="h-8 shrink-0 bg-[#39653f] hover:bg-[#2c4e30]"
-                          >
-                            {savingSlot ? '儲存中...' : '儲存車位'}
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            onClick={() => {
-                              setEditingSlot(false);
-                              setSlotNumbersInput(detail.parkingSlotNumbers?.join(', ') || '');
-                            }}
-                            disabled={savingSlot}
-                            className="h-8 shrink-0"
-                          >
-                            取消
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex justify-between items-center group">
-                        <span className="font-medium tabular-nums">
-                          {detail.parkingSlotNumbers && detail.parkingSlotNumbers.length > 0 
-                            ? detail.parkingSlotNumbers.join('、') 
-                            : '尚未分配'}
-                        </span>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-6 text-xs text-[#39653f] hover:text-[#2c4e30] opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => setEditingSlot(true)}
-                        >
-                          更改車位
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="slot-edit-vehicleCount">車輛數量 *</Label>
+                <Input
+                  id="slot-edit-vehicleCount"
+                  type="number"
+                  min={1}
+                  value={editForm.vehicleCount}
+                  onChange={(e) => {
+                    setEditForm((f) => ({
+                      ...f,
+                      vehicleCount: Math.max(1, Number(e.target.value) || 1),
+                      parkingSlotNumbers: [],
+                    }));
+                    setShouldRecalcPrice(true);
+                  }}
+                  placeholder="車輛數量"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="slot-edit-status">狀態</Label>
+                <Select
+                  value={editForm.status}
+                  onValueChange={(value) => setEditForm((f) => ({ ...f, status: value }))}
+                >
+                  <SelectTrigger id="slot-edit-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EDIT_STATUS_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {/* Quick status action buttons */}
+                {detail && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {(detail.status === 'pending' || detail.status === 'confirmed') && (
+                      <>
+                        <Button type="button" size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-white" onClick={() => openStatusChangeDialog(detail, 'checked-in')}>
+                          已進入
                         </Button>
-                      </div>
+                        <Button type="button" size="sm" variant="destructive" onClick={() => openStatusChangeDialog(detail, 'cancelled')}>
+                          取消
+                        </Button>
+                      </>
                     )}
-                  </dd>
-                </div>
-                <div className="grid grid-cols-[5.5rem_1fr] gap-x-2">
-                  <dt className="text-muted-foreground">金額</dt>
-                  <dd className="font-semibold tabular-nums text-[#39653f]">
-                    {detail.finalAmount?.toLocaleString('zh-TW', {
-                      style: 'currency',
-                      currency: 'TWD',
-                      minimumFractionDigits: 0,
-                    })}
-                  </dd>
-                </div>
-                {detail.notes && (
-                  <div className="grid grid-cols-1 gap-1">
-                    <dt className="text-muted-foreground">備註</dt>
-                    <dd className="whitespace-pre-wrap rounded-md bg-muted/50 p-2 text-xs">{detail.notes}</dd>
+                    {detail.status === 'checked-in' && (
+                      <>
+                        <Button type="button" size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => openStatusChangeDialog(detail, 'checked-out')}>
+                          已離開
+                        </Button>
+                        <Button type="button" size="sm" variant="outline" onClick={() => handleRevertStatus(detail)} title="返回上一狀態">
+                          <RotateCcw className="h-4 w-4 mr-1" /> 返回上一狀態
+                        </Button>
+                      </>
+                    )}
+                    {detail.status === 'checked-out' && (
+                      <Button type="button" size="sm" variant="outline" onClick={() => handleRevertStatus(detail)} title="返回上一狀態">
+                        <RotateCcw className="h-4 w-4 mr-1" /> 返回上一狀態
+                      </Button>
+                    )}
+                    {detail.status === 'cancelled' && (
+                      <Button type="button" size="sm" variant="outline" onClick={() => handleRevertStatus(detail)} title="恢復預約">
+                        <RotateCcw className="h-4 w-4 mr-1" /> 恢復預約
+                      </Button>
+                    )}
                   </div>
                 )}
-              </dl>
-            </ScrollArea>
+              </div>
+              {editForm.status === 'checked-in' && editForm.parkingTypeId && detail && (
+                <div className="space-y-2 rounded-md border p-3 bg-amber-50/50">
+                  <Label>實體車位（{editForm.vehicleCount || 1} 格 · 在場用）</Label>
+                  <ParkingSlotPicker
+                    key={`${detail._id}-${editForm.parkingTypeId}`}
+                    parkingTypeId={editForm.parkingTypeId}
+                    excludeBookingId={detail._id}
+                    vehicleCount={Math.max(1, editForm.vehicleCount || 1)}
+                    value={editForm.parkingSlotNumbers}
+                    onChange={(parkingSlotNumbers) => setEditForm((f) => ({ ...f, parkingSlotNumbers }))}
+                  />
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="slot-edit-notes">備註</Label>
+                <Input
+                  id="slot-edit-notes"
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
+                  placeholder="備註"
+                />
+              </div>
+              {/* Price comparison */}
+              {detail && (
+                <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
+                  <div className="text-sm font-medium text-muted-foreground">價格比較</div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="text-muted-foreground">原價（目前預約）</div>
+                      <div className="font-semibold text-base">{detail.finalAmount.toLocaleString('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">新價（變更後）</div>
+                      {newPriceLoading ? (
+                        <div className="text-muted-foreground">計算中...</div>
+                      ) : newPrice != null ? (
+                        <div className={`font-semibold text-base ${newPrice !== detail.finalAmount ? 'text-amber-600' : ''}`}>
+                          {newPrice.toLocaleString('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          {newPrice !== detail.finalAmount && (
+                            <span className="ml-1 text-xs font-normal">
+                              ({newPrice > detail.finalAmount ? '+' : ''}{(newPrice - detail.finalAmount).toLocaleString('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0, maximumFractionDigits: 0 })})
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-muted-foreground text-xs">{newPriceError || '變更停車場、時間或車輛數量後顯示'}</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={closeEditDialog} disabled={editSaving}>
+                  取消
+                </Button>
+                <Button type="submit" disabled={editSaving}>
+                  {editSaving ? '儲存中...' : '儲存'}
+                </Button>
+              </DialogFooter>
+            </form>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Status Change Confirmation Dialog */}
+      <AlertDialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>確認變更狀態</AlertDialogTitle>
+            <AlertDialogDescription>
+              {statusChangeTarget && (
+                <>
+                  車牌 <strong>{statusChangeTarget.licensePlate}</strong> 的狀態將變更為
+                  {statusChangeTarget.status === 'checked-in' ? ' 已進入停車場' :
+                   statusChangeTarget.status === 'checked-out' ? ' 已離開停車場' :
+                   statusChangeTarget.status === 'cancelled' ? ' 已取消' :
+                   statusChangeTarget.status === 'confirmed' ? ' 預約成功' : ` ${statusChangeTarget.status}`}
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-2">
+            {statusChangeTarget?.status === 'checked-in' && statusChangeParkingTypeId && detail && (
+              <div className="space-y-2">
+                <Label>選擇車位（{detail.vehicleCount || 1} 格）</Label>
+                <ParkingSlotPicker
+                  key={`status-${detail._id}-${statusChangeParkingTypeId}`}
+                  parkingTypeId={statusChangeParkingTypeId}
+                  excludeBookingId={detail._id}
+                  vehicleCount={Math.max(1, detail.vehicleCount || 1)}
+                  value={checkInSlots}
+                  onChange={setCheckInSlots}
+                />
+              </div>
+            )}
+            {statusChangeTarget?.status === 'cancelled' && (
+              <div className="space-y-2">
+                <Label htmlFor="slot-status-reason">取消原因</Label>
+                <Textarea
+                  id="slot-status-reason"
+                  value={statusReason}
+                  onChange={(e) => setStatusReason(e.target.value)}
+                  placeholder="請填寫取消原因（選填）"
+                  rows={3}
+                />
+              </div>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <Button onClick={confirmStatusChange}>
+              確認
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
