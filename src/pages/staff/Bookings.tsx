@@ -149,6 +149,7 @@ const StaffBookings: React.FC = () => {
       await updateBookingStatus(bookingId, newStatus);
       toast.success('狀態更新成功');
       loadBookings();
+      window.dispatchEvent(new Event('parking-updated'));
     } catch (error: any) {
       console.error('Status update error:', error);
       const errorMessage = error.response?.data?.message || error.message || '狀態更新失敗';

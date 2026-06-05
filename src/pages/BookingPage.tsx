@@ -22,6 +22,7 @@ import {
   FileText,
   Shield,
   Clock,
+  Loader2,
   // Car,
   // Building,
   // Sun,
@@ -511,6 +512,7 @@ const BookingPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    if (loading) return;
     // Check if all required terms are accepted
     const activeTerms = systemSettings?.termsCheckboxes?.filter(term => term.isActive) || [];
     
@@ -1947,9 +1949,16 @@ const BookingPage: React.FC = () => {
                   disabled={(() => {
                     return isButtonDisabled;
                   })()}
-                  className="w-full sm:w-auto px-6 sm:px-8 py-2 sm:py-3 bg-[#39653f] hover:bg-[#2d4f33]"
+                  className="w-full sm:w-auto px-6 sm:px-8 py-2 sm:py-3 bg-[#39653f] hover:bg-[#2d4f33] flex items-center justify-center gap-2"
                 >
-                  {loading ? '正在處理...' : '完成預約'}
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      正在處理...
+                    </>
+                  ) : (
+                    '完成預約'
+                  )}
                 </Button>
               )}
             </div>

@@ -30,9 +30,18 @@ const AdminLayout: React.FC = () => {
   const [todayParking, setTodayParking] = React.useState<TodayParkingAvailability[]>([]);
 
   React.useEffect(() => {
-    getTodayAvailability()
-      .then((res) => setTodayParking(res.parking || []))
-      .catch(() => setTodayParking([]));
+    const fetchAvailability = () => {
+      getTodayAvailability()
+        .then((res) => setTodayParking(res.parking || []))
+        .catch(() => setTodayParking([]));
+    };
+
+    fetchAvailability();
+
+    window.addEventListener('parking-updated', fetchAvailability);
+    return () => {
+      window.removeEventListener('parking-updated', fetchAvailability);
+    };
   }, []);
 
   const handleLogout = () => {

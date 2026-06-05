@@ -83,6 +83,12 @@ interface EditBookingForm {
   notes: string;
   vehicleCount: number;
   parkingSlotNumbers: number[];
+  departureTerminal: string;
+  returnTerminal: string;
+  departurePassengerCount: number;
+  departureLuggageCount: number;
+  returnPassengerCount: number;
+  returnLuggageCount: number;
 }
 
 const BookingsPage: React.FC = () => {
@@ -145,6 +151,12 @@ const BookingsPage: React.FC = () => {
     notes: '',
     vehicleCount: 1,
     parkingSlotNumbers: [],
+    departureTerminal: '',
+    returnTerminal: '',
+    departurePassengerCount: 1,
+    departureLuggageCount: 0,
+    returnPassengerCount: 1,
+    returnLuggageCount: 0,
   });
   const [editSaving, setEditSaving] = useState(false);
 
@@ -315,6 +327,7 @@ const BookingsPage: React.FC = () => {
     } else {
       void loadBookings();
     }
+    window.dispatchEvent(new Event('parking-updated'));
   };
 
   const openStatusDialog = (booking: Booking, status: string) => {
@@ -447,6 +460,12 @@ const BookingsPage: React.FC = () => {
       parkingSlotNumbers: Array.isArray((booking as Booking & { parkingSlotNumbers?: number[] }).parkingSlotNumbers)
         ? ([...(booking as Booking & { parkingSlotNumbers: number[] }).parkingSlotNumbers] as number[])
         : [],
+      departureTerminal: booking.departureTerminal ?? '',
+      returnTerminal: booking.returnTerminal ?? '',
+      departurePassengerCount: booking.departurePassengerCount ?? booking.passengerCount ?? 1,
+      departureLuggageCount: booking.departureLuggageCount ?? booking.luggageCount ?? 0,
+      returnPassengerCount: booking.returnPassengerCount ?? 1,
+      returnLuggageCount: booking.returnLuggageCount ?? 0,
     });
   };
 
@@ -543,6 +562,12 @@ const BookingsPage: React.FC = () => {
         vehicleCount: editForm.vehicleCount || 1,
         status: editForm.status as 'pending' | 'confirmed' | 'checked-in' | 'checked-out' | 'cancelled',
         notes: editForm.notes || undefined,
+        departureTerminal: editForm.departureTerminal || undefined,
+        returnTerminal: editForm.returnTerminal || undefined,
+        departurePassengerCount: editForm.departurePassengerCount,
+        departureLuggageCount: editForm.departureLuggageCount,
+        returnPassengerCount: editForm.returnPassengerCount,
+        returnLuggageCount: editForm.returnLuggageCount,
         ...(editForm.status === 'checked-in' && editForm.parkingSlotNumbers.length > 0
           ? { parkingSlotNumbers: editForm.parkingSlotNumbers }
           : {}),
@@ -2039,6 +2064,94 @@ const BookingsPage: React.FC = () => {
                 />
               </div>
             )}
+            {/* 接駁和行李資訊 */}
+            <div className="space-y-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className="flex items-center space-x-2">
+                <span className="text-blue-800 font-medium">✈️ 接駁和行李資訊</span>
+                <span className="text-xs text-blue-600">(接駁服務需要)</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* 出發 */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-gray-700 border-b pb-1 text-sm">出發 (前往機場)</h4>
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-departureTerminal">出發航廈</Label>
+                    <select
+                      id="edit-departureTerminal"
+                      value={editForm.departureTerminal || ''}
+                      onChange={(e) => setEditForm((f) => ({ ...f, departureTerminal: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    >
+                      <option value="">請選擇出發航廈</option>
+                      <option value="terminal1">第一航廈</option>
+                      <option value="terminal2">第二航廈</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-departurePassengerCount">接駁人數 (上限5人)</Label>
+                    <Input
+                      id="edit-departurePassengerCount"
+                      type="number"
+                      min={0}
+                      max={5}
+                      value={editForm.departurePassengerCount}
+                      onChange={(e) => setEditForm((f) => ({ ...f, departurePassengerCount: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-departureLuggageCount">行李數量</Label>
+                    <Input
+                      id="edit-departureLuggageCount"
+                      type="number"
+                      min={0}
+                      value={editForm.departureLuggageCount}
+                      onChange={(e) => setEditForm((f) => ({ ...f, departureLuggageCount: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
+                </div>
+                {/* 回程 */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-gray-700 border-b pb-1 text-sm">回程 (接回停車場)</h4>
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-returnTerminal">回程航廈</Label>
+                    <select
+                      id="edit-returnTerminal"
+                      value={editForm.returnTerminal || ''}
+                      onChange={(e) => setEditForm((f) => ({ ...f, returnTerminal: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    >
+                      <option value="">請選擇回程航廈</option>
+                      <option value="terminal1">第一航廈</option>
+                      <option value="terminal2">第二航廈</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-returnPassengerCount">接駁人數</Label>
+                    <Input
+                      id="edit-returnPassengerCount"
+                      type="number"
+                      min={0}
+                      max={5}
+                      value={editForm.returnPassengerCount}
+                      onChange={(e) => setEditForm((f) => ({ ...f, returnPassengerCount: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-returnLuggageCount">行李數量</Label>
+                    <Input
+                      id="edit-returnLuggageCount"
+                      type="number"
+                      min={0}
+                      value={editForm.returnLuggageCount}
+                      onChange={(e) => setEditForm((f) => ({ ...f, returnLuggageCount: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
+                💡 上限5人，多一個人現場收100元/人。回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
+              </div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="edit-notes">備註</Label>
               <Input

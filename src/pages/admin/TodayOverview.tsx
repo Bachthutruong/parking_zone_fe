@@ -79,6 +79,9 @@ interface TodayBooking {
     name: string;
     phone: string;
   };
+  departureTerminal?: string;
+  departurePassengerCount?: number;
+  passengerCount?: number;
 }
 
 interface TodaySummary {
@@ -106,6 +109,12 @@ interface EditFormState {
   notes?: string;
   vehicleCount: number;
   parkingSlotNumbers: number[];
+  departureTerminal: string;
+  returnTerminal: string;
+  departurePassengerCount: number;
+  departureLuggageCount: number;
+  returnPassengerCount: number;
+  returnLuggageCount: number;
 }
 
 const STATUS_OPTIONS = [
@@ -136,6 +145,12 @@ const AdminTodayOverview: React.FC = () => {
     notes: '',
     vehicleCount: 1,
     parkingSlotNumbers: [],
+    departureTerminal: '',
+    returnTerminal: '',
+    departurePassengerCount: 1,
+    departureLuggageCount: 0,
+    returnPassengerCount: 1,
+    returnLuggageCount: 0,
   });
   const [saving, setSaving] = useState(false);
   const [parkingTypes, setParkingTypes] = useState<any[]>([]);
@@ -310,6 +325,7 @@ const AdminTodayOverview: React.FC = () => {
       );
       toast.success('狀態更新成功');
       loadTodayData();
+      window.dispatchEvent(new Event('parking-updated'));
       setIsStatusDialogOpen(false);
       setBookingInProcess(null);
       setCheckInSlots([]);
@@ -358,6 +374,7 @@ const AdminTodayOverview: React.FC = () => {
       setSelectedIds(new Set());
       setIsBulkStatusDialogOpen(false);
       loadTodayData();
+      window.dispatchEvent(new Event('parking-updated'));
     } catch (error: any) {
       const msg = error?.response?.data?.message || error?.message || '批次更新失敗';
       toast.error(msg);
@@ -462,6 +479,12 @@ const AdminTodayOverview: React.FC = () => {
       parkingSlotNumbers: Array.isArray((booking as any).parkingSlotNumbers)
         ? ([...(booking as any).parkingSlotNumbers] as number[])
         : [],
+      departureTerminal: (booking as any).departureTerminal ?? '',
+      returnTerminal: (booking as any).returnTerminal ?? '',
+      departurePassengerCount: (booking as any).departurePassengerCount ?? (booking as any).passengerCount ?? 1,
+      departureLuggageCount: (booking as any).departureLuggageCount ?? (booking as any).luggageCount ?? 0,
+      returnPassengerCount: (booking as any).returnPassengerCount ?? 1,
+      returnLuggageCount: (booking as any).returnLuggageCount ?? 0,
     });
   };
 
@@ -554,6 +577,12 @@ const AdminTodayOverview: React.FC = () => {
         status: editForm.status as 'pending' | 'confirmed' | 'checked-in' | 'checked-out' | 'cancelled',
         notes: editForm.notes || undefined,
         vehicleCount: editForm.vehicleCount || 1,
+        departureTerminal: editForm.departureTerminal || undefined,
+        returnTerminal: editForm.returnTerminal || undefined,
+        departurePassengerCount: editForm.departurePassengerCount,
+        departureLuggageCount: editForm.departureLuggageCount,
+        returnPassengerCount: editForm.returnPassengerCount,
+        returnLuggageCount: editForm.returnLuggageCount,
         ...(editForm.status === 'checked-in' && editForm.parkingSlotNumbers.length > 0
           ? { parkingSlotNumbers: editForm.parkingSlotNumbers }
           : {}),
@@ -591,6 +620,7 @@ const AdminTodayOverview: React.FC = () => {
       toast.success('已更新預約資訊');
       closeEditDialog();
       loadTodayData();
+      window.dispatchEvent(new Event('parking-updated'));
     } catch (err: any) {
       toast.error(err?.response?.data?.message || '更新失敗');
     } finally {
@@ -878,7 +908,7 @@ const AdminTodayOverview: React.FC = () => {
                 <TableHead>停車場</TableHead>
                 <TableHead>時間</TableHead>
                 <TableHead>狀態</TableHead>
-                <TableHead>金額</TableHead>
+                <TableHead>出發航廈(人數)</TableHead>
                 <TableHead className="no-print">操作</TableHead>
               </TableRow>
             </TableHeader>
@@ -936,8 +966,12 @@ const AdminTodayOverview: React.FC = () => {
                     {getStatusBadge(booking.status)}
                   </TableCell>
                   <TableCell>
-                    <div className="font-bold text-green-600">
-                      {formatCurrency(booking.finalAmount)}
+                    <div className="text-sm font-medium text-slate-700">
+                      {booking.departureTerminal ? (
+                        `${booking.departureTerminal === 'terminal1' ? '第一航廈' : '第二航廈'}(${booking.departurePassengerCount ?? booking.passengerCount ?? 0}人)`
+                      ) : (
+                        <span className="text-gray-400">未選擇</span>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="no-print">
@@ -1264,6 +1298,94 @@ const AdminTodayOverview: React.FC = () => {
                 />
               </div>
             )}
+            {/* 接駁和行李資訊 */}
+            <div className="space-y-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className="flex items-center space-x-2">
+                <span className="text-blue-800 font-medium">✈️ 接駁和行李資訊</span>
+                <span className="text-xs text-blue-600">(接駁服務需要)</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* 出發 */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-gray-700 border-b pb-1 text-sm">出發 (前往機場)</h4>
+                  <div className="space-y-1">
+                    <Label htmlFor="today-edit-departureTerminal">出發航廈</Label>
+                    <select
+                      id="today-edit-departureTerminal"
+                      value={editForm.departureTerminal || ''}
+                      onChange={(e) => setEditForm((f) => ({ ...f, departureTerminal: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    >
+                      <option value="">請選擇出發航廈</option>
+                      <option value="terminal1">第一航廈</option>
+                      <option value="terminal2">第二航廈</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="today-edit-departurePassengerCount">接駁人數 (上限5人)</Label>
+                    <Input
+                      id="today-edit-departurePassengerCount"
+                      type="number"
+                      min={0}
+                      max={5}
+                      value={editForm.departurePassengerCount}
+                      onChange={(e) => setEditForm((f) => ({ ...f, departurePassengerCount: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="today-edit-departureLuggageCount">行李數量</Label>
+                    <Input
+                      id="today-edit-departureLuggageCount"
+                      type="number"
+                      min={0}
+                      value={editForm.departureLuggageCount}
+                      onChange={(e) => setEditForm((f) => ({ ...f, departureLuggageCount: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
+                </div>
+                {/* 回程 */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-gray-700 border-b pb-1 text-sm">回程 (接回停車場)</h4>
+                  <div className="space-y-1">
+                    <Label htmlFor="today-edit-returnTerminal">回程航廈</Label>
+                    <select
+                      id="today-edit-returnTerminal"
+                      value={editForm.returnTerminal || ''}
+                      onChange={(e) => setEditForm((f) => ({ ...f, returnTerminal: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    >
+                      <option value="">請選擇回程航廈</option>
+                      <option value="terminal1">第一航廈</option>
+                      <option value="terminal2">第二航廈</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="today-edit-returnPassengerCount">接駁人數</Label>
+                    <Input
+                      id="today-edit-returnPassengerCount"
+                      type="number"
+                      min={0}
+                      max={5}
+                      value={editForm.returnPassengerCount}
+                      onChange={(e) => setEditForm((f) => ({ ...f, returnPassengerCount: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="today-edit-returnLuggageCount">行李數量</Label>
+                    <Input
+                      id="today-edit-returnLuggageCount"
+                      type="number"
+                      min={0}
+                      value={editForm.returnLuggageCount}
+                      onChange={(e) => setEditForm((f) => ({ ...f, returnLuggageCount: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
+                💡 上限5人，多一個人現場收100元/人。回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
+              </div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="edit-notes">備註</Label>
               <Input

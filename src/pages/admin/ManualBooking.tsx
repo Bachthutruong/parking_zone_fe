@@ -469,6 +469,7 @@ const AdminManualBooking: React.FC = () => {
       setShowSuccessDialog(true);
       resetForm();
       toast.success('手動預約建立成功');
+      window.dispatchEvent(new Event('parking-updated'));
     } catch (error: any) {
       console.error('Error creating manual booking:', error);
       toast.error(error.response?.data?.message || '無法建立手動預約');

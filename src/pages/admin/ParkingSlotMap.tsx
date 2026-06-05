@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getParkingSlotSnapshot, type SlotSnapshotLot } from '@/services/parking';
+import { getParkingSlotSnapshot, getTodayAvailability, type SlotSnapshotLot, type TodayParkingAvailability } from '@/services/parking';
 import { getBookingDetails, calculatePrice } from '@/services/booking';
 import { updateBooking, updateBookingStatus, getAllParkingTypes } from '@/services/admin';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -60,7 +60,8 @@ function pickCols(total: number): number {
 const SlotGrid: React.FC<{
   lot: SlotSnapshotLot;
   onSelectBooking: (id: string) => void;
-}> = ({ lot, onSelectBooking }) => {
+  todayAvailable?: number;
+}> = ({ lot, onSelectBooking, todayAvailable }) => {
   const cols = useMemo(() => pickCols(lot.slots.length), [lot.slots.length]);
   const rows = useMemo(
     () => chunkSlots(lot.slots, cols),
@@ -105,7 +106,7 @@ const SlotGrid: React.FC<{
       <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs sm:text-sm">
         <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-800">
           <span className="h-2 w-2 rounded-full bg-emerald-500" />
-          空編號格 <strong className="font-semibold tabular-nums">{free}</strong>
+          空編號格 <strong className="font-semibold tabular-nums">{todayAvailable != null ? todayAvailable : free}</strong>
         </div>
         <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-slate-800">
           <span className="h-2 w-2 rounded-full bg-violet-500" />
@@ -245,12 +246,19 @@ interface EditBookingForm {
   notes: string;
   vehicleCount: number;
   parkingSlotNumbers: number[];
+  departureTerminal: string;
+  returnTerminal: string;
+  departurePassengerCount: number;
+  departureLuggageCount: number;
+  returnPassengerCount: number;
+  returnLuggageCount: number;
 }
 
 const ParkingSlotMap: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [serverTime, setServerTime] = useState<string>('');
   const [lots, setLots] = useState<SlotSnapshotLot[]>([]);
+  const [todayParking, setTodayParking] = useState<TodayParkingAvailability[]>([]);
   const [detail, setDetail] = useState<Booking | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -260,6 +268,9 @@ const ParkingSlotMap: React.FC = () => {
     driverName: '', phone: '', email: '', licensePlate: '',
     parkingTypeId: '', checkInTime: '', checkOutTime: '',
     status: 'confirmed', notes: '', vehicleCount: 1, parkingSlotNumbers: [],
+    departureTerminal: '', returnTerminal: '',
+    departurePassengerCount: 1, departureLuggageCount: 0,
+    returnPassengerCount: 1, returnLuggageCount: 0,
   });
   const [editSaving, setEditSaving] = useState(false);
   const [parkingTypes, setParkingTypes] = useState<any[]>([]);
@@ -278,9 +289,13 @@ const ParkingSlotMap: React.FC = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await getParkingSlotSnapshot();
-      setServerTime(res.serverTime);
-      setLots(res.lots);
+      const [snapshotRes, todayRes] = await Promise.all([
+        getParkingSlotSnapshot(),
+        getTodayAvailability().catch(() => ({ parking: [] as TodayParkingAvailability[] })),
+      ]);
+      setServerTime(snapshotRes.serverTime);
+      setLots(snapshotRes.lots);
+      setTodayParking(todayRes.parking || []);
     } catch (e: unknown) {
       toast.error((e as { response?: { data?: { message?: string } } })?.response?.data?.message || '載入失敗');
     } finally {
@@ -325,6 +340,12 @@ const ParkingSlotMap: React.FC = () => {
         notes: (b as any).notes ?? '',
         vehicleCount: b.vehicleCount ?? 1,
         parkingSlotNumbers: Array.isArray(b.parkingSlotNumbers) ? [...b.parkingSlotNumbers] : [],
+        departureTerminal: (b as any).departureTerminal ?? '',
+        returnTerminal: (b as any).returnTerminal ?? '',
+        departurePassengerCount: (b as any).departurePassengerCount ?? b.passengerCount ?? 1,
+        departureLuggageCount: (b as any).departureLuggageCount ?? b.luggageCount ?? 0,
+        returnPassengerCount: (b as any).returnPassengerCount ?? 1,
+        returnLuggageCount: (b as any).returnLuggageCount ?? 0,
       });
       setNewPrice(null);
       setNewPriceError(null);
@@ -416,6 +437,12 @@ const ParkingSlotMap: React.FC = () => {
         vehicleCount: editForm.vehicleCount || 1,
         status: editForm.status,
         notes: editForm.notes || undefined,
+        departureTerminal: editForm.departureTerminal || undefined,
+        returnTerminal: editForm.returnTerminal || undefined,
+        departurePassengerCount: editForm.departurePassengerCount,
+        departureLuggageCount: editForm.departureLuggageCount,
+        returnPassengerCount: editForm.returnPassengerCount,
+        returnLuggageCount: editForm.returnLuggageCount,
         ...(editForm.status === 'checked-in' && editForm.parkingSlotNumbers.length > 0
           ? { parkingSlotNumbers: editForm.parkingSlotNumbers }
           : {}),
@@ -447,6 +474,7 @@ const ParkingSlotMap: React.FC = () => {
       toast.success('已更新預約資訊');
       closeEditDialog();
       void load();
+      window.dispatchEvent(new Event('parking-updated'));
     } catch (err: any) {
       toast.error(err?.response?.data?.message || '更新失敗');
     } finally {
@@ -489,6 +517,7 @@ const ParkingSlotMap: React.FC = () => {
       setTimeout(() => {
         closeEditDialog();
         void load();
+        window.dispatchEvent(new Event('parking-updated'));
       }, 300);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || error?.message || '狀態更新失敗');
@@ -582,7 +611,7 @@ const ParkingSlotMap: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-5 sm:pt-6">
-                <SlotGrid lot={lot} onSelectBooking={openDetails} />
+                <SlotGrid lot={lot} onSelectBooking={openDetails} todayAvailable={todayParking.find(p => p.id === lot.parkingType._id)?.availableSpaces} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -784,6 +813,94 @@ const ParkingSlotMap: React.FC = () => {
                   />
                 </div>
               )}
+              {/* 接駁和行李資訊 */}
+              <div className="space-y-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <div className="flex items-center space-x-2">
+                  <span className="text-blue-800 font-medium">✈️ 接駁和行李資訊</span>
+                  <span className="text-xs text-blue-600">(接駁服務需要)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* 出發 */}
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-gray-700 border-b pb-1 text-sm">出發 (前往機場)</h4>
+                    <div className="space-y-1">
+                      <Label htmlFor="slot-edit-departureTerminal">出發航廈</Label>
+                      <select
+                        id="slot-edit-departureTerminal"
+                        value={editForm.departureTerminal || ''}
+                        onChange={(e) => setEditForm((f) => ({ ...f, departureTerminal: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      >
+                        <option value="">請選擇出發航廈</option>
+                        <option value="terminal1">第一航廈</option>
+                        <option value="terminal2">第二航廈</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="slot-edit-departurePassengerCount">接駁人數 (上限5人)</Label>
+                      <Input
+                        id="slot-edit-departurePassengerCount"
+                        type="number"
+                        min={0}
+                        max={5}
+                        value={editForm.departurePassengerCount}
+                        onChange={(e) => setEditForm((f) => ({ ...f, departurePassengerCount: parseInt(e.target.value) || 0 }))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="slot-edit-departureLuggageCount">行李數量</Label>
+                      <Input
+                        id="slot-edit-departureLuggageCount"
+                        type="number"
+                        min={0}
+                        value={editForm.departureLuggageCount}
+                        onChange={(e) => setEditForm((f) => ({ ...f, departureLuggageCount: parseInt(e.target.value) || 0 }))}
+                      />
+                    </div>
+                  </div>
+                  {/* 回程 */}
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-gray-700 border-b pb-1 text-sm">回程 (接回停車場)</h4>
+                    <div className="space-y-1">
+                      <Label htmlFor="slot-edit-returnTerminal">回程航廈</Label>
+                      <select
+                        id="slot-edit-returnTerminal"
+                        value={editForm.returnTerminal || ''}
+                        onChange={(e) => setEditForm((f) => ({ ...f, returnTerminal: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      >
+                        <option value="">請選擇回程航廈</option>
+                        <option value="terminal1">第一航廈</option>
+                        <option value="terminal2">第二航廈</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="slot-edit-returnPassengerCount">接駁人數</Label>
+                      <Input
+                        id="slot-edit-returnPassengerCount"
+                        type="number"
+                        min={0}
+                        max={5}
+                        value={editForm.returnPassengerCount}
+                        onChange={(e) => setEditForm((f) => ({ ...f, returnPassengerCount: parseInt(e.target.value) || 0 }))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="slot-edit-returnLuggageCount">行李數量</Label>
+                      <Input
+                        id="slot-edit-returnLuggageCount"
+                        type="number"
+                        min={0}
+                        value={editForm.returnLuggageCount}
+                        onChange={(e) => setEditForm((f) => ({ ...f, returnLuggageCount: parseInt(e.target.value) || 0 }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
+                  💡 上限5人，多一個人現場收100元/人。回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="slot-edit-notes">備註</Label>
                 <Input
