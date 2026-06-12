@@ -276,8 +276,9 @@ export interface BookingFormData {
   phone: string;
   email: string; // Kept as string for form state, but treated as optional in validation
   licensePlate: string;
+  vehicleCount: number;
   // Legacy fields kept for compatibility but marked optional in form logic if we switch completely
-  passengerCount: number; 
+  passengerCount: number;
   luggageCount: number;
   departurePassengerCount: number;
   departureLuggageCount: number;
@@ -350,4 +351,4 @@ export interface CurrentParkingStatus {
   parkedVehicles: Booking[];
   arrivingToday: Booking[];
   leavingToday: Booking[];
-} 
+}

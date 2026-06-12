@@ -18,13 +18,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Search, 
-  Filter, 
-  Calendar, 
-  Clock, 
-  Car, 
-  Phone, 
+import {
+  Search,
+  Filter,
+  Calendar,
+  Clock,
+  Car,
+  Phone,
   Eye,
   Pencil,
   Printer,
@@ -40,6 +40,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2, RotateCcw } from 'lucide-react';
 import { getSystemSettings } from '@/services/systemSettings';
 import { formatDateTime, getDateStrTaiwan, getNextDayStrTaiwan, formatDateWithWeekday } from '@/lib/dateUtils';
+import {
+  getDepartureLuggageCount,
+  getDeparturePassengerCount,
+  getReturnLuggageCount,
+  getReturnPassengerCount,
+  getTerminalLabel,
+  normalizeTerminal,
+} from '@/lib/bookingDisplay';
+import { clampPassengerCount, getPassengerLimit, PASSENGERS_PER_VEHICLE } from '@/lib/bookingLimits';
 import DateInput from '@/components/ui/date-input';
 import type { Booking } from '@/types';
 import { BookingImportDialog } from '@/components/admin/BookingImportDialog';
@@ -158,6 +167,7 @@ const BookingsPage: React.FC = () => {
     returnPassengerCount: 1,
     returnLuggageCount: 0,
   });
+  const editPassengerLimit = getPassengerLimit(editForm.vehicleCount);
   const [editSaving, setEditSaving] = useState(false);
 
   // Parking Types State
@@ -276,7 +286,7 @@ const BookingsPage: React.FC = () => {
 
       // Use the new calendar-specific API
       const response = await getCalendarBookings(filterParams);
-      
+
       // Group bookings by date and parking type. Must use Taiwan date (same as sidebar/backend).
       // - occupiedSpaces = SUM(vehicleCount) for bookings that overlap the day
       // - Only count status in ['pending','confirmed','checked-in'] and !isDeleted
@@ -311,7 +321,7 @@ const BookingsPage: React.FC = () => {
         }
         return acc;
       }, {});
-      
+
       setCalendarData(groupedData);
     } catch (error) {
       console.error('Error loading calendar data:', error);
@@ -460,8 +470,8 @@ const BookingsPage: React.FC = () => {
       parkingSlotNumbers: Array.isArray((booking as Booking & { parkingSlotNumbers?: number[] }).parkingSlotNumbers)
         ? ([...(booking as Booking & { parkingSlotNumbers: number[] }).parkingSlotNumbers] as number[])
         : [],
-      departureTerminal: booking.departureTerminal ?? '',
-      returnTerminal: booking.returnTerminal ?? '',
+      departureTerminal: normalizeTerminal(booking.departureTerminal) ?? '',
+      returnTerminal: normalizeTerminal(booking.returnTerminal) ?? '',
       departurePassengerCount: booking.departurePassengerCount ?? booking.passengerCount ?? 1,
       departureLuggageCount: booking.departureLuggageCount ?? booking.luggageCount ?? 0,
       returnPassengerCount: booking.returnPassengerCount ?? 1,
@@ -551,6 +561,7 @@ const BookingsPage: React.FC = () => {
     }
     try {
       setEditSaving(true);
+      const statusChanged = editForm.status !== editingBooking.status;
       const payload: any = {
         driverName: editForm.driverName,
         phone: editForm.phone,
@@ -560,7 +571,6 @@ const BookingsPage: React.FC = () => {
         checkInTime: editForm.checkInTime,
         checkOutTime: editForm.checkOutTime,
         vehicleCount: editForm.vehicleCount || 1,
-        status: editForm.status as 'pending' | 'confirmed' | 'checked-in' | 'checked-out' | 'cancelled',
         notes: editForm.notes || undefined,
         departureTerminal: editForm.departureTerminal || undefined,
         returnTerminal: editForm.returnTerminal || undefined,
@@ -602,6 +612,14 @@ const BookingsPage: React.FC = () => {
       }
 
       await updateBooking(editingBooking._id, payload as Parameters<typeof updateBooking>[1]);
+      if (statusChanged) {
+        await updateBookingStatus(
+          editingBooking._id,
+          editForm.status,
+          undefined,
+          editForm.status === 'checked-in' ? editForm.parkingSlotNumbers : undefined
+        );
+      }
       toast.success('已更新預約資訊');
       closeEditDialog();
       refreshAfterMutation();
@@ -625,7 +643,7 @@ const BookingsPage: React.FC = () => {
         newStatus = 'confirmed';
         break;
     }
-    
+
     if (newStatus) {
       openStatusDialog(booking, newStatus);
     }
@@ -633,13 +651,13 @@ const BookingsPage: React.FC = () => {
 
   const handleDateBookingClick = (date: string, parkingTypeId: string) => {
     const dateData = calendarData[date as keyof typeof calendarData];
-    
+
     if (dateData && dateData[parkingTypeId as keyof typeof dateData]) {
       setDateBookings((dateData as any)[parkingTypeId].bookings);
     } else {
       setDateBookings([]); // No bookings for this date
     }
-    
+
     setSelectedDate(date);
     setSelectedParkingType(parkingTypeId);
     setShowBookingsDialog(true);
@@ -683,7 +701,7 @@ const BookingsPage: React.FC = () => {
         settings = null;
       }
     }
-    
+
     const contractTermsText = settings?.contractTerms
       ? settings.contractTerms
           .replace(/<h2[^>]*>/g, '\n\n')
@@ -719,55 +737,55 @@ const BookingsPage: React.FC = () => {
           .services { display: flex; flex-wrap: wrap; gap: 5px; }
           .service-badge { background-color: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
           .total { font-size: 18px; font-weight: bold; color: #333; }
-          .contract-terms { 
-            font-size: 12px; 
-            line-height: 1.6; 
-            color: #000; 
-            font-family: Arial, sans-serif; 
-            white-space: normal; 
-            word-wrap: break-word; 
+          .contract-terms {
+            font-size: 12px;
+            line-height: 1.6;
+            color: #000;
+            font-family: Arial, sans-serif;
+            white-space: normal;
+            word-wrap: break-word;
           }
           .contract-terms--lead {
             border-bottom: 2px solid #333;
             padding-bottom: 20px;
             margin-bottom: 24px;
           }
-          .contract-terms h2 { 
-            font-size: 16px; 
-            font-weight: bold; 
-            margin-bottom: 10px; 
-            color: #333; 
+          .contract-terms h2 {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
           }
-          .contract-terms p { 
-            margin-bottom: 8px; 
-            color: #000; 
-            font-size: 12px; 
+          .contract-terms p {
+            margin-bottom: 8px;
+            color: #000;
+            font-size: 12px;
           }
-          .contract-terms strong { 
-            font-weight: bold; 
-            color: #000; 
+          .contract-terms strong {
+            font-weight: bold;
+            color: #000;
           }
           @media print {
             body { margin: 0; }
             .no-print { display: none; }
-            .contract-terms { 
+            .contract-terms {
               -webkit-print-color-adjust: exact !important;
               color-adjust: exact !important;
               print-color-adjust: exact !important;
               page-break-inside: avoid;
               break-inside: avoid;
             }
-            .contract-terms h2 { 
+            .contract-terms h2 {
               -webkit-print-color-adjust: exact !important;
               color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
-            .contract-terms p { 
+            .contract-terms p {
               -webkit-print-color-adjust: exact !important;
               color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
-            .contract-terms strong { 
+            .contract-terms strong {
               -webkit-print-color-adjust: exact !important;
               color-adjust: exact !important;
               print-color-adjust: exact !important;
@@ -852,12 +870,12 @@ const BookingsPage: React.FC = () => {
           <h3>接駁與行李信息</h3>
           <div class="info-grid">
             <div class="info-item">
-              <span class="label">出發 (${booking.departureTerminal === 'terminal1' ? '第一航廈' : booking.departureTerminal === 'terminal2' ? '第二航廈' : '未選擇'}):</span> 
-              接駁 ${booking.departurePassengerCount || booking.passengerCount || 0} 人 / 行李 ${booking.departureLuggageCount || booking.luggageCount || 0} 件
+              <span class="label">出發 (${getTerminalLabel(booking.departureTerminal)}):</span>
+              接駁 ${getDeparturePassengerCount(booking)} 人 / 行李 ${getDepartureLuggageCount(booking)} 件
             </div>
             <div class="info-item">
-              <span class="label">回程 (${booking.returnTerminal === 'terminal1' ? '第一航廈' : booking.returnTerminal === 'terminal2' ? '第二航廈' : '未選擇'}):</span> 
-              接駁 ${booking.returnPassengerCount || 0} 人 / 行李 ${booking.returnLuggageCount || 0} 件
+              <span class="label">回程 (${getTerminalLabel(booking.returnTerminal)}):</span>
+              接駁 ${getReturnPassengerCount(booking)} 人 / 行李 ${getReturnLuggageCount(booking)} 件
             </div>
           </div>
         </div>
@@ -866,7 +884,7 @@ const BookingsPage: React.FC = () => {
         <div class="section">
           <h3>附加服務</h3>
           <div class="services">
-            ${(booking.addonServices ?? []).map(addon => 
+            ${(booking.addonServices ?? []).map(addon =>
               `<span class="service-badge">${addon.service.icon} ${addon.service.name} - ${addon.price.toLocaleString('zh-TW')} TWD</span>`
             ).join('')}
           </div>
@@ -921,7 +939,7 @@ const BookingsPage: React.FC = () => {
             </div>
             ` : ''}
             <div class="info-item">
-              <span class="label">類型:</span> ${(booking.parkingType.type || 'indoor') === 'indoor' ? '室內' : 
+              <span class="label">類型:</span> ${(booking.parkingType.type || 'indoor') === 'indoor' ? '室內' :
                 (booking.parkingType.type || 'indoor') === 'outdoor' ? '戶外' : '無障礙'}
             </div>
             <div class="info-item">
@@ -931,7 +949,7 @@ const BookingsPage: React.FC = () => {
               <span class="label">回國時間:</span> ${formatDateTime(booking.checkOutTime)}
             </div>
             <div class="info-item">
-              <span class="label">狀態:</span> 
+              <span class="label">狀態:</span>
               <span class="status status-${booking.status}">
                 ${booking.status === 'pending' ? '等待進入停車場' :
                   booking.status === 'confirmed' ? '等待進入停車場 (舊)' :
@@ -992,26 +1010,26 @@ const BookingsPage: React.FC = () => {
     const lastDay = new Date(currentYear, currentMonth + 1, 0);
     const daysInMonth = lastDay.getDate();
     const startingDayOfWeek = firstDay.getDay();
-    
+
     const days = [];
-    
+
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
       days.push(null);
     }
-    
+
     // Add days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const dayData = (calendarData as any)[dateStr] || {};
-      
+
       days.push({
         day,
         date: dateStr,
         data: dayData
       });
     }
-    
+
     const monthNames = [
       '一月', '二月', '三月', '四月', '五月', '六月',
       '七月', '八月', '九月', '十月', '十一月', '十二月'
@@ -1030,7 +1048,7 @@ const BookingsPage: React.FC = () => {
             <span>‹</span>
             <span>上月</span>
           </Button>
-          
+
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <Select
@@ -1048,7 +1066,7 @@ const BookingsPage: React.FC = () => {
                   ))}
                 </SelectContent>
               </Select>
-              
+
               <Select
                 value={currentYear.toString()}
                 onValueChange={(value) => setCurrentYear(parseInt(value))}
@@ -1068,7 +1086,7 @@ const BookingsPage: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <Button
               variant="outline"
               size="sm"
@@ -1078,7 +1096,7 @@ const BookingsPage: React.FC = () => {
               今天
             </Button>
           </div>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -1098,22 +1116,22 @@ const BookingsPage: React.FC = () => {
               {day}
             </div>
           ))}
-        
+
         {/* Days */}
         {days.map((dayData, index) => {
           if (!dayData) {
             return <div key={`empty-${index}`} className="p-2 min-h-[100px]"></div>;
           }
-          
+
           const { day, date, data } = dayData;
           const isToday = date === getDateStrTaiwan(new Date());
           const isCurrentMonth = new Date(date + 'T12:00:00+08:00').getMonth() === currentMonth;
-          
+
           return (
-            <div 
-              key={`day-${date}`} 
+            <div
+              key={`day-${date}`}
               className={`p-2 min-h-[100px] border border-gray-200 ${
-                isToday ? 'bg-blue-50 border-blue-300' : 
+                isToday ? 'bg-blue-50 border-blue-300' :
                 isCurrentMonth ? 'bg-white' : 'bg-gray-50 text-gray-400'
               }`}
             >
@@ -1122,7 +1140,7 @@ const BookingsPage: React.FC = () => {
               }`}>
                 {day}
               </div>
-              
+
               {/* Show parking type statistics - same logic as sidebar: available = totalSpaces - occupiedSpaces (sum vehicleCount) */}
               {(selectedParkingType === 'all' ? parkingTypes : parkingTypes.filter(pt => pt._id === selectedParkingType)).map(pt => {
                 const parkingData = data[pt._id];
@@ -1130,14 +1148,14 @@ const BookingsPage: React.FC = () => {
                 const totalSpaces = pt.totalSpaces ?? 50;
                 const availableSlots = Math.max(0, totalSpaces - occupiedSpaces);
                 const hasBookings = (parkingData?.bookings?.length ?? 0) > 0;
-                
+
                 const occupancyPercent = totalSpaces > 0 ? (occupiedSpaces / totalSpaces) * 100 : 0;
                 let statusColor = 'bg-green-100 border-green-300 text-green-700';
                 if (occupancyPercent >= 80) statusColor = 'bg-red-100 border-red-300 text-red-700';
                 else if (occupancyPercent >= 50) statusColor = 'bg-yellow-100 border-yellow-300 text-yellow-700';
-                
+
                 return (
-                  <div 
+                  <div
                     key={pt._id}
                     className={`mb-1 p-1.5 rounded border text-xs cursor-pointer transition-all hover:shadow-md ${statusColor}`}
                     onClick={() => handleDateBookingClick(date, pt._id)}
@@ -1240,8 +1258,8 @@ const BookingsPage: React.FC = () => {
 
             <div>
               <Label htmlFor="status">狀態</Label>
-              <Select 
-                value={currentStatus} 
+              <Select
+                value={currentStatus}
                 onValueChange={(value) => handleFilterChange('status', value)}
                 defaultValue="all"
                 disabled={activeTab === 'deleted'}
@@ -1315,8 +1333,8 @@ const BookingsPage: React.FC = () => {
           <CardTitle className="text-base sm:text-lg">預約清單 ({total})</CardTitle>
           <div className="flex flex-wrap items-center gap-2">
             <Label htmlFor="limit">顯示數量:</Label>
-            <Select 
-              value={itemsPerPage.toString()} 
+            <Select
+              value={itemsPerPage.toString()}
               onValueChange={(val) => { setItemsPerPage(Number(val)); setPage(1); }}
             >
               <SelectTrigger className="w-[80px]">
@@ -1501,7 +1519,7 @@ const BookingsPage: React.FC = () => {
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          
+
                           {/* Status Action Buttons */}
                           {(booking.status === 'pending' || booking.status === 'confirmed') && (
                             <>
@@ -1522,7 +1540,7 @@ const BookingsPage: React.FC = () => {
                               </Button>
                             </>
                           )}
-                          
+
                           {booking.status === 'checked-in' && (
                             <>
                               <Button
@@ -1565,7 +1583,7 @@ const BookingsPage: React.FC = () => {
                               <RotateCcw className="h-4 w-4" />
                             </Button>
                           )}
-                          
+
 
                           <Button
                             size="sm"
@@ -1574,7 +1592,7 @@ const BookingsPage: React.FC = () => {
                           >
                             <Printer className="h-4 w-4" />
                           </Button>
-                      
+
                       {activeTab !== 'deleted' && (
                         <Button
                           variant="destructive"
@@ -1653,7 +1671,7 @@ const BookingsPage: React.FC = () => {
               {dateBookings.length > 0 ? ` (共 ${dateBookings.length} 筆)` : ''}
             </DialogDescription>
           </DialogHeader>
-          
+
           {dateBookings.length === 0 ? (
             <div className="py-8 sm:py-12 text-center">
               <div className="text-gray-400 mb-4">
@@ -1677,7 +1695,7 @@ const BookingsPage: React.FC = () => {
                       <div><strong>車牌:</strong> {booking.licensePlate}</div>
                     </div>
                   </div>
-                  
+
                   <div>
                     <h4 className="font-semibold text-sm text-gray-600">時間信息</h4>
                     <div className="space-y-1 text-sm">
@@ -1686,23 +1704,23 @@ const BookingsPage: React.FC = () => {
                       <div><strong>狀態:</strong> {getStatusBadge(booking.status)}</div>
                     </div>
                   </div>
-                  
+
                   <div>
                     <h4 className="font-semibold text-sm text-gray-600">服務信息</h4>
                     <div className="space-y-1 text-sm">
                       <div>
-                        <strong>出發:</strong> 
-                        {booking.departureTerminal === 'terminal1' ? '一航' : booking.departureTerminal === 'terminal2' ? '二航' : '-'} 
-                        ({booking.departurePassengerCount || booking.passengerCount || 0}人/{booking.departureLuggageCount || booking.luggageCount || 0}行李)
+                        <strong>出發:</strong>
+                        {getTerminalLabel(booking.departureTerminal, { emptyLabel: '-' })}
+                        ({getDeparturePassengerCount(booking)}人/{getDepartureLuggageCount(booking)}行李)
                       </div>
                       <div>
-                        <strong>回程:</strong> 
-                        {booking.returnTerminal === 'terminal1' ? '一航' : booking.returnTerminal === 'terminal2' ? '二航' : '-'} 
-                        ({booking.returnPassengerCount || 0}人/{booking.returnLuggageCount || 0}行李)
+                        <strong>回程:</strong>
+                        {getTerminalLabel(booking.returnTerminal, { emptyLabel: '-' })}
+                        ({getReturnPassengerCount(booking)}人/{getReturnLuggageCount(booking)}行李)
                       </div>
                     </div>
                   </div>
-                  
+
                   <div>
                     <h4 className="font-semibold text-sm text-gray-600">金額信息</h4>
                     <div className="space-y-1 text-sm">
@@ -1726,7 +1744,7 @@ const BookingsPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex justify-end space-x-2 mt-4">
                   <Button
                     size="sm"
@@ -1783,7 +1801,7 @@ const BookingsPage: React.FC = () => {
               預約的詳細資訊
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedBooking && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
@@ -1796,19 +1814,19 @@ const BookingsPage: React.FC = () => {
                     <div><strong>車牌號碼:</strong> {selectedBooking.licensePlate}</div>
                     <div className="bg-gray-50 p-2 rounded text-sm space-y-1">
                       <div className="font-semibold text-gray-700">出發 (前往機場)</div>
-                      <div>航廈: {selectedBooking.departureTerminal === 'terminal1' ? '第一航廈' : selectedBooking.departureTerminal === 'terminal2' ? '第二航廈' : '未選擇'}</div>
-                      <div>接駁: {selectedBooking.departurePassengerCount || selectedBooking.passengerCount || 0} 人</div>
-                      <div>行李: {selectedBooking.departureLuggageCount || selectedBooking.luggageCount || 0} 件</div>
+                      <div>航廈: {getTerminalLabel(selectedBooking.departureTerminal)}</div>
+                      <div>接駁: {getDeparturePassengerCount(selectedBooking)} 人</div>
+                      <div>行李: {getDepartureLuggageCount(selectedBooking)} 件</div>
                     </div>
                     <div className="bg-gray-50 p-2 rounded text-sm space-y-1">
                       <div className="font-semibold text-gray-700">回程 (接回停車場)</div>
-                      <div>航廈: {selectedBooking.returnTerminal === 'terminal1' ? '第一航廈' : selectedBooking.returnTerminal === 'terminal2' ? '第二航廈' : '未選擇'}</div>
-                      <div>接駁: {selectedBooking.returnPassengerCount || 0} 人</div>
-                      <div>行李: {selectedBooking.returnLuggageCount || 0} 件</div>
+                      <div>航廈: {getTerminalLabel(selectedBooking.returnTerminal)}</div>
+                      <div>接駁: {getReturnPassengerCount(selectedBooking)} 人</div>
+                      <div>行李: {getReturnLuggageCount(selectedBooking)} 件</div>
                     </div>
                   </div>
                 </div>
-                
+
                 <div>
                   <h4 className="font-semibold mb-2">預約資訊</h4>
                   <div className="space-y-2 text-sm">
@@ -1851,7 +1869,7 @@ const BookingsPage: React.FC = () => {
                 <h4 className="font-semibold mb-2">付款資訊</h4>
                 <div className="space-y-2 text-sm">
                   <div><strong>總金額:</strong> {formatCurrency(selectedBooking.totalAmount)}</div>
-                  
+
                   {/* Auto Discount */}
                   {selectedBooking.autoDiscount && selectedBooking.autoDiscountAmount && selectedBooking.autoDiscountAmount > 0 && (
                     <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
@@ -1865,7 +1883,7 @@ const BookingsPage: React.FC = () => {
                       <div className="text-xs text-purple-500">{selectedBooking.autoDiscount.description}</div>
                     </div>
                   )}
-                  
+
                   {/* VIP Discount */}
                   {selectedBooking.vipDiscount > 0 && (
                     <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
@@ -1877,7 +1895,7 @@ const BookingsPage: React.FC = () => {
                       <div className="text-xs text-yellow-500">VIP會員享有折扣優惠</div>
                     </div>
                   )}
-                  
+
                   {/* Discount Code */}
                   {selectedBooking.discountAmount > 0 && (
                     <div className="bg-green-50 p-3 rounded-lg border border-green-200">
@@ -1888,7 +1906,7 @@ const BookingsPage: React.FC = () => {
                       <div className="text-xs text-green-500">折扣碼已應用</div>
                     </div>
                   )}
-                  
+
                   <div className="border-t pt-2">
                     <div><strong>應付金額:</strong> {formatCurrency(selectedBooking.finalAmount)}</div>
                     <div><strong>付款方式:</strong> {selectedBooking.paymentMethod}</div>
@@ -2023,10 +2041,13 @@ const BookingsPage: React.FC = () => {
                 min={1}
                 value={editForm.vehicleCount}
                 onChange={(e) => {
+                  const vehicleCount = Math.max(1, Number(e.target.value) || 1);
                   setEditForm((f) => ({
                     ...f,
-                    vehicleCount: Math.max(1, Number(e.target.value) || 1),
+                    vehicleCount,
                     parkingSlotNumbers: [],
+                    departurePassengerCount: clampPassengerCount(f.departurePassengerCount, vehicleCount),
+                    returnPassengerCount: clampPassengerCount(f.returnPassengerCount, vehicleCount),
                   }));
                   setShouldRecalcPrice(true);
                 }}
@@ -2088,14 +2109,17 @@ const BookingsPage: React.FC = () => {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="edit-departurePassengerCount">接駁人數 (上限5人)</Label>
+                    <Label htmlFor="edit-departurePassengerCount">接駁人數 (上限{editPassengerLimit}人)</Label>
                     <Input
                       id="edit-departurePassengerCount"
                       type="number"
                       min={0}
-                      max={5}
+                      max={editPassengerLimit}
                       value={editForm.departurePassengerCount}
-                      onChange={(e) => setEditForm((f) => ({ ...f, departurePassengerCount: parseInt(e.target.value) || 0 }))}
+                      onChange={(e) => setEditForm((f) => ({
+                        ...f,
+                        departurePassengerCount: clampPassengerCount(e.target.value, f.vehicleCount)
+                      }))}
                     />
                   </div>
                   <div className="space-y-1">
@@ -2126,14 +2150,17 @@ const BookingsPage: React.FC = () => {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="edit-returnPassengerCount">接駁人數</Label>
+                    <Label htmlFor="edit-returnPassengerCount">接駁人數 (上限{editPassengerLimit}人)</Label>
                     <Input
                       id="edit-returnPassengerCount"
                       type="number"
                       min={0}
-                      max={5}
+                      max={editPassengerLimit}
                       value={editForm.returnPassengerCount}
-                      onChange={(e) => setEditForm((f) => ({ ...f, returnPassengerCount: parseInt(e.target.value) || 0 }))}
+                      onChange={(e) => setEditForm((f) => ({
+                        ...f,
+                        returnPassengerCount: clampPassengerCount(e.target.value, f.vehicleCount)
+                      }))}
                     />
                   </div>
                   <div className="space-y-1">
@@ -2149,7 +2176,7 @@ const BookingsPage: React.FC = () => {
                 </div>
               </div>
               <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
-                💡 上限5人，多一個人現場收100元/人。回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
+                💡 每車上限{PASSENGERS_PER_VEHICLE}人，目前{editForm.vehicleCount}輛共{editPassengerLimit}人。回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
               </div>
             </div>
             <div className="space-y-2">
@@ -2307,7 +2334,7 @@ const BookingsPage: React.FC = () => {
                   {bookingInProcess.status === 'checked-in' ? ' 已進入停車場' :
                    bookingInProcess.status === 'checked-out' ? ' 已離開停車場' :
                    bookingInProcess.status === 'cancelled' ? ' 已取消' :
-                   bookingInProcess.status === 'confirmed' ? ' 已確認' : 
+                   bookingInProcess.status === 'confirmed' ? ' 已確認' :
                    ` ${bookingInProcess.status}`} 嗎？
                 </>
               )}
@@ -2352,7 +2379,7 @@ const BookingsPage: React.FC = () => {
           })()}
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
-            <Button 
+            <Button
               variant={bookingInProcess?.status === 'cancelled' ? 'destructive' : 'default'}
               onClick={confirmStatusChange}
             >
@@ -2365,4 +2392,4 @@ const BookingsPage: React.FC = () => {
   );
 };
 
-export default BookingsPage; 
+export default BookingsPage;

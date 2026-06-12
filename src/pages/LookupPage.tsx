@@ -5,12 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { 
-  Search, 
-  Phone, 
-  Car, 
-  Calendar, 
-  Clock, 
+import {
+  Search,
+  Phone,
+  Car,
+  Calendar,
+  Clock,
   MapPin,
   User,
   // Mail,
@@ -26,6 +26,13 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getBookingBySearch, getBookingDetails } from '@/services/booking';
+import {
+  getDepartureLuggageCount,
+  getDeparturePassengerCount,
+  getReturnLuggageCount,
+  getReturnPassengerCount,
+  getTerminalLabel,
+} from '@/lib/bookingDisplay';
 import type { Booking } from '@/types';
 
 const LookupPage: React.FC = () => {
@@ -55,11 +62,11 @@ const LookupPage: React.FC = () => {
       setLoading(true);
       const phone = searchType === 'phone' ? searchValue.trim() : undefined;
       const licensePlate = searchType === 'licensePlate' ? searchValue.trim().toUpperCase() : undefined;
-      
+
       const result = await getBookingBySearch(phone, licensePlate);
       setBookings(result || []);
       setFilteredBookings(result || []);
-      
+
       if (result?.length === 0) {
         toast('找不到任何預約', { icon: 'ℹ️' });
       }
@@ -127,7 +134,7 @@ const LookupPage: React.FC = () => {
     if (parkingType.icon) {
       return parkingType.icon;
     }
-    
+
     // Fallback to type-based icons
     switch (parkingType.type || parkingType) {
       case 'indoor': return '🏢';
@@ -222,7 +229,7 @@ const LookupPage: React.FC = () => {
                   <span>電話號碼</span>
                 </Label>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <input
                   type="radio"
@@ -255,7 +262,7 @@ const LookupPage: React.FC = () => {
                 />
               </div>
               <div className="flex items-end space-x-2">
-                <Button 
+                <Button
                   variant="outline"
                   onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
                   className="px-3 sm:px-4 text-xs sm:text-sm"
@@ -263,8 +270,8 @@ const LookupPage: React.FC = () => {
                   <Filter className="h-4 w-4 sm:mr-2" />
                   <span className="hidden sm:inline">過濾器</span>
                 </Button>
-                <Button 
-                  onClick={handleSearch} 
+                <Button
+                  onClick={handleSearch}
                   disabled={loading || !searchValue.trim()}
                   className="px-4 sm:px-6 flex-1 sm:flex-initial"
                 >
@@ -290,10 +297,10 @@ const LookupPage: React.FC = () => {
                     <span className="hidden sm:inline">清除過濾器</span>
                   </Button>
                 </div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   <div>
-                    <Label htmlFor="status">狀態</Label>  
+                    <Label htmlFor="status">狀態</Label>
                     <select
                       id="status"
                       value={advancedFilters.status}
@@ -305,10 +312,10 @@ const LookupPage: React.FC = () => {
                       <option value="confirmed">預約成功</option>
                       <option value="checked-in">已進入停車場</option>
                       <option value="checked-out">已離開停車場</option>
-                      <option value="cancelled">已取消</option> 
+                      <option value="cancelled">已取消</option>
                     </select>
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="dateFrom">從日期</Label>
                     <Input
@@ -318,7 +325,7 @@ const LookupPage: React.FC = () => {
                       onChange={(e) => setAdvancedFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="dateTo">到日期</Label>
                     <Input
@@ -328,7 +335,7 @@ const LookupPage: React.FC = () => {
                       onChange={(e) => setAdvancedFilters(prev => ({ ...prev, dateTo: e.target.value }))}
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="minAmount">最小金額</Label>
                     <Input
@@ -339,7 +346,7 @@ const LookupPage: React.FC = () => {
                       onChange={(e) => setAdvancedFilters(prev => ({ ...prev, minAmount: e.target.value }))}
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="maxAmount">最大金額</Label>
                     <Input
@@ -377,7 +384,7 @@ const LookupPage: React.FC = () => {
                           <h3 className="font-semibold text-sm sm:text-base">{booking.driverName}</h3>
                           {getStatusBadge(booking.status)}
                         </div>
-                        
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600">
                           <div className="space-y-1">
                             <div className="flex items-center space-x-2">
@@ -394,7 +401,7 @@ const LookupPage: React.FC = () => {
                               <span className="text-lg">{getParkingTypeIcon(booking.parkingType)}</span>
                             </div>
                           </div>
-                          
+
                           <div className="space-y-1">
                             <div className="flex items-center space-x-2">
                               <Calendar className="h-4 w-4" />
@@ -414,7 +421,7 @@ const LookupPage: React.FC = () => {
                             )}
                             {booking.vipDiscount && booking.vipDiscount > 0 && (
                               <div className="flex items-center space-x-2 text-blue-600">
-                                <span className="text-xs">👑 VIP: -{formatCurrency(booking.vipDiscount)}</span> 
+                                <span className="text-xs">👑 VIP: -{formatCurrency(booking.vipDiscount)}</span>
                               </div>
                             )}
                           </div>
@@ -433,7 +440,7 @@ const LookupPage: React.FC = () => {
                           </div>
                         )}
                       </div>
-                      
+
                       <Button
                         variant="outline"
                         size="sm"
@@ -474,7 +481,7 @@ const LookupPage: React.FC = () => {
               預約詳細信息
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedBooking && (
             <div className="space-y-4 sm:space-y-6">
               {/* Customer Information */}
@@ -492,8 +499,13 @@ const LookupPage: React.FC = () => {
                   </div>
                   <div className="space-y-2">
                     <div><strong>車牌號碼:</strong> {selectedBooking.licensePlate}</div>
-                    <div><strong>乘客:</strong> {selectedBooking.passengerCount} 人</div>
-                    <div><strong>行李:</strong> {selectedBooking.luggageCount} 件</div>
+                    <div><strong>乘客:</strong> {getDeparturePassengerCount(selectedBooking)} 人</div>
+                    <div><strong>行李:</strong> {getDepartureLuggageCount(selectedBooking)} 件</div>
+                    <div><strong>出發航廈:</strong> {getTerminalLabel(selectedBooking.departureTerminal)}</div>
+                    <div><strong>出發人數:</strong> {getDeparturePassengerCount(selectedBooking)} 人</div>
+                    <div><strong>回程航廈:</strong> {getTerminalLabel(selectedBooking.returnTerminal)}</div>
+                    <div><strong>回程人數:</strong> {getReturnPassengerCount(selectedBooking)} 人</div>
+                    <div><strong>回程行李:</strong> {getReturnLuggageCount(selectedBooking)} 件</div>
                   </div>
                 </div>
               </div>
@@ -564,26 +576,26 @@ const LookupPage: React.FC = () => {
                 </h4>
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div><strong>總金額:</strong> {formatCurrency(selectedBooking.totalAmount)}</div>
-                  
+
                   {/* Voucher Discount */}
                   {selectedBooking.discountAmount > 0 && (
                     <div className="bg-green-50 p-2 rounded">
                       <div><strong>🎫 折扣:</strong> -{formatCurrency(selectedBooking.discountAmount)}</div>
                     </div>
                   )}
-                  
+
                   {/* VIP Discount */}
                   {selectedBooking.vipDiscount && selectedBooking.vipDiscount > 0 && (
                     <div className="bg-blue-50 p-2 rounded">
                       <div><strong>👑 VIP 折扣:</strong> -{formatCurrency(selectedBooking.vipDiscount)}</div>
                     </div>
                   )}
-                  
+
                   <div className="border-t pt-2">
                     <div><strong>總折扣:</strong> -{formatCurrency((selectedBooking.discountAmount || 0) + (selectedBooking.vipDiscount || 0))}</div>
                     <div><strong>付款:</strong> {formatCurrency(selectedBooking.finalAmount)}</div>
                   </div>
-                  
+
                   <div><strong>付款方式:</strong> {selectedBooking.paymentMethod}</div>
                   <div><strong>付款狀態:</strong> {selectedBooking.paymentStatus}</div>
                 </div>
@@ -602,4 +614,4 @@ const LookupPage: React.FC = () => {
   );
 };
 
-export default LookupPage; 
+export default LookupPage;

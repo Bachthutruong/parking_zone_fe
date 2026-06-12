@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getParkingSlotSnapshot, getTodayAvailability, type SlotSnapshotLot, type TodayParkingAvailability } from '@/services/parking';
+import { getParkingSlotSnapshot, type SlotSnapshotLot } from '@/services/parking';
 import { getBookingDetails, calculatePrice } from '@/services/booking';
 import { updateBooking, updateBookingStatus, getAllParkingTypes } from '@/services/admin';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -38,6 +38,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { formatDateTime } from '@/lib/dateUtils';
+import { clampPassengerCount, getPassengerLimit, PASSENGERS_PER_VEHICLE } from '@/lib/bookingLimits';
 import type { Booking } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
@@ -60,18 +61,19 @@ function pickCols(total: number): number {
 const SlotGrid: React.FC<{
   lot: SlotSnapshotLot;
   onSelectBooking: (id: string) => void;
-  todayAvailable?: number;
-}> = ({ lot, onSelectBooking, todayAvailable }) => {
+}> = ({ lot, onSelectBooking }) => {
   const cols = useMemo(() => pickCols(lot.slots.length), [lot.slots.length]);
   const rows = useMemo(
     () => chunkSlots(lot.slots, cols),
     [lot.slots, cols]
   );
   const accent = lot.parkingType.color || '#39653f';
-  const onGrid = lot.slots.filter((s) => s.booking).length;
   const unassigned = lot.unassignedCheckedIn ?? [];
-  const inLot = onGrid + unassigned.length;
-  const free = lot.slots.length - onGrid;
+  const onGrid = lot.occupiedSlotCount ?? lot.slots.filter((s) => s.booking).length;
+  const unassignedVehicleCount = lot.unassignedVehicleCount
+    ?? unassigned.reduce((sum, b) => sum + Math.max(1, b.missingSlotCount ?? 1), 0);
+  const inLot = onGrid + unassignedVehicleCount;
+  const free = lot.freeSlotCount ?? Math.max(0, lot.slots.length - onGrid);
 
   return (
     <div className="space-y-4 w-full">
@@ -80,7 +82,7 @@ const SlotGrid: React.FC<{
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <h3 className="text-sm font-bold text-amber-900 sm:text-base">
               在場但尚未分配編號車位
-              <span className="ml-2 font-mono text-base tabular-nums sm:text-lg">（{unassigned.length} 輛）</span>
+              <span className="ml-2 font-mono text-base tabular-nums sm:text-lg">（{unassignedVehicleCount} 輛）</span>
             </h3>
             <p className="text-xs leading-snug text-amber-800/90 sm:max-w-xl sm:text-right sm:text-sm">
               入場時若未選格，不會出現在下方格子。請至「預約」編輯補車位，或改回狀態再入場並選格。
@@ -96,6 +98,9 @@ const SlotGrid: React.FC<{
               >
                 <span className="text-xs text-amber-800/80">未編號 · 在場</span>
                 <span className="font-mono text-sm font-bold text-amber-950 sm:text-base">{b.licensePlate}</span>
+                {(b.missingSlotCount ?? 1) > 1 && (
+                  <span className="text-[11px] font-semibold text-amber-800">{b.missingSlotCount} 輛未編號</span>
+                )}
                 <span className="w-full truncate text-center text-[11px] text-slate-600">{b.driverName || '—'}</span>
               </button>
             ))}
@@ -106,7 +111,7 @@ const SlotGrid: React.FC<{
       <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs sm:text-sm">
         <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-800">
           <span className="h-2 w-2 rounded-full bg-emerald-500" />
-          空編號格 <strong className="font-semibold tabular-nums">{todayAvailable != null ? todayAvailable : free}</strong>
+          空編號格 <strong className="font-semibold tabular-nums">{free}</strong>
         </div>
         <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-slate-800">
           <span className="h-2 w-2 rounded-full bg-violet-500" />
@@ -115,7 +120,7 @@ const SlotGrid: React.FC<{
         {unassigned.length > 0 && (
           <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-amber-900">
             <span className="h-2 w-2 rounded-full bg-amber-500" />
-            在場未編號 <strong className="font-semibold tabular-nums">{unassigned.length}</strong>
+            在場未編號 <strong className="font-semibold tabular-nums">{unassignedVehicleCount}</strong>
           </div>
         )}
         <div className="inline-flex items-center gap-1.5 rounded-full border border-[#39653f]/30 bg-[#39653f]/8 px-2.5 py-1 text-[#1d4b32]">
@@ -258,7 +263,6 @@ const ParkingSlotMap: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [serverTime, setServerTime] = useState<string>('');
   const [lots, setLots] = useState<SlotSnapshotLot[]>([]);
-  const [todayParking, setTodayParking] = useState<TodayParkingAvailability[]>([]);
   const [detail, setDetail] = useState<Booking | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -272,6 +276,7 @@ const ParkingSlotMap: React.FC = () => {
     departurePassengerCount: 1, departureLuggageCount: 0,
     returnPassengerCount: 1, returnLuggageCount: 0,
   });
+  const editPassengerLimit = getPassengerLimit(editForm.vehicleCount);
   const [editSaving, setEditSaving] = useState(false);
   const [parkingTypes, setParkingTypes] = useState<any[]>([]);
   const [newPriceLoading, setNewPriceLoading] = useState(false);
@@ -289,13 +294,9 @@ const ParkingSlotMap: React.FC = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [snapshotRes, todayRes] = await Promise.all([
-        getParkingSlotSnapshot(),
-        getTodayAvailability().catch(() => ({ parking: [] as TodayParkingAvailability[] })),
-      ]);
+      const snapshotRes = await getParkingSlotSnapshot();
       setServerTime(snapshotRes.serverTime);
       setLots(snapshotRes.lots);
-      setTodayParking(todayRes.parking || []);
     } catch (e: unknown) {
       toast.error((e as { response?: { data?: { message?: string } } })?.response?.data?.message || '載入失敗');
     } finally {
@@ -426,6 +427,7 @@ const ParkingSlotMap: React.FC = () => {
     }
     try {
       setEditSaving(true);
+      const statusChanged = editForm.status !== detail.status;
       const payload: any = {
         driverName: editForm.driverName,
         phone: editForm.phone,
@@ -435,7 +437,6 @@ const ParkingSlotMap: React.FC = () => {
         checkInTime: editForm.checkInTime,
         checkOutTime: editForm.checkOutTime,
         vehicleCount: editForm.vehicleCount || 1,
-        status: editForm.status,
         notes: editForm.notes || undefined,
         departureTerminal: editForm.departureTerminal || undefined,
         returnTerminal: editForm.returnTerminal || undefined,
@@ -471,6 +472,14 @@ const ParkingSlotMap: React.FC = () => {
         console.error('Recalculate price failed:', err);
       }
       await updateBooking(detail._id, payload as Parameters<typeof updateBooking>[1]);
+      if (statusChanged) {
+        await updateBookingStatus(
+          detail._id,
+          editForm.status,
+          undefined,
+          editForm.status === 'checked-in' ? editForm.parkingSlotNumbers : undefined
+        );
+      }
       toast.success('已更新預約資訊');
       closeEditDialog();
       void load();
@@ -611,7 +620,7 @@ const ParkingSlotMap: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-5 sm:pt-6">
-                <SlotGrid lot={lot} onSelectBooking={openDetails} todayAvailable={todayParking.find(p => p.id === lot.parkingType._id)?.availableSpaces} />
+                <SlotGrid lot={lot} onSelectBooking={openDetails} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -737,10 +746,13 @@ const ParkingSlotMap: React.FC = () => {
                   min={1}
                   value={editForm.vehicleCount}
                   onChange={(e) => {
+                    const vehicleCount = Math.max(1, Number(e.target.value) || 1);
                     setEditForm((f) => ({
                       ...f,
-                      vehicleCount: Math.max(1, Number(e.target.value) || 1),
+                      vehicleCount,
                       parkingSlotNumbers: [],
+                      departurePassengerCount: clampPassengerCount(f.departurePassengerCount, vehicleCount),
+                      returnPassengerCount: clampPassengerCount(f.returnPassengerCount, vehicleCount),
                     }));
                     setShouldRecalcPrice(true);
                   }}
@@ -837,14 +849,17 @@ const ParkingSlotMap: React.FC = () => {
                       </select>
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="slot-edit-departurePassengerCount">接駁人數 (上限5人)</Label>
+                      <Label htmlFor="slot-edit-departurePassengerCount">接駁人數 (上限{editPassengerLimit}人)</Label>
                       <Input
                         id="slot-edit-departurePassengerCount"
                         type="number"
                         min={0}
-                        max={5}
+                        max={editPassengerLimit}
                         value={editForm.departurePassengerCount}
-                        onChange={(e) => setEditForm((f) => ({ ...f, departurePassengerCount: parseInt(e.target.value) || 0 }))}
+                        onChange={(e) => setEditForm((f) => ({
+                          ...f,
+                          departurePassengerCount: clampPassengerCount(e.target.value, f.vehicleCount)
+                        }))}
                       />
                     </div>
                     <div className="space-y-1">
@@ -875,14 +890,17 @@ const ParkingSlotMap: React.FC = () => {
                       </select>
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="slot-edit-returnPassengerCount">接駁人數</Label>
+                      <Label htmlFor="slot-edit-returnPassengerCount">接駁人數 (上限{editPassengerLimit}人)</Label>
                       <Input
                         id="slot-edit-returnPassengerCount"
                         type="number"
                         min={0}
-                        max={5}
+                        max={editPassengerLimit}
                         value={editForm.returnPassengerCount}
-                        onChange={(e) => setEditForm((f) => ({ ...f, returnPassengerCount: parseInt(e.target.value) || 0 }))}
+                        onChange={(e) => setEditForm((f) => ({
+                          ...f,
+                          returnPassengerCount: clampPassengerCount(e.target.value, f.vehicleCount)
+                        }))}
                       />
                     </div>
                     <div className="space-y-1">
@@ -898,7 +916,7 @@ const ParkingSlotMap: React.FC = () => {
                   </div>
                 </div>
                 <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
-                  💡 上限5人，多一個人現場收100元/人。回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
+                  💡 每車上限{PASSENGERS_PER_VEHICLE}人，目前{editForm.vehicleCount}輛共{editPassengerLimit}人。回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
                 </div>
               </div>
               <div className="space-y-2">

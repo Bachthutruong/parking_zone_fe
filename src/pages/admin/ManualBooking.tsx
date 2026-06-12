@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { 
+import {
   Plus,
   // Calendar,
   Car,
@@ -35,6 +35,7 @@ import { checkParkingTypeMaintenance } from '@/services/maintenance';
 import { checkVIPStatus } from '@/services/auth';
 import { api } from '@/services';
 import { formatDate, formatDateWithWeekday, getDateStrTaiwan, getNextDayStrTaiwan, startOfDayISO, endOfDayISO, startOfDayISOFromDateStr, endOfDayISOFromDateStr } from '@/lib/dateUtils';
+import { clampPassengerCount, getPassengerLimit, PASSENGERS_PER_VEHICLE } from '@/lib/bookingLimits';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import ConflictNotification from '@/components/ConflictNotification';
 
@@ -53,7 +54,7 @@ const AdminManualBooking: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [createdBooking, setCreatedBooking] = useState<any>(null);
-  
+
   // New state variables for availability and pricing
   const [, setAvailableSlots] = useState<any[]>([]);
   const [pricing, setPricing] = useState<any>(null);
@@ -70,7 +71,7 @@ const AdminManualBooking: React.FC = () => {
   const [blacklistWarning, setBlacklistWarning] = useState<string | null>(null);
   /** Member profile 備註 — same as Users admin, not booking.notes */
   const [userNotes, setUserNotes] = useState('');
-  
+
   const [formData, setFormData] = useState({
     parkingTypeId: '',
     checkInTime: '',
@@ -97,6 +98,7 @@ const AdminManualBooking: React.FC = () => {
     departureTerminal: '',
     returnTerminal: ''
   });
+  const passengerLimit = getPassengerLimit(formData.vehicleCount);
 
   useEffect(() => {
     loadData();
@@ -201,7 +203,7 @@ const AdminManualBooking: React.FC = () => {
         getAllParkingTypes(),
         getAllAddonServices()
       ]);
-      
+
       setParkingTypes(parkingTypesData.parkingTypes);
       setAddonServices(addonServicesData.services);
     } catch (error: any) {
@@ -221,15 +223,15 @@ const AdminManualBooking: React.FC = () => {
         checkOutTime: endOfDayISO(formData.checkOutTime),
         vehicleCount: formData.vehicleCount
       });
-      
+
       const data = response.data;
-      
+
       if (data.success) {
         setAvailableSlots(data.availableSlots);
         setPricing(data.pricing);
         setConflictingDays([]);
         setAvailabilityErrorDetail(null);
-        
+
         // Calculate pricing with addon services and discounts
         await calculatePricing();
       } else {
@@ -305,9 +307,9 @@ const AdminManualBooking: React.FC = () => {
         formData.checkInTime,
         formData.checkOutTime
       );
-      
+
       setMaintenanceDays(result.maintenanceDays);
-      
+
       if (result.hasMaintenance) {
         toast.error('此停車場在選擇的時間內正在維護');
       }
@@ -334,7 +336,7 @@ const AdminManualBooking: React.FC = () => {
           checkOutTime: endOfDayISOFromDateStr(dayStr),
           vehicleCount: formData.vehicleCount
         });
-        
+
         const data = response.data;
         if (!data.success) {
           conflicts.push(dayStr);
@@ -343,7 +345,7 @@ const AdminManualBooking: React.FC = () => {
         console.error('Error checking day availability:', error);
         conflicts.push(dayStr);
       }
-      
+
       dayStr = getNextDayStrTaiwan(dayStr);
     }
 
@@ -449,12 +451,12 @@ const AdminManualBooking: React.FC = () => {
         isVIP: isVIP,
         vipDiscount: currentUser?.vipDiscount || 12 // Pass VIP discount percentage
       };
-      
+
       console.log('Creating manual booking with data:', bookingData);
 
       const result = await createManualBooking(bookingData);
       console.log('Manual booking creation result:', result);
-      
+
       if (result.booking) {
           console.log('Checking created booking fields:', {
               id: result.booking._id,
@@ -464,7 +466,7 @@ const AdminManualBooking: React.FC = () => {
               amount: result.booking.finalAmount
           });
       }
-      
+
       setCreatedBooking(result.booking);
       setShowSuccessDialog(true);
       resetForm();
@@ -550,13 +552,13 @@ const AdminManualBooking: React.FC = () => {
   //     outdoor: { label: 'Ngoài trời', color: 'bg-green-100 text-green-800 border-green-200' },
   //     disabled: { label: 'Khuyết tật', color: 'bg-orange-100 text-orange-800 border-orange-200' }
   //   };
-    
+
   //   const config = badgeConfig[type as keyof typeof badgeConfig] || badgeConfig.indoor;
   //   return <Badge variant="outline" className={config.color}>{config.label}</Badge>;
   // };
 
   const selectedParkingType = parkingTypes.find(pt => pt._id === formData.parkingTypeId);
-  const selectedServices = addonServices.filter(service => 
+  const selectedServices = addonServices.filter(service =>
     formData.selectedAddonServices.includes(service._id)
   );
 
@@ -642,8 +644,18 @@ const AdminManualBooking: React.FC = () => {
                 min="1"
                 value={formData.vehicleCount}
                 onChange={(e) => {
-                  const val = parseInt(e.target.value) || 1;
-                  setFormData(prev => ({ ...prev, vehicleCount: Math.max(1, val) }));
+                  const vehicleCount = Math.max(1, parseInt(e.target.value) || 1);
+                  setFormData(prev => {
+                    const departurePassengerCount = clampPassengerCount(prev.departurePassengerCount, vehicleCount);
+                    const returnPassengerCount = clampPassengerCount(prev.returnPassengerCount, vehicleCount);
+                    return {
+                      ...prev,
+                      vehicleCount,
+                      departurePassengerCount,
+                      returnPassengerCount,
+                      passengerCount: Math.max(departurePassengerCount, returnPassengerCount),
+                    };
+                  });
                 }}
                 placeholder="輸入車輛數量"
               />
@@ -688,7 +700,7 @@ const AdminManualBooking: React.FC = () => {
 
             {/* Conflict Notification */}
             {conflictingDays.length > 0 && (
-              <ConflictNotification 
+              <ConflictNotification
                 checkInTime={formData.checkInTime}
                 checkOutTime={formData.checkOutTime}
                 conflictingDays={conflictingDays}
@@ -733,7 +745,7 @@ const AdminManualBooking: React.FC = () => {
                   </Badge>
                 )}
               </div>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <Label htmlFor="driverName">您的姓名 *</Label>
@@ -815,7 +827,7 @@ const AdminManualBooking: React.FC = () => {
                   <span className="text-blue-800 font-medium">✈️ 接駁和行李資訊</span>
                   <span className="text-xs text-blue-600">(接駁服務需要)</span>
                 </div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   {/* Departure Section */}
                   <div className="space-y-4">
@@ -833,20 +845,23 @@ const AdminManualBooking: React.FC = () => {
                         <option value="terminal2">第二航廈</option>
                       </select>
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <Label htmlFor="departurePassengerCount">接駁人數 (上限5人)</Label>
+                      <Label htmlFor="departurePassengerCount">接駁人數 (上限{passengerLimit}人)</Label>
                       <Input
                         id="departurePassengerCount"
                         type="number"
                         min="0"
-                        max="5"
+                        max={passengerLimit}
                         value={formData.departurePassengerCount}
-                        onChange={(e) => setFormData(prev => ({ 
-                          ...prev, 
-                          departurePassengerCount: parseInt(e.target.value) || 0,
-                          passengerCount: Math.max(parseInt(e.target.value) || 0, prev.returnPassengerCount || 0)
-                        }))}
+                        onChange={(e) => setFormData(prev => {
+                          const departurePassengerCount = clampPassengerCount(e.target.value, prev.vehicleCount);
+                          return {
+                            ...prev,
+                            departurePassengerCount,
+                            passengerCount: Math.max(departurePassengerCount, prev.returnPassengerCount || 0)
+                          };
+                        })}
                       />
                     </div>
                     <div className="space-y-2">
@@ -856,15 +871,15 @@ const AdminManualBooking: React.FC = () => {
                         type="number"
                         min="0"
                         value={formData.departureLuggageCount}
-                        onChange={(e) => setFormData(prev => ({ 
-                          ...prev, 
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
                           departureLuggageCount: parseInt(e.target.value) || 0,
                           luggageCount: Math.max(parseInt(e.target.value) || 0, prev.returnLuggageCount || 0)
                         }))}
                       />
                     </div>
                   </div>
-                  
+
                   {/* Return Section */}
                   <div className="space-y-4">
                     <h4 className="font-semibold text-gray-700 border-b pb-2">回程 (接回停車場)</h4>
@@ -883,18 +898,21 @@ const AdminManualBooking: React.FC = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="returnPassengerCount">接駁人數</Label>
+                      <Label htmlFor="returnPassengerCount">接駁人數 (上限{passengerLimit}人)</Label>
                       <Input
                         id="returnPassengerCount"
                         type="number"
                         min="0"
-                        max="5"
+                        max={passengerLimit}
                         value={formData.returnPassengerCount}
-                        onChange={(e) => setFormData(prev => ({ 
-                          ...prev, 
-                          returnPassengerCount: parseInt(e.target.value) || 0,
-                          passengerCount: Math.max(prev.departurePassengerCount || 0, parseInt(e.target.value) || 0)
-                        }))}
+                        onChange={(e) => setFormData(prev => {
+                          const returnPassengerCount = clampPassengerCount(e.target.value, prev.vehicleCount);
+                          return {
+                            ...prev,
+                            returnPassengerCount,
+                            passengerCount: Math.max(prev.departurePassengerCount || 0, returnPassengerCount)
+                          };
+                        })}
                       />
                     </div>
                     <div className="space-y-2">
@@ -904,8 +922,8 @@ const AdminManualBooking: React.FC = () => {
                         type="number"
                         min="0"
                         value={formData.returnLuggageCount}
-                        onChange={(e) => setFormData(prev => ({ 
-                          ...prev, 
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
                           returnLuggageCount: parseInt(e.target.value) || 0,
                           luggageCount: Math.max(prev.departureLuggageCount || 0, parseInt(e.target.value) || 0)
                         }))}
@@ -913,9 +931,9 @@ const AdminManualBooking: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="text-lg text-blue-600 bg-blue-100 p-2 rounded">
-                  💡 上限5人，多一個人現場收100元/人。回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
+                  💡 每車上限{PASSENGERS_PER_VEHICLE}人，目前{formData.vehicleCount}輛共{passengerLimit}人。回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
                 </div>
               </div>
             </div>
@@ -926,7 +944,7 @@ const AdminManualBooking: React.FC = () => {
                 <Clock className="h-4 w-4 mr-2" />
                 附加資訊
               </h3>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <Label htmlFor="estimatedArrivalTime">預計到達時間</Label>
@@ -1054,14 +1072,14 @@ const AdminManualBooking: React.FC = () => {
                   應用
                 </Button>
               </div>
-              
+
               {discountInfo && (
                 <div className="p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg">
                   <div className="flex items-center space-x-2 mb-3">
                     <CheckCircle className="h-5 w-5 text-green-600" />
                     <span className="font-medium text-green-800">優惠已應用！</span>
                   </div>
-                  
+
                   <div className="space-y-3">
                     {/* Voucher Discount */}
                     <div className="bg-white p-3 rounded-lg border border-green-200">
@@ -1173,10 +1191,10 @@ const AdminManualBooking: React.FC = () => {
                       <div className="space-y-2">
                         {pricing.dailyPrices.map((dayPrice: any, index: number) => {
                           // Calculate daily discount if auto discount applies
-                          const dailyDiscount = pricing?.autoDiscountInfo && pricing?.autoDiscountAmount > 0 
-                            ? pricing.autoDiscountAmount / pricing.dailyPrices.length 
+                          const dailyDiscount = pricing?.autoDiscountInfo && pricing?.autoDiscountAmount > 0
+                            ? pricing.autoDiscountAmount / pricing.dailyPrices.length
                             : 0;
-                          
+
                           return (
                             <div key={index} className="flex justify-between items-center text-sm bg-white p-2 rounded">
                               <div className="flex items-center space-x-2">
@@ -1208,7 +1226,7 @@ const AdminManualBooking: React.FC = () => {
                                   </span>
                                 )}
                                 <span className={`font-semibold ${
-                                  dayPrice.isSpecialPrice ? 'text-orange-600' : 
+                                  dayPrice.isSpecialPrice ? 'text-orange-600' :
                                   dailyDiscount > 0 ? 'text-purple-600' : 'text-blue-600'
                                 }`}>
                                   {formatCurrency(dayPrice.price - dailyDiscount)}
@@ -1226,7 +1244,7 @@ const AdminManualBooking: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Addon Services */}
                   {formData.selectedAddonServices.length > 0 && (
                     <div className="bg-blue-50 p-3 rounded-lg">
@@ -1247,7 +1265,7 @@ const AdminManualBooking: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  
+
                   {isVIP && (
                                           <div className="flex justify-between items-center py-2 bg-blue-50 rounded-lg px-3">
                         <div className="flex items-center space-x-2">
@@ -1278,9 +1296,9 @@ const AdminManualBooking: React.FC = () => {
                         <span className="font-semibold text-green-600">-{formatCurrency(discountInfo.discountAmount)}</span>
                       </div>
                   )}
-                  
+
                   <Separator />
-                  
+
                   {/* Total Summary */}
                   <div className="bg-gradient-to-r from-emerald-100 to-teal-100 p-4 rounded-lg border-2 border-emerald-300">
                     <div className="space-y-2">
@@ -1290,7 +1308,7 @@ const AdminManualBooking: React.FC = () => {
                           {formatCurrency(pricing?.totalAmount || 0)}
                         </span>
                       </div>
-                      
+
                       {/* Auto Discount */}
                       {pricing?.autoDiscountInfo && pricing?.autoDiscountAmount > 0 && (
                         <div className="flex justify-between items-center bg-purple-50 p-2 rounded border border-purple-200">
@@ -1300,7 +1318,7 @@ const AdminManualBooking: React.FC = () => {
                               {pricing.autoDiscountInfo.name}
                             </span>
                             <div className="text-xs text-purple-600">
-                              {pricing.autoDiscountInfo.discountType === 'percentage' 
+                              {pricing.autoDiscountInfo.discountType === 'percentage'
                                 ? `每天節省 ${pricing.autoDiscountInfo.discountValue}%`
                                 : `每天節省 ${formatCurrency(pricing.autoDiscountInfo.discountValue)}`
                               }
@@ -1312,7 +1330,7 @@ const AdminManualBooking: React.FC = () => {
                           </div>
                         </div>
                       )}
-                      
+
                       {isVIP && (
                         <div className="flex justify-between items-center bg-yellow-50 p-2 rounded border border-yellow-200">
                           <div className="flex items-center space-x-2">
@@ -1331,7 +1349,7 @@ const AdminManualBooking: React.FC = () => {
                           </div>
                         </div>
                       )}
-                      
+
                       {/* Discount Code */}
                       {discountInfo?.discountAmount > 0 && (
                         <div className="flex justify-between items-center bg-green-50 p-2 rounded border border-green-200">
@@ -1347,7 +1365,7 @@ const AdminManualBooking: React.FC = () => {
                           </div>
                         </div>
                       )}
-                      
+
                       <div className="border-t pt-2 space-y-1">
                         <div className="flex justify-between items-center">
                           <span className="font-bold text-lg text-gray-900">總付款：</span>
@@ -1382,14 +1400,14 @@ const AdminManualBooking: React.FC = () => {
               手動預約已成功創建
             </DialogDescription>
           </DialogHeader>
-          
+
           {createdBooking && (
             <div className="space-y-4">
               <div className="p-4 bg-green-50 rounded-lg space-y-3">
                 <div className="font-bold text-lg text-green-900 border-b border-green-200 pb-2">
                   預約編號: {createdBooking.bookingNumber}
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-y-2 text-sm text-gray-700">
                   <div className="flex flex-col">
                     <span className="text-gray-500 text-xs">客戶姓名</span>
@@ -1446,7 +1464,7 @@ const AdminManualBooking: React.FC = () => {
               </div>
             </div>
           )}
-          
+
           <DialogFooter>
             <Button onClick={() => setShowSuccessDialog(false)}>
               關閉
@@ -1458,4 +1476,4 @@ const AdminManualBooking: React.FC = () => {
   );
 };
 
-export default AdminManualBooking; 
+export default AdminManualBooking;

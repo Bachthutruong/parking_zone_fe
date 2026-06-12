@@ -26,6 +26,13 @@ import { toast } from 'react-hot-toast';
 import { getAllBookings, updateBookingStatus } from '@/services/admin';
 import { getSystemSettings } from '@/services/systemSettings';
 import { formatDateTime } from '@/lib/dateUtils';
+import {
+  getDepartureLuggageCount,
+  getDeparturePassengerCount,
+  getReturnLuggageCount,
+  getReturnPassengerCount,
+  getTerminalLabel,
+} from '@/lib/bookingDisplay';
 import type { Booking } from '@/types';
 
 const StaffBookings: React.FC = () => {
@@ -378,25 +385,32 @@ const StaffBookings: React.FC = () => {
               <span class="label">車牌號碼:</span> ${booking.licensePlate}
             </div>
             <div class="info-item">
-              <span class="label">乘客:</span> ${booking.passengerCount} 人
+              <span class="label">乘客:</span> ${getDeparturePassengerCount(booking)} 人
             </div>
             <div class="info-item">
-              <span class="label">行李:</span> ${booking.luggageCount} 件
+              <span class="label">行李:</span> ${getDepartureLuggageCount(booking)} 件
             </div>
           </div>
         </div>
 
-        ${booking.passengerCount > 0 ? `
+        ${getDeparturePassengerCount(booking) > 0 || getReturnPassengerCount(booking) > 0 ? `
         <div class="section">
           <h3>接駁服務信息</h3>
           <div class="info-grid">
             <div class="info-item">
-              <span class="label">出發航廈:</span> ${booking.departureTerminal === 'terminal1' ? '第一航廈' : 
-                booking.departureTerminal === 'terminal2' ? '第二航廈' : '未選擇'}
+              <span class="label">出發航廈:</span> ${getTerminalLabel(booking.departureTerminal)}
             </div>
             <div class="info-item">
-              <span class="label">回程航廈:</span> ${booking.returnTerminal === 'terminal1' ? '第一航廈' : 
-                booking.returnTerminal === 'terminal2' ? '第二航廈' : '未選擇'}
+              <span class="label">出發人數:</span> ${getDeparturePassengerCount(booking)} 人
+            </div>
+            <div class="info-item">
+              <span class="label">回程航廈:</span> ${getTerminalLabel(booking.returnTerminal)}
+            </div>
+            <div class="info-item">
+              <span class="label">回程人數:</span> ${getReturnPassengerCount(booking)} 人
+            </div>
+            <div class="info-item">
+              <span class="label">回程行李:</span> ${getReturnLuggageCount(booking)} 件
             </div>
           </div>
         </div>
@@ -1092,12 +1106,15 @@ const StaffBookings: React.FC = () => {
                   <div>
                     <h4 className="font-semibold text-sm text-gray-600">服務信息</h4>
                     <div className="space-y-1 text-sm">
-                      <div><strong>乘客:</strong> {booking.passengerCount} 人</div>
-                      <div><strong>行李:</strong> {booking.luggageCount} 件</div>
-                      {booking.passengerCount > 0 && (
+                      <div><strong>乘客:</strong> {getDeparturePassengerCount(booking)} 人</div>
+                      <div><strong>行李:</strong> {getDepartureLuggageCount(booking)} 件</div>
+                      {(getDeparturePassengerCount(booking) > 0 || getReturnPassengerCount(booking) > 0) && (
                         <>
-                          <div><strong>出發航廈:</strong> {booking.departureTerminal === 'terminal1' ? '第一航廈' : booking.departureTerminal === 'terminal2' ? '第二航廈' : '未選擇'}</div>
-                          <div><strong>回程航廈:</strong> {booking.returnTerminal === 'terminal1' ? '第一航廈' : booking.returnTerminal === 'terminal2' ? '第二航廈' : '未選擇'}</div>
+                          <div><strong>出發航廈:</strong> {getTerminalLabel(booking.departureTerminal)}</div>
+                          <div><strong>出發人數:</strong> {getDeparturePassengerCount(booking)} 人</div>
+                          <div><strong>回程航廈:</strong> {getTerminalLabel(booking.returnTerminal)}</div>
+                          <div><strong>回程人數:</strong> {getReturnPassengerCount(booking)} 人</div>
+                          <div><strong>回程行李:</strong> {getReturnLuggageCount(booking)} 件</div>
                         </>
                       )}
                     </div>
@@ -1189,12 +1206,15 @@ const StaffBookings: React.FC = () => {
                     <div><strong>電話:</strong> {selectedBooking.phone}</div>
                     <div><strong>電子郵件:</strong> {selectedBooking.email}</div>
                     <div><strong>車牌號碼:</strong> {selectedBooking.licensePlate}</div>
-                    <div><strong>乘客:</strong> {selectedBooking.passengerCount} 人</div>
-                    <div><strong>行李:</strong> {selectedBooking.luggageCount} 件</div>
-                    {selectedBooking.passengerCount > 0 && (
+                    <div><strong>乘客:</strong> {getDeparturePassengerCount(selectedBooking)} 人</div>
+                    <div><strong>行李:</strong> {getDepartureLuggageCount(selectedBooking)} 件</div>
+                    {(getDeparturePassengerCount(selectedBooking) > 0 || getReturnPassengerCount(selectedBooking) > 0) && (
                       <>
-                        <div><strong>出發航廈:</strong> {selectedBooking.departureTerminal === 'terminal1' ? '第一航廈' : selectedBooking.departureTerminal === 'terminal2' ? '第二航廈' : '未選擇'}</div>
-                        <div><strong>回程航廈:</strong> {selectedBooking.returnTerminal === 'terminal1' ? '第一航廈' : selectedBooking.returnTerminal === 'terminal2' ? '第二航廈' : '未選擇'}</div>
+                        <div><strong>出發航廈:</strong> {getTerminalLabel(selectedBooking.departureTerminal)}</div>
+                        <div><strong>出發人數:</strong> {getDeparturePassengerCount(selectedBooking)} 人</div>
+                        <div><strong>回程航廈:</strong> {getTerminalLabel(selectedBooking.returnTerminal)}</div>
+                        <div><strong>回程人數:</strong> {getReturnPassengerCount(selectedBooking)} 人</div>
+                        <div><strong>回程行李:</strong> {getReturnLuggageCount(selectedBooking)} 件</div>
                       </>
                     )}
                   </div>

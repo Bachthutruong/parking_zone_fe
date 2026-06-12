@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { fromDateTimeLocal, toDateInput, getTaiwanHourMinute, getDateStrTaiwan, getNextDayStrTaiwan } from '@/lib/dateUtils';
+import { normalizeTerminal } from '@/lib/bookingDisplay';
 
 export const IMPORT_SHEET_DATA = '預約資料';
 export const IMPORT_SHEET_TYPES = '停車場類型';
@@ -57,6 +58,39 @@ function resolveFieldName(raw: string): string | null {
     車輛數: 'vehicleCount',
     车辆数: 'vehicleCount',
     車位數: 'vehicleCount',
+    passengercount: 'passengerCount',
+    乘客: 'passengerCount',
+    乘客數: 'passengerCount',
+    人數: 'passengerCount',
+    人数: 'passengerCount',
+    luggagecount: 'luggageCount',
+    行李: 'luggageCount',
+    行李數: 'luggageCount',
+    行李数量: 'luggageCount',
+    departureterminal: 'departureTerminal',
+    出發航廈: 'departureTerminal',
+    出发航厦: 'departureTerminal',
+    出發航站: 'departureTerminal',
+    出發t: 'departureTerminal',
+    回程terminal: 'returnTerminal',
+    returnterminal: 'returnTerminal',
+    回程航廈: 'returnTerminal',
+    回程航厦: 'returnTerminal',
+    回程航站: 'returnTerminal',
+    回程t: 'returnTerminal',
+    departurepassengercount: 'departurePassengerCount',
+    出發人數: 'departurePassengerCount',
+    出发人数: 'departurePassengerCount',
+    出發接駁人數: 'departurePassengerCount',
+    departureluggagecount: 'departureLuggageCount',
+    出發行李: 'departureLuggageCount',
+    出發行李數: 'departureLuggageCount',
+    returnpassengercount: 'returnPassengerCount',
+    回程人數: 'returnPassengerCount',
+    回程接駁人數: 'returnPassengerCount',
+    returnluggagecount: 'returnLuggageCount',
+    回程行李: 'returnLuggageCount',
+    回程行李數: 'returnLuggageCount',
     discountcode: 'discountCode',
     折扣碼: 'discountCode',
     折扣码: 'discountCode',
@@ -156,6 +190,20 @@ export function parseVehicleCount(v: unknown): number | null {
   return n;
 }
 
+export function parseNonNegativeInt(v: unknown, defaultValue: number): number | null {
+  if (v === '' || v === null || v === undefined) return defaultValue;
+  const n = typeof v === 'number' ? v : parseInt(String(v).trim(), 10);
+  if (Number.isNaN(n) || n < 0) return null;
+  return n;
+}
+
+function parseTerminalCell(v: unknown): { value?: 'terminal1' | 'terminal2'; error?: string } {
+  if (v === '' || v === null || v === undefined) return {};
+  const normalized = normalizeTerminal(String(v));
+  if (!normalized) return { error: '航廈僅支援 T1 / T2' };
+  return { value: normalized };
+}
+
 export interface ParkingTypeRef {
   _id: string;
   name: string;
@@ -176,6 +224,12 @@ export interface ImportRowParsed {
   flightNumber: string;
   notes: string;
   isVIP: boolean;
+  departureTerminal?: 'terminal1' | 'terminal2';
+  returnTerminal?: 'terminal1' | 'terminal2';
+  departurePassengerCount: number;
+  departureLuggageCount: number;
+  returnPassengerCount: number;
+  returnLuggageCount: number;
 }
 
 export type ImportRowOutcome =
@@ -261,6 +315,30 @@ export function validateAndBuildRow(
   const flightNumber = mapped.flightNumber != null ? String(mapped.flightNumber).trim() : '';
   const notes = mapped.notes != null ? String(mapped.notes).trim() : '';
   const isVIP = parseBoolCell(mapped.isVIP);
+  const departurePassengerCount = parseNonNegativeInt(
+    mapped.departurePassengerCount ?? mapped.passengerCount,
+    1
+  );
+  const departureLuggageCount = parseNonNegativeInt(mapped.departureLuggageCount ?? mapped.luggageCount, 0);
+  const returnPassengerCount = parseNonNegativeInt(mapped.returnPassengerCount, 1);
+  const returnLuggageCount = parseNonNegativeInt(mapped.returnLuggageCount, 0);
+  if (
+    departurePassengerCount === null ||
+    departureLuggageCount === null ||
+    returnPassengerCount === null ||
+    returnLuggageCount === null
+  ) {
+    return { ok: false, sheetRow, message: '接駁人數與行李數須為 0 以上整數' };
+  }
+
+  const departureTerminal = parseTerminalCell(mapped.departureTerminal);
+  if (departureTerminal.error) {
+    return { ok: false, sheetRow, message: `出發${departureTerminal.error}` };
+  }
+  const returnTerminal = parseTerminalCell(mapped.returnTerminal);
+  if (returnTerminal.error) {
+    return { ok: false, sheetRow, message: `回程${returnTerminal.error}` };
+  }
 
   return {
     ok: true,
@@ -278,6 +356,12 @@ export function validateAndBuildRow(
       flightNumber,
       notes,
       isVIP,
+      departureTerminal: departureTerminal.value,
+      returnTerminal: returnTerminal.value,
+      departurePassengerCount,
+      departureLuggageCount,
+      returnPassengerCount,
+      returnLuggageCount,
     },
   };
 }
@@ -357,6 +441,12 @@ export function downloadBookingImportTemplate(parkingTypes: ParkingTypeRef[]): v
     'licensePlate',
     'email',
     'vehicleCount',
+    'departureTerminal',
+    'departurePassengerCount',
+    'departureLuggageCount',
+    'returnTerminal',
+    'returnPassengerCount',
+    'returnLuggageCount',
     'discountCode',
     'flightNumber',
     'notes',
@@ -375,6 +465,12 @@ export function downloadBookingImportTemplate(parkingTypes: ParkingTypeRef[]): v
     '0912345678',
     'ABC1234',
     '',
+    1,
+    'T1',
+    2,
+    1,
+    'T2',
+    2,
     1,
     '',
     '',
@@ -399,6 +495,9 @@ export function downloadBookingImportTemplate(parkingTypes: ParkingTypeRef[]): v
     ['checkOutTime', '必填。格式同上；須晚於進場時間'],
     ['driverName / phone / licensePlate', '必填'],
     ['vehicleCount', '選填，預設 1；不可超過該停車場 totalSpaces'],
+    ['departureTerminal / returnTerminal', '選填：T1 / T2（也可填 1 / 2）'],
+    ['departurePassengerCount / returnPassengerCount', '選填，預設 1；請填 0 以上整數'],
+    ['departureLuggageCount / returnLuggageCount', '選填，預設 0；請填 0 以上整數'],
     ['isVIP', '選填：1 / 0、是 / 否、true / false'],
     [''],
     ['匯入時系統會逐筆檢查空位（與手動預約相同邏輯），含維護日與過去時間等限制。'],
@@ -420,12 +519,12 @@ export function rowToManualBookingPayload(row: ImportRowParsed, vipDiscountDefau
     email: row.email || undefined,
     licensePlate: row.licensePlate,
     vehicleCount: row.vehicleCount,
-    passengerCount: 1,
-    luggageCount: 0,
-    departurePassengerCount: 1,
-    departureLuggageCount: 0,
-    returnPassengerCount: 1,
-    returnLuggageCount: 0,
+    passengerCount: row.departurePassengerCount,
+    luggageCount: row.departureLuggageCount,
+    departurePassengerCount: row.departurePassengerCount,
+    departureLuggageCount: row.departureLuggageCount,
+    returnPassengerCount: row.returnPassengerCount,
+    returnLuggageCount: row.returnLuggageCount,
     addonServices: [] as string[],
     discountCode: row.discountCode || undefined,
     estimatedArrivalTime: undefined,
@@ -434,8 +533,8 @@ export function rowToManualBookingPayload(row: ImportRowParsed, vipDiscountDefau
     paymentStatus: 'pending',
     paymentMethod: 'cash',
     status: 'confirmed',
-    departureTerminal: undefined,
-    returnTerminal: undefined,
+    departureTerminal: row.departureTerminal,
+    returnTerminal: row.returnTerminal,
     isVIP: row.isVIP,
     vipDiscount: vipDiscountDefault,
   };

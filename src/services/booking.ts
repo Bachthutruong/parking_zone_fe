@@ -27,8 +27,15 @@ export interface CreateBookingParams {
   phone: string;
   email: string;
   licensePlate: string;
+  vehicleCount?: number;
   passengerCount: number;
   luggageCount: number;
+  departurePassengerCount?: number;
+  departureLuggageCount?: number;
+  returnPassengerCount?: number;
+  returnLuggageCount?: number;
+  departureTerminal?: string;
+  returnTerminal?: string;
   addonServices: string[];
   discountCode?: string;
   estimatedArrivalTime?: string;
@@ -44,6 +51,7 @@ export interface CalculatePriceParams {
   discountCode?: string;
   isVIP?: boolean;
   userEmail?: string;
+  vehicleCount?: number;
 }
 
 // Get booking terms
@@ -81,7 +89,7 @@ export const getBookingBySearch = async (phone?: string, licensePlate?: string):
   const params: any = {};
   if (phone) params.phone = phone;
   if (licensePlate) params.licensePlate = licensePlate;
-  
+
   const response = await api.get('/bookings/search', { params });
   return response.data.bookings;
 };
@@ -96,4 +104,4 @@ export const getBookingDetails = async (id: string): Promise<Booking> => {
 export const updateBookingStatus = async (id: string, status: string, notes?: string) => {
   const response = await api.put(`/bookings/${id}/status`, { status, notes });
   return response.data;
-}; 
+};

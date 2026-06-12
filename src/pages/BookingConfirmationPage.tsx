@@ -4,14 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { 
-  CheckCircle, 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Car, 
-  Phone, 
-  Mail, 
+import {
+  CheckCircle,
+  Calendar,
+  Clock,
+  MapPin,
+  Car,
+  Phone,
+  Mail,
   FileText,
   // Download,
   // Share2,
@@ -27,6 +27,13 @@ import {
 // import { toast } from 'react-hot-toast';
 import { getSystemSettings } from '@/services/systemSettings';
 import { formatDate, formatDateWithWeekday } from '@/lib/dateUtils';
+import {
+  getDepartureLuggageCount,
+  getDeparturePassengerCount,
+  getReturnLuggageCount,
+  getReturnPassengerCount,
+  getTerminalLabel,
+} from '@/lib/bookingDisplay';
 import type { SystemSettings } from '@/types';
 
 interface BookingConfirmationData {
@@ -88,10 +95,10 @@ const BookingConfirmationPage: React.FC = () => {
   const navigate = useNavigate();
   const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
   const [loading, setLoading] = useState(true);
-  
+
   // Get booking data from location state
   const bookingData: BookingConfirmationData | null = location.state?.bookingData;
-  
+
   // Debug logs
   console.log('🔍 BOOKING CONFIRMATION DEBUG:');
   console.log('   - bookingData:', bookingData);
@@ -162,7 +169,7 @@ const BookingConfirmationPage: React.FC = () => {
     if (parkingType.icon) {
       return <span className="text-lg">{parkingType.icon}</span>;
     }
-    
+
     // Fallback to type-based icons
     switch (parkingType.type || parkingType) {
       case 'indoor':
@@ -186,7 +193,7 @@ const BookingConfirmationPage: React.FC = () => {
       'checked-out': { label: '已離開停車場', variant: 'outline' as const, color: 'bg-gray-100 text-gray-800' },
       cancelled: { label: '已取消', variant: 'destructive' as const, color: 'bg-red-100 text-red-800' }
     };
-    
+
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
     return <Badge variant={config.variant} className={config.color}>{config.label}</Badge>;
   };
@@ -374,17 +381,16 @@ const BookingConfirmationPage: React.FC = () => {
                            <div className="flex justify-between">
                              <span className="text-gray-600">航廈:</span>
                              <span className="font-semibold">
-                               {bookingData.departureTerminal === 'terminal1' ? '第一航廈' : 
-                                bookingData.departureTerminal === 'terminal2' ? '第二航廈' : '未選擇'}
+                               {getTerminalLabel(bookingData.departureTerminal)}
                              </span>
                            </div>
                            <div className="flex justify-between">
                              <span className="text-gray-600">接駁人數:</span>
-                             <span className="font-semibold">{bookingData.departurePassengerCount || bookingData.passengerCount || 0} 人</span>
+                             <span className="font-semibold">{getDeparturePassengerCount(bookingData)} 人</span>
                            </div>
                            <div className="flex justify-between">
                              <span className="text-gray-600">行李數量:</span>
-                             <span className="font-semibold">{bookingData.departureLuggageCount || bookingData.luggageCount || 0} 件</span>
+                             <span className="font-semibold">{getDepartureLuggageCount(bookingData)} 件</span>
                            </div>
                         </div>
                       </div>
@@ -396,17 +402,16 @@ const BookingConfirmationPage: React.FC = () => {
                            <div className="flex justify-between">
                              <span className="text-gray-600">航廈:</span>
                              <span className="font-semibold">
-                               {bookingData.returnTerminal === 'terminal1' ? '第一航廈' : 
-                                bookingData.returnTerminal === 'terminal2' ? '第二航廈' : '未選擇'}
+                               {getTerminalLabel(bookingData.returnTerminal)}
                              </span>
                            </div>
                            <div className="flex justify-between">
                              <span className="text-gray-600">接駁人數:</span>
-                             <span className="font-semibold">{bookingData.returnPassengerCount || 0} 人</span>
+                             <span className="font-semibold">{getReturnPassengerCount(bookingData)} 人</span>
                            </div>
                            <div className="flex justify-between">
                              <span className="text-gray-600">行李數量:</span>
-                             <span className="font-semibold">{bookingData.returnLuggageCount || 0} 件</span>
+                             <span className="font-semibold">{getReturnLuggageCount(bookingData)} 件</span>
                            </div>
                         </div>
                       </div>
@@ -426,7 +431,7 @@ const BookingConfirmationPage: React.FC = () => {
               </CardHeader>
               <CardContent className="p-4 sm:p-6">
                 <div className="space-y-3">
-                  
+
                   {/* Daily Prices Breakdown */}
                   {(bookingData.dailyPrices && bookingData.dailyPrices.length > 0 || true) && (
                     <div className="bg-blue-50 p-2 sm:p-3 rounded-lg">
@@ -437,10 +442,10 @@ const BookingConfirmationPage: React.FC = () => {
                           : buildFallbackDailyPrices()
                         ).map((day: any, index: number) => {
                           // Calculate daily discount if auto discount applies
-                          const dailyDiscount = bookingData?.autoDiscountInfo && bookingData?.autoDiscountAmount && bookingData?.autoDiscountAmount > 0 
+                          const dailyDiscount = bookingData?.autoDiscountInfo && bookingData?.autoDiscountAmount && bookingData?.autoDiscountAmount > 0
                             ? bookingData.autoDiscountAmount / (bookingData.dailyPrices?.length || bookingData.durationDays || 1)
                             : 0;
-                          
+
                           return (
                             <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 text-xs sm:text-sm bg-white p-2 rounded">
                               <div className="flex flex-wrap items-center gap-1 sm:gap-2">
@@ -472,7 +477,7 @@ const BookingConfirmationPage: React.FC = () => {
                                   </span>
                                 )}
                                 <span className={`font-semibold ${
-                                  day.isSpecialPrice ? 'text-orange-600' : 
+                                  day.isSpecialPrice ? 'text-orange-600' :
                                   dailyDiscount > 0 ? 'text-purple-600' : 'text-blue-600'
                                 }`}>
                                   {formatCurrency(day.price - dailyDiscount)}
@@ -490,7 +495,7 @@ const BookingConfirmationPage: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  
+
                   {bookingData.addonServices.length > 0 && (
                     <>
                       <Separator />
@@ -505,7 +510,7 @@ const BookingConfirmationPage: React.FC = () => {
                       </div>
                     </>
                   )}
-                  
+
                   {/* Auto Discount */}
                   {bookingData.autoDiscountInfo && bookingData.autoDiscountAmount && bookingData.autoDiscountAmount > 0 && (
                     <>
@@ -559,7 +564,7 @@ const BookingConfirmationPage: React.FC = () => {
                       </div>
                     </>
                   )}
-                  
+
                   <Separator />
                   <div className="bg-gradient-to-r from-emerald-100 to-teal-100 p-3 sm:p-4 rounded-lg border-2 border-emerald-300">
                     <div className="space-y-2">
@@ -567,20 +572,20 @@ const BookingConfirmationPage: React.FC = () => {
                         <span className="font-semibold">總費用:</span>
                         <span className="font-semibold">{formatCurrency(bookingData.totalAmount)}</span>
                       </div>
-                      
+
                       {(bookingData.discountAmount > 0 || (bookingData.vipDiscount && bookingData.vipDiscount > 0) || (bookingData.autoDiscountAmount && bookingData.autoDiscountAmount > 0)) && (
                         <div className="flex justify-between items-center text-sm sm:text-base">
                           <span className="font-semibold text-green-700">總折扣:</span>
                           <span className="font-bold text-green-700 text-base sm:text-lg">
                             -{formatCurrency(
-                              (bookingData.discountAmount || 0) + 
-                              (bookingData.vipDiscount || 0) + 
+                              (bookingData.discountAmount || 0) +
+                              (bookingData.vipDiscount || 0) +
                               (bookingData.autoDiscountAmount || 0)
                             )}
                           </span>
                         </div>
                       )}
-                      
+
                       <div className="border-t pt-2">
                         <div className="flex justify-between items-center">
                           <span className="font-bold text-base sm:text-lg">總付款:</span>
@@ -607,32 +612,32 @@ const BookingConfirmationPage: React.FC = () => {
                 <CardTitle className="text-lg">快速操作</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button 
-                  onClick={handleDownloadReceipt} 
-                  variant="outline" 
+                <Button
+                  onClick={handleDownloadReceipt}
+                  variant="outline"
                   className="w-full justify-start"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   下載收據
                 </Button>
-                <Button 
-                  onClick={handleShare} 
-                  variant="outline" 
+                <Button
+                  onClick={handleShare}
+                  variant="outline"
                   className="w-full justify-start"
                 >
                   <Share2 className="h-4 w-4 mr-2" />
                   分享
                 </Button>
-                <Button 
-                  onClick={handleNewBooking} 
+                <Button
+                  onClick={handleNewBooking}
                   className="w-full justify-start bg-[#39653f] hover:bg-[#2d4f33]"
                 >
                   <Car className="h-4 w-4 mr-2" />
                   預約新車位
                 </Button>
-                <Button 
-                  onClick={handleBackToHome} 
-                  variant="outline" 
+                <Button
+                  onClick={handleBackToHome}
+                  variant="outline"
                   className="w-full justify-start"
                 >
                   <Home className="h-4 w-4 mr-2" />
@@ -651,11 +656,11 @@ const BookingConfirmationPage: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-xs sm:text-sm p-4 sm:p-6">
-                  <div 
+                  <div
                     className="text-gray-700 leading-relaxed"
                     dangerouslySetInnerHTML={{ __html: systemSettings.contactContent.content }}
                   />
-                  
+
                   {systemSettings.contactContent.imageUrl && (
                     <div className="mt-3">
                       <img
@@ -665,7 +670,7 @@ const BookingConfirmationPage: React.FC = () => {
                       />
                     </div>
                   )}
-                  
+
                   {systemSettings.contactContent.showContactInfo && (
                     <div className="space-y-2 pt-3 border-t">
                       <div className="flex items-center space-x-2">
@@ -683,9 +688,9 @@ const BookingConfirmationPage: React.FC = () => {
                       {systemSettings.contactInfo?.website && (
                         <div className="flex items-center space-x-2">
                           <FileText className="h-4 w-4 text-gray-500" />
-                          <a 
-                            href={systemSettings.contactInfo.website} 
-                            target="_blank" 
+                          <a
+                            href={systemSettings.contactInfo.website}
+                            target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:underline"
                           >
@@ -706,4 +711,4 @@ const BookingConfirmationPage: React.FC = () => {
   );
 };
 
-export default BookingConfirmationPage; 
+export default BookingConfirmationPage;

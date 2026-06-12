@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { 
+import {
   // LayoutDashboard, // ẩn tạm, sau xử lý xong sẽ bật lại
   Calendar,
   Users,
@@ -21,18 +21,35 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
-import { getTodayAvailability, type TodayParkingAvailability } from '@/services/parking';
+import { getParkingSlotSnapshot } from '@/services/parking';
+
+type SidebarParkingAvailability = {
+  id: string;
+  name: string;
+  totalSpaces: number;
+  availableSpaces: number;
+};
 
 const AdminLayout: React.FC = () => {
   const { logout, user } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
-  const [todayParking, setTodayParking] = React.useState<TodayParkingAvailability[]>([]);
+  const [todayParking, setTodayParking] = React.useState<SidebarParkingAvailability[]>([]);
 
   React.useEffect(() => {
     const fetchAvailability = () => {
-      getTodayAvailability()
-        .then((res) => setTodayParking(res.parking || []))
+      getParkingSlotSnapshot()
+        .then((res) => {
+          setTodayParking((res.lots || []).map((lot) => {
+            const occupied = lot.occupiedSlotCount ?? lot.slots.filter((slot) => slot.booking).length;
+            return {
+              id: lot.parkingType._id,
+              name: lot.parkingType.name,
+              totalSpaces: lot.parkingType.totalSpaces,
+              availableSpaces: lot.freeSlotCount ?? Math.max(0, lot.parkingType.totalSpaces - occupied),
+            };
+          }));
+        })
         .catch(() => setTodayParking([]));
     };
 
@@ -72,7 +89,7 @@ const AdminLayout: React.FC = () => {
       { path: '/admin/settings', icon: Settings, label: '系統設定', exact: false, roles: ['admin'] },
     ];
 
-    return [...baseItems, ...adminOnlyItems].filter(item => 
+    return [...baseItems, ...adminOnlyItems].filter(item =>
       item.roles.includes(user?.role || 'user')
     );
   };
@@ -89,7 +106,7 @@ const AdminLayout: React.FC = () => {
     <div className="min-h-screen bg-gray-50 flex">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
@@ -186,7 +203,7 @@ const AdminLayout: React.FC = () => {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          
+
           <div className="flex items-center space-x-2 sm:space-x-4">
             <div className="text-xs sm:text-sm text-gray-600">
               歡迎，{user?.role === 'admin' ? '管理員' : '員工'}
@@ -203,4 +220,4 @@ const AdminLayout: React.FC = () => {
   );
 };
 
-export default AdminLayout; 
+export default AdminLayout;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { getCheckinFreeSlots } from '@/services/parking';
 import { Loader2, ParkingCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -48,6 +48,16 @@ const ParkingSlotPicker: React.FC<Props> = ({
   }, [load]);
 
   const maxPick = Math.max(1, vehicleCount || 1);
+  const selectedSlots = useMemo(
+    () => Array.from(new Set(value.filter((n) => Number.isInteger(n) && n > 0))).sort((a, b) => a - b),
+    [value]
+  );
+  const displaySlots = useMemo(
+    () => Array.from(new Set([...freeSlots, ...selectedSlots]))
+      .filter((n) => n >= 1 && (total === 0 || n <= total))
+      .sort((a, b) => a - b),
+    [freeSlots, selectedSlots, total]
+  );
 
   const toggle = (n: number) => {
     const have = new Set(value);
@@ -82,10 +92,10 @@ const ParkingSlotPicker: React.FC<Props> = ({
     );
   }
 
-  if (freeSlots.length < maxPick) {
+  if (displaySlots.length < maxPick) {
     return (
       <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-        可選空位不足（需 {maxPick} 格，空位 {freeSlots.length}）。是否已有在場車輛佔用？
+        可選空位不足（需 {maxPick} 格，空位 {displaySlots.length}）。是否已有在場車輛佔用？
       </p>
     );
   }
@@ -96,7 +106,7 @@ const ParkingSlotPicker: React.FC<Props> = ({
         已選 {value.length} / {maxPick} 格 · 全場 {total} 格 · 可點選編號
       </p>
       <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-1 border rounded-md bg-muted/30">
-        {freeSlots.map((n) => {
+        {displaySlots.map((n) => {
           const on = value.includes(n);
           return (
             <button

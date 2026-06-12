@@ -67,6 +67,9 @@ export type SlotSnapshotLot = {
     vehicleCount?: number;
     actualCheckInTime?: string;
   } | null }[];
+  occupiedSlotCount?: number;
+  freeSlotCount?: number;
+  unassignedVehicleCount?: number;
   unassignedCheckedIn: Array<{
     _id: string;
     licensePlate: string;
@@ -74,6 +77,8 @@ export type SlotSnapshotLot = {
     phone: string;
     checkInTime?: string;
     checkOutTime?: string;
+    vehicleCount?: number;
+    missingSlotCount?: number;
   }>;
 };
 

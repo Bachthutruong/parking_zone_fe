@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { 
+import {
   Calendar,
   Car,
   Clock,
@@ -40,6 +40,8 @@ import { getTodayBookings, updateBooking, updateBookingStatus, updateBulkBooking
 import ParkingSlotPicker from '@/components/admin/ParkingSlotPicker';
 import { calculatePrice } from '@/services/booking';
 import { formatDateTime, formatDateWithWeekday } from '@/lib/dateUtils';
+import { getDeparturePassengerCount, getTerminalLabel, normalizeTerminal } from '@/lib/bookingDisplay';
+import { clampPassengerCount, getPassengerLimit, PASSENGERS_PER_VEHICLE } from '@/lib/bookingLimits';
 import DateInput from '@/components/ui/date-input';
 import {
   Tooltip,
@@ -152,6 +154,7 @@ const AdminTodayOverview: React.FC = () => {
     returnPassengerCount: 1,
     returnLuggageCount: 0,
   });
+  const editPassengerLimit = getPassengerLimit(editForm.vehicleCount);
   const [saving, setSaving] = useState(false);
   const [parkingTypes, setParkingTypes] = useState<any[]>([]);
   const [newPriceLoading, setNewPriceLoading] = useState(false);
@@ -566,6 +569,7 @@ const AdminTodayOverview: React.FC = () => {
     }
     try {
       setSaving(true);
+      const statusChanged = editForm.status !== editingBooking.status;
       const payload: any = {
         driverName: editForm.driverName,
         phone: editForm.phone,
@@ -574,7 +578,6 @@ const AdminTodayOverview: React.FC = () => {
         parkingType: editForm.parkingTypeId || undefined,
         checkInTime: editForm.checkInTime,
         checkOutTime: editForm.checkOutTime,
-        status: editForm.status as 'pending' | 'confirmed' | 'checked-in' | 'checked-out' | 'cancelled',
         notes: editForm.notes || undefined,
         vehicleCount: editForm.vehicleCount || 1,
         departureTerminal: editForm.departureTerminal || undefined,
@@ -617,6 +620,14 @@ const AdminTodayOverview: React.FC = () => {
       }
 
       await updateBooking(editingBooking._id, payload as Parameters<typeof updateBooking>[1]);
+      if (statusChanged) {
+        await updateBookingStatus(
+          editingBooking._id,
+          editForm.status,
+          undefined,
+          editForm.status === 'checked-in' ? editForm.parkingSlotNumbers : undefined
+        );
+      }
       toast.success('已更新預約資訊');
       closeEditDialog();
       loadTodayData();
@@ -966,12 +977,13 @@ const AdminTodayOverview: React.FC = () => {
                     {getStatusBadge(booking.status)}
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm font-medium text-slate-700">
-                      {booking.departureTerminal ? (
-                        `${booking.departureTerminal === 'terminal1' ? '第一航廈' : '第二航廈'}(${booking.departurePassengerCount ?? booking.passengerCount ?? 0}人)`
-                      ) : (
-                        <span className="text-gray-400">未選擇</span>
-                      )}
+                    <div className="text-sm font-medium text-slate-700 whitespace-nowrap">
+                      <span className={normalizeTerminal(booking.departureTerminal) ? '' : 'text-gray-400'}>
+                        {getTerminalLabel(booking.departureTerminal)}
+                      </span>
+                      <span className="ml-1 text-gray-700">
+                        ({getDeparturePassengerCount(booking)}人)
+                      </span>
                     </div>
                   </TableCell>
                   <TableCell className="no-print">
@@ -1257,10 +1269,13 @@ const AdminTodayOverview: React.FC = () => {
                 min={1}
                 value={editForm.vehicleCount}
                 onChange={(e) => {
+                  const vehicleCount = Math.max(1, Number(e.target.value) || 1);
                   setEditForm((f) => ({
                     ...f,
-                    vehicleCount: Math.max(1, Number(e.target.value) || 1),
+                    vehicleCount,
                     parkingSlotNumbers: [],
+                    departurePassengerCount: clampPassengerCount(f.departurePassengerCount, vehicleCount),
+                    returnPassengerCount: clampPassengerCount(f.returnPassengerCount, vehicleCount),
                   }));
                   setShouldRecalcPrice(true);
                 }}
@@ -1322,14 +1337,17 @@ const AdminTodayOverview: React.FC = () => {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="today-edit-departurePassengerCount">接駁人數 (上限5人)</Label>
+                    <Label htmlFor="today-edit-departurePassengerCount">接駁人數 (上限{editPassengerLimit}人)</Label>
                     <Input
                       id="today-edit-departurePassengerCount"
                       type="number"
                       min={0}
-                      max={5}
+                      max={editPassengerLimit}
                       value={editForm.departurePassengerCount}
-                      onChange={(e) => setEditForm((f) => ({ ...f, departurePassengerCount: parseInt(e.target.value) || 0 }))}
+                      onChange={(e) => setEditForm((f) => ({
+                        ...f,
+                        departurePassengerCount: clampPassengerCount(e.target.value, f.vehicleCount)
+                      }))}
                     />
                   </div>
                   <div className="space-y-1">
@@ -1360,14 +1378,17 @@ const AdminTodayOverview: React.FC = () => {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="today-edit-returnPassengerCount">接駁人數</Label>
+                    <Label htmlFor="today-edit-returnPassengerCount">接駁人數 (上限{editPassengerLimit}人)</Label>
                     <Input
                       id="today-edit-returnPassengerCount"
                       type="number"
                       min={0}
-                      max={5}
+                      max={editPassengerLimit}
                       value={editForm.returnPassengerCount}
-                      onChange={(e) => setEditForm((f) => ({ ...f, returnPassengerCount: parseInt(e.target.value) || 0 }))}
+                      onChange={(e) => setEditForm((f) => ({
+                        ...f,
+                        returnPassengerCount: clampPassengerCount(e.target.value, f.vehicleCount)
+                      }))}
                     />
                   </div>
                   <div className="space-y-1">
@@ -1383,7 +1404,7 @@ const AdminTodayOverview: React.FC = () => {
                 </div>
               </div>
               <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
-                💡 上限5人，多一個人現場收100元/人。回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
+                💡 每車上限{PASSENGERS_PER_VEHICLE}人，目前{editForm.vehicleCount}輛共{editPassengerLimit}人。回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
               </div>
             </div>
             <div className="space-y-2">
@@ -1461,4 +1482,4 @@ const AdminTodayOverview: React.FC = () => {
   );
 };
 
-export default AdminTodayOverview; 
+export default AdminTodayOverview;

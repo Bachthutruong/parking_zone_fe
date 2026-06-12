@@ -9,8 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 // import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { 
-  MapPin, 
+import {
+  MapPin,
   CheckCircle,
   AlertCircle,
   ArrowLeft,
@@ -33,6 +33,7 @@ import { getSystemSettings, getAllParkingTypes, getAllAddonServices as getAddonS
 import { checkParkingTypeMaintenance } from '@/services/maintenance';
 import { checkVIPStatus } from '@/services/auth';
 import { formatDate, formatDateWithWeekday, formatDateTime, startOfDayISO, endOfDayISO, getDateStrTaiwan, getNextDayStrTaiwan, startOfDayISOFromDateStr, endOfDayISOFromDateStr } from '@/lib/dateUtils';
+import { clampPassengerCount, getPassengerLimit, PASSENGERS_PER_VEHICLE } from '@/lib/bookingLimits';
 import type { SystemSettings, ParkingType, AddonService, BookingFormData } from '@/types';
 import ImageGallery from '@/components/ImageGallery';
 
@@ -72,6 +73,7 @@ const BookingPage: React.FC = () => {
     phone: '',
     email: '',
     licensePlate: '',
+    vehicleCount: 1,
     passengerCount: 0,
     luggageCount: 0,
     departurePassengerCount: 0,
@@ -79,6 +81,7 @@ const BookingPage: React.FC = () => {
     returnPassengerCount: 0,
     returnLuggageCount: 0
   });
+  const passengerLimit = getPassengerLimit(formData.vehicleCount);
 
   // State for individual terms checkboxes
   const [acceptedTerms, setAcceptedTerms] = useState<Record<string, boolean>>({});
@@ -89,11 +92,11 @@ const BookingPage: React.FC = () => {
     if (!systemSettings) {
       return false;
     }
-    
+
     const activeTerms = systemSettings?.termsCheckboxes?.filter(term => term.isActive) || [];
     const requiredTerms = activeTerms.filter(term => term.isRequired);
     const allRequiredTermsAccepted = requiredTerms.every(term => acceptedTerms[term.id]);
-    
+
     return allRequiredTermsAccepted;
   }, [systemSettings, acceptedTerms]);
 
@@ -103,14 +106,14 @@ const BookingPage: React.FC = () => {
     if (!systemSettings) {
       return true;
     }
-    
+
     const activeTerms = systemSettings?.termsCheckboxes?.filter(term => term.isActive) || [];
-    
+
     // If no terms checkboxes configured, button is enabled
     if (activeTerms.length === 0) {
       return loading;
     }
-    
+
     // If terms checkboxes are configured, check all required terms
     return loading || !isAllTermsAccepted;
   }, [loading, systemSettings, systemSettings?.termsCheckboxes, isAllTermsAccepted]);
@@ -146,10 +149,10 @@ const BookingPage: React.FC = () => {
       // Set booking terms and rules from system settings
       setBookingTerms(settings?.bookingTerms || '');
       setBookingRules(settings?.bookingRules || '');
-      
+
       // Set minimum booking days from system settings
       setMinBookingDays(settings?.minBookingDays || 3);
-      
+
       // Load VIP status from localStorage
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       setIsVIP(user.isVIP || false);
@@ -180,7 +183,7 @@ const BookingPage: React.FC = () => {
       setShowConflictMessage(false);
       setConflictDetails(null);
     }
-  }, [formData.parkingTypeId, formData.checkInTime, formData.checkOutTime]);
+  }, [formData.parkingTypeId, formData.checkInTime, formData.checkOutTime, formData.vehicleCount]);
 
   // Check VIP status when phone changes
   useEffect(() => {
@@ -204,15 +207,16 @@ const BookingPage: React.FC = () => {
         parkingTypeId: formData.parkingTypeId,
         // For availability, only the date should matter, not the specific time
         checkInTime: startOfDayISO(formData.checkInTime),
-        checkOutTime: endOfDayISO(formData.checkOutTime)
+        checkOutTime: endOfDayISO(formData.checkOutTime),
+        vehicleCount: formData.vehicleCount
       });
-      
+
       const data = response.data;
       if (data.success) {
         setAvailableSlots(data.availableSlots);
         setConflictingDays([]);
         setAvailabilityErrorDetail(null);
-        
+
         // Now calculate pricing with auto discount
         await calculatePricing();
       } else {
@@ -252,7 +256,8 @@ const BookingPage: React.FC = () => {
         discountCode: formData.discountCode,
         isVIP: isVIP,
         userEmail: formData.email,
-        phone: formData.phone
+        phone: formData.phone,
+        vehicleCount: formData.vehicleCount
       });
 
       if (response.data.success) {
@@ -269,7 +274,7 @@ const BookingPage: React.FC = () => {
           // Calculate total discount including auto discount
           totalDiscount: (response.data.pricing.autoDiscountAmount || 0) + (response.data.pricing.discountAmount || 0) + (response.data.pricing.vipDiscount || 0)
         });
-          
+
       }
     } catch (error: any) {
       console.error('❌ calculatePricing: Error calculating pricing:', error);
@@ -292,9 +297,9 @@ const BookingPage: React.FC = () => {
         startOfDayISO(formData.checkInTime),
         endOfDayISO(formData.checkOutTime)
       );
-      
+
       setMaintenanceDays(result.maintenanceDays);
-      
+
       if (result.hasMaintenance) {
         toast.error('此停車場在選定時間內正在維護');
       }
@@ -320,9 +325,10 @@ const BookingPage: React.FC = () => {
           const response = await api.post('/bookings/check-availability', {
             parkingTypeId: formData.parkingTypeId,
             checkInTime: startOfDayISOFromDateStr(dayStr),
-            checkOutTime: endOfDayISOFromDateStr(dayStr)
+            checkOutTime: endOfDayISOFromDateStr(dayStr),
+            vehicleCount: formData.vehicleCount
           });
-          
+
           const data = response.data;
           if (!data.success) {
             conflictingDates.push({
@@ -342,7 +348,7 @@ const BookingPage: React.FC = () => {
             formattedDate: formatDateWithWeekday(dayStr)
           });
         }
-        
+
         dayStr = getNextDayStrTaiwan(dayStr);
       }
 
@@ -379,9 +385,10 @@ const BookingPage: React.FC = () => {
         const response = await api.post('/bookings/check-availability', {
           parkingTypeId: formData.parkingTypeId,
           checkInTime: startOfDayISOFromDateStr(dayStr),
-          checkOutTime: endOfDayISOFromDateStr(dayStr)
+          checkOutTime: endOfDayISOFromDateStr(dayStr),
+          vehicleCount: formData.vehicleCount
         });
-        
+
         const data = response.data;
         if (!data.success) {
           conflicts.push(dayStr);
@@ -390,7 +397,7 @@ const BookingPage: React.FC = () => {
         console.error('Error checking day availability:', error);
         conflicts.push(dayStr);
       }
-      
+
       dayStr = getNextDayStrTaiwan(dayStr);
     }
 
@@ -399,7 +406,7 @@ const BookingPage: React.FC = () => {
 
   const checkVIPStatusByPhone = async (phone: string) => {
     if (!phone) return;
-    
+
     try {
       // First try to get user info from localStorage
       const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -409,10 +416,10 @@ const BookingPage: React.FC = () => {
         toast.success(`🎉 歡迎VIP會員！您享有${storedUser.vipDiscount || 0}%折扣！`);
         return;
       }
-      
+
       // Check VIP status from backend
       const response = await checkVIPStatus(phone);
-      
+
       if (response.success && response.user && response.user.isVIP) {
         setCurrentUser(response.user);
         setIsVIP(true);
@@ -443,13 +450,13 @@ const BookingPage: React.FC = () => {
   //   setVipCodeLoading(true);
   //   try {
   //     const response = await checkVIPByCode(vipCode.trim());
-      
+
   //     if (response.success && response.user && response.user.isVIP) {
   //       setCurrentUser(response.user);
   //       setIsVIP(true);
   //       setShowVIPCodeInput(false);
   //       setVipCode('');
-        
+
   //       // Auto-fill form with VIP user info
   //       setFormData(prev => ({
   //         ...prev,
@@ -458,7 +465,7 @@ const BookingPage: React.FC = () => {
   //         phone: response.user.phone,
   //         licensePlate: response.user.licensePlate || ''
   //       }));
-        
+
   //       toast.success(`🎉 歡迎VIP會員！您享有${response.user.vipDiscount || 0}%折扣！`);
   //       // Recalculate pricing with VIP discount
   //       await calculatePricing();
@@ -515,7 +522,7 @@ const BookingPage: React.FC = () => {
     if (loading) return;
     // Check if all required terms are accepted
     const activeTerms = systemSettings?.termsCheckboxes?.filter(term => term.isActive) || [];
-    
+
     // If terms checkboxes are configured, check all required terms
     if (activeTerms.length > 0 && !isAllTermsAccepted) {
       const requiredTerms = activeTerms.filter(term => term.isRequired);
@@ -523,7 +530,7 @@ const BookingPage: React.FC = () => {
       toast.error(`您必須同意所有必填條款：${missingTerms.map(term => term.title).join('、')}`);
       return;
     }
-    
+
 
     if (!formData.parkingTypeId) {
       toast.error('請選擇停車場類型');
@@ -567,6 +574,7 @@ const BookingPage: React.FC = () => {
         phone: formData.phone,
         email: formData.email,
         licensePlate: formData.licensePlate,
+        vehicleCount: formData.vehicleCount,
         passengerCount: formData.passengerCount,
         luggageCount: formData.luggageCount,
         departurePassengerCount: formData.departurePassengerCount,
@@ -580,7 +588,7 @@ const BookingPage: React.FC = () => {
       };
 
       const result = await createBooking(bookingData);
-      
+
       // Transform booking data for confirmation page
       const confirmationData = {
         bookingId: result.booking._id,
@@ -594,6 +602,7 @@ const BookingPage: React.FC = () => {
         phone: result.booking.phone,
         email: result.booking.email,
         licensePlate: result.booking.licensePlate,
+        vehicleCount: result.booking.vehicleCount || formData.vehicleCount,
         checkInTime: result.booking.checkInTime,
         checkOutTime: result.booking.checkOutTime,
         durationDays: result.booking.durationDays || 1,
@@ -622,14 +631,14 @@ const BookingPage: React.FC = () => {
         // Add daily prices from pricing
         dailyPrices: pricing?.dailyPrices || []
       };
-      
+
       // Navigate to confirmation page with booking details
-      navigate('/booking-confirmation', { 
-        state: { 
+      navigate('/booking-confirmation', {
+        state: {
           bookingData: confirmationData,
           pricing: pricing,
           discountInfo: discountInfo
-        } 
+        }
       });
     } catch (error: any) {
       console.error('Error creating booking:', error);
@@ -650,7 +659,7 @@ const BookingPage: React.FC = () => {
     if (parkingType.icon) {
       return parkingType.icon;
     }
-    
+
     // Fallback to type-based icons
     const iconMap = {
       indoor: '🏢',
@@ -705,7 +714,7 @@ const BookingPage: React.FC = () => {
                 <p className="text-gray-600 mb-4 sm:mb-6 leading-relaxed text-sm sm:text-base">
                   請在預約停車位之前仔細閱讀規定和條款。
                 </p>
-                
+
                 <div className="space-y-4 sm:space-y-6">
                   {/* Booking Terms */}
                   {bookingTerms && (
@@ -719,7 +728,7 @@ const BookingPage: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Booking Rules */}
                   {bookingRules && (
                     <div className="bg-green-50 rounded-lg p-4">
@@ -732,7 +741,7 @@ const BookingPage: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Fallback content if no terms/rules are set */}
                   {!bookingTerms && !bookingRules && (
                     <div className="space-y-4">
@@ -764,7 +773,7 @@ const BookingPage: React.FC = () => {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="border-t pt-6">
                   <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
                     <Checkbox
@@ -799,18 +808,18 @@ const BookingPage: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {(parkingTypes || []).filter(type => type.isActive).map((type) => {
                       const isSelected = formData.parkingTypeId === type._id;
-                      const isUnderMaintenance = maintenanceDays.some(maintenance => 
+                      const isUnderMaintenance = maintenanceDays.some(maintenance =>
                         maintenance.affectedParkingTypes.some((affectedType: any) => affectedType._id === type._id)
                       );
-                      
+
                       return (
-                        <Card 
-                          key={type._id} 
+                        <Card
+                          key={type._id}
                           className={`transition-all duration-300 ${
-                            isUnderMaintenance 
-                              ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-300' 
-                              : isSelected 
-                                ? 'cursor-pointer border-2 border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg hover:shadow-xl hover:scale-105' 
+                            isUnderMaintenance
+                              ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-300'
+                              : isSelected
+                                ? 'cursor-pointer border-2 border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg hover:shadow-xl hover:scale-105'
                                 : 'cursor-pointer border-gray-200 hover:border-blue-300 hover:shadow-xl hover:scale-105'
                           }`}
                           onClick={() => {
@@ -832,7 +841,7 @@ const BookingPage: React.FC = () => {
                                     點擊圖片查看 • 使用箭頭或縮圖切換
                                   </div>
                                 </div>
-                                <ImageGallery 
+                                <ImageGallery
                                   images={type.images}
                                   showFullscreen={true}
                                   className="w-full"
@@ -856,19 +865,19 @@ const BookingPage: React.FC = () => {
                                 </div>
                               </div>
                             </div>
-                            
+
                             <div className="space-y-3">
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-gray-600">容量:</span>
                                 <span className="font-medium text-gray-900">{type.totalSpaces} 位</span>
                               </div>
-                              
+
                               {type.description && (
                                 <p className="text-sm text-gray-600 leading-relaxed">
                                   {safeText(type.description)}
                                 </p>
                               )}
-                              
+
                               <div className="pt-3 border-t">
                                 <div className="text-center">
                                   <p className="text-2xl font-bold text-blue-600">
@@ -900,7 +909,7 @@ const BookingPage: React.FC = () => {
                               value={formData.checkInTime}
                               onChange={(checkInTime) => {
                                 setFormData(prev => ({ ...prev, checkInTime }));
-                                
+
                                 // Auto-adjust minimum checkout date based on calendar days (ignore hours)
                                 if (checkInTime && formData.checkOutTime) {
                                   const checkInDate = new Date(checkInTime);
@@ -914,11 +923,11 @@ const BookingPage: React.FC = () => {
                                     0,
                                     0
                                   );
-                                  
+
                                   const currentCheckOutDate = new Date(formData.checkOutTime);
                                   if (currentCheckOutDate < minCheckOutDate) {
-                                    setFormData(prev => ({ 
-                                      ...prev, 
+                                    setFormData(prev => ({
+                                      ...prev,
                                       checkOutTime: minCheckOutDate.toISOString()
                                     }));
                                   }
@@ -978,6 +987,34 @@ const BookingPage: React.FC = () => {
                       </div>
                     </div>
 
+                    <div className="space-y-2 max-w-xs">
+                      <Label htmlFor="vehicleCount" className="text-sm font-medium text-gray-700">車輛數量 *</Label>
+                      <Input
+                        id="vehicleCount"
+                        type="number"
+                        min="1"
+                        value={formData.vehicleCount}
+                        onChange={(e) => {
+                          const vehicleCount = Math.max(1, Number(e.target.value) || 1);
+                          setFormData((prev) => {
+                            const departurePassengerCount = clampPassengerCount(prev.departurePassengerCount, vehicleCount);
+                            const returnPassengerCount = clampPassengerCount(prev.returnPassengerCount, vehicleCount);
+                            return {
+                              ...prev,
+                              vehicleCount,
+                              departurePassengerCount,
+                              returnPassengerCount,
+                              passengerCount: Math.max(departurePassengerCount, returnPassengerCount),
+                            };
+                          });
+                        }}
+                        placeholder="1"
+                      />
+                      <p className="text-xs text-gray-500">
+                        多輛車會一起檢查空位並計算價格；接駁人數上限會按車輛數量增加。
+                      </p>
+                    </div>
+
                     {/* Passenger and Luggage Selection */}
                     <div className="space-y-4 sm:space-y-6">
                       <div className="space-y-4 sm:space-y-6 bg-blue-50 p-3 sm:p-4 rounded-lg border border-blue-200">
@@ -985,7 +1022,7 @@ const BookingPage: React.FC = () => {
                           <span className="text-blue-800 font-medium text-sm sm:text-base">✈️ 接駁和行李資訊</span>
                           <span className="text-xs text-blue-600">(接駁服務需要)</span>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                           {/* Departure Section */}
                           <div className="space-y-4">
@@ -1005,24 +1042,29 @@ const BookingPage: React.FC = () => {
                                 <option value="terminal2">第二航廈</option>
                               </select>
                             </div>
-                            
+
                             <div className="space-y-2">
-                              <Label htmlFor="departurePassengerCount" className="text-sm font-medium text-gray-700">接駁人數 (上限5人)</Label>
+                              <Label htmlFor="departurePassengerCount" className="text-sm font-medium text-gray-700">接駁人數 (上限{passengerLimit}人)</Label>
                               <Input
                                 id="departurePassengerCount"
                                 type="number"
                                 min="0"
-                                max="5"
+                                max={passengerLimit}
                                 value={formData.departurePassengerCount || 0}
-                                onChange={(e) => setFormData(prev => ({ 
-                                  ...prev, 
-                                  departurePassengerCount: parseInt(e.target.value) || 0,
-                                  // Update legacy field for compatibility if needed, or derived
-                                  passengerCount: Math.max(parseInt(e.target.value) || 0, prev.returnPassengerCount || 0)
-                                }))}
+                                onChange={(e) => setFormData(prev => {
+                                  const departurePassengerCount = clampPassengerCount(e.target.value, prev.vehicleCount);
+                                  return {
+                                    ...prev,
+                                    departurePassengerCount,
+                                    // Update legacy field for compatibility if needed, or derived
+                                    passengerCount: Math.max(departurePassengerCount, prev.returnPassengerCount || 0)
+                                  };
+                                })}
                                 placeholder="0"
                               />
-                              <p className="text-xs text-gray-500">上限5人，多一個人現場收100元/人</p>
+                              <p className="text-xs text-gray-500">
+                                每車上限{PASSENGERS_PER_VEHICLE}人，目前共{passengerLimit}人；多一個人現場收100元/人
+                              </p>
                             </div>
 
                             <div className="space-y-2">
@@ -1032,8 +1074,8 @@ const BookingPage: React.FC = () => {
                                 type="number"
                                 min="0"
                                 value={formData.departureLuggageCount || 0}
-                                onChange={(e) => setFormData(prev => ({ 
-                                  ...prev, 
+                                onChange={(e) => setFormData(prev => ({
+                                  ...prev,
                                   departureLuggageCount: parseInt(e.target.value) || 0,
                                   luggageCount: Math.max(parseInt(e.target.value) || 0, prev.returnLuggageCount || 0)
                                 }))}
@@ -1042,7 +1084,7 @@ const BookingPage: React.FC = () => {
                               <p className="text-xs text-gray-500">1個人免費1個行李，第2個以上現場收100元/行李</p>
                             </div>
                           </div>
-                          
+
                           {/* Return Section */}
                           <div className="space-y-4">
                             <h4 className="font-semibold text-gray-700 border-b pb-2">回程 (接回停車場)</h4>
@@ -1063,18 +1105,21 @@ const BookingPage: React.FC = () => {
                             </div>
 
                             <div className="space-y-2">
-                              <Label htmlFor="returnPassengerCount" className="text-sm font-medium text-gray-700">接駁人數</Label>
+                              <Label htmlFor="returnPassengerCount" className="text-sm font-medium text-gray-700">接駁人數 (上限{passengerLimit}人)</Label>
                               <Input
                                 id="returnPassengerCount"
                                 type="number"
                                 min="0"
-                                max="5"
+                                max={passengerLimit}
                                 value={formData.returnPassengerCount || 0}
-                                onChange={(e) => setFormData(prev => ({ 
-                                  ...prev, 
-                                  returnPassengerCount: parseInt(e.target.value) || 0,
-                                  passengerCount: Math.max(prev.departurePassengerCount || 0, parseInt(e.target.value) || 0)
-                                }))}
+                                onChange={(e) => setFormData(prev => {
+                                  const returnPassengerCount = clampPassengerCount(e.target.value, prev.vehicleCount);
+                                  return {
+                                    ...prev,
+                                    returnPassengerCount,
+                                    passengerCount: Math.max(prev.departurePassengerCount || 0, returnPassengerCount)
+                                  };
+                                })}
                                 placeholder="0"
                               />
                               <p className="text-xs text-gray-500">若回程多出人數，每人加收 $100</p>
@@ -1087,8 +1132,8 @@ const BookingPage: React.FC = () => {
                                 type="number"
                                 min="0"
                                 value={formData.returnLuggageCount || 0}
-                                onChange={(e) => setFormData(prev => ({ 
-                                  ...prev, 
+                                onChange={(e) => setFormData(prev => ({
+                                  ...prev,
                                   returnLuggageCount: parseInt(e.target.value) || 0,
                                   luggageCount: Math.max(prev.departureLuggageCount || 0, parseInt(e.target.value) || 0)
                                 }))}
@@ -1098,9 +1143,9 @@ const BookingPage: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="text-lg text-blue-600 bg-blue-100 p-2 rounded mt-4">
-                          💡 溫馨提醒：請務必填寫正確人數與行李數，以便安排車輛接送。
+                          💡 溫馨提醒：請務必填寫正確人數與行李數，以便安排車輛接送。接駁人數每車上限{PASSENGERS_PER_VEHICLE}人，目前{formData.vehicleCount}輛共{passengerLimit}人。
                         </div>
                       </div>
 
@@ -1168,7 +1213,7 @@ const BookingPage: React.FC = () => {
                           <AlertCircle className="h-5 w-5 text-red-600" />
                           <h3 className="text-lg font-semibold text-red-800">您所選的日期，停車位已經被約完，詳細如下：</h3>
                         </div>
-                        
+
                         <div className="space-y-4">
                           <div>
                             <h4 className="font-medium text-red-700 mb-2">您選的日期：</h4>
@@ -1188,7 +1233,7 @@ const BookingPage: React.FC = () => {
                               ))}
                             </div>
                           </div>
-                          
+
                           <div className="bg-white p-4 rounded-lg border border-red-200">
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-sm font-medium text-red-700">總計：</span>
@@ -1202,7 +1247,7 @@ const BookingPage: React.FC = () => {
                               </div>
                             </div>
                           </div>
-                          
+
                           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                             <h4 className="font-medium text-blue-800 mb-2">建議：</h4>
                             <div className="space-y-1 text-sm text-blue-700">
@@ -1261,11 +1306,11 @@ const BookingPage: React.FC = () => {
                   {(addonServices || []).filter(service => service.isActive).map((service) => {
                     const isSelected = formData.selectedAddonServices.includes(service._id);
                     return (
-                      <Card 
-                        key={service._id} 
+                      <Card
+                        key={service._id}
                         className={`cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 ${
-                          isSelected 
-                            ? 'border-2 border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 shadow-lg' 
+                          isSelected
+                            ? 'border-2 border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 shadow-lg'
                             : 'border-gray-200 hover:border-purple-300'
                         }`}
                         onClick={() => {
@@ -1292,7 +1337,7 @@ const BookingPage: React.FC = () => {
                               </div>
                             </div>
                           </div>
-                          
+
                           <div className="text-center pt-3 border-t">
                             <p className="text-2xl font-bold text-purple-600">
                               {formatCurrency(service.price)}
@@ -1342,10 +1387,10 @@ const BookingPage: React.FC = () => {
                         <div className="space-y-2">
                           {pricing.dailyPrices.map((dayPrice: any, index: number) => {
                             // Calculate daily discount if auto discount applies
-                            const dailyDiscount = pricing?.autoDiscountInfo && pricing?.autoDiscountAmount > 0 
-                              ? pricing.autoDiscountAmount / pricing.dailyPrices.length 
+                            const dailyDiscount = pricing?.autoDiscountInfo && pricing?.autoDiscountAmount > 0
+                              ? pricing.autoDiscountAmount / pricing.dailyPrices.length
                               : 0;
-                            
+
                             return (
                               <div key={index} className="flex justify-between items-center text-sm bg-white p-2 rounded">
                                 <div className="flex items-center space-x-2">
@@ -1392,7 +1437,7 @@ const BookingPage: React.FC = () => {
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Addon Services */}
                     {formData.selectedAddonServices.length > 0 && (
                       <div className="bg-blue-50 p-3 rounded-lg">
@@ -1415,7 +1460,7 @@ const BookingPage: React.FC = () => {
                     )}
 
                     {/* Luggage (removed: no longer charges or displayed) */}
-                  
+
 
                     {/* VIP Discount Preview - Always show if user is VIP */}
                     {isVIP && currentUser && (
@@ -1448,9 +1493,9 @@ const BookingPage: React.FC = () => {
                         <span className="font-semibold text-green-600">-{formatCurrency(discountInfo.discountAmount)}</span>
                       </div>
                     )}
-                    
+
                     <Separator />
-                    
+
                     {/* Total Summary */}
                     <div className="bg-gradient-to-r from-emerald-100 to-teal-100 p-4 rounded-lg border-2 border-emerald-300">
                       <div className="space-y-2">
@@ -1463,7 +1508,7 @@ const BookingPage: React.FC = () => {
                             ))}
                           </span>
                         </div>
-                        
+
                         {/* Auto Discount */}
                         {pricing?.autoDiscountInfo && pricing?.autoDiscountAmount > 0 && (
                           <div className="flex justify-between items-center bg-purple-50 p-2 rounded border border-purple-200">
@@ -1473,7 +1518,7 @@ const BookingPage: React.FC = () => {
                                 {pricing.autoDiscountInfo.name}
                               </span>
                               <div className="text-xs text-purple-600">
-                            {pricing.autoDiscountInfo.discountType === 'percentage' 
+                            {pricing.autoDiscountInfo.discountType === 'percentage'
                               ? `每天節省 ${pricing.autoDiscountInfo.discountValue}%`
                               : `每天節省 ${formatCurrency(pricing.autoDiscountInfo.discountValue)}`
                             }
@@ -1485,7 +1530,7 @@ const BookingPage: React.FC = () => {
                             </div>
                           </div>
                         )}
-                        
+
                         {/* VIP Discount */}
                         {isVIP && currentUser && (
                           <div className="flex justify-between items-center bg-yellow-50 p-2 rounded border border-yellow-200">
@@ -1499,7 +1544,7 @@ const BookingPage: React.FC = () => {
                               <div className="font-bold text-yellow-700">
                                 -{formatCurrency(
                                   (() => {
-                                    const baseTotal = (pricing?.basePrice || pricing?.totalPrice || 0) + 
+                                    const baseTotal = (pricing?.basePrice || pricing?.totalPrice || 0) +
                                       (addonServices
                                         .filter(service => formData.selectedAddonServices.includes(service._id))
                                         .reduce((sum, service) => sum + service.price, 0)
@@ -1513,7 +1558,7 @@ const BookingPage: React.FC = () => {
                             </div>
                           </div>
                         )}
-                        
+
                         {/* Discount Code */}
                         {discountInfo?.discountAmount > 0 && (
                           <div className="flex justify-between items-center bg-green-50 p-2 rounded border border-green-200">
@@ -1529,38 +1574,38 @@ const BookingPage: React.FC = () => {
                             </div>
                           </div>
                         )}
-                        
+
                         <div className="border-t pt-2">
                           <div className="flex justify-between items-center">
                             <span className="font-bold text-lg text-gray-900">總付款:</span>
                             <span className="text-2xl font-bold text-emerald-600">
                               {(() => {
                                 // Calculate base total
-                                const baseTotal = (pricing?.basePrice || pricing?.totalPrice || 0) + 
+                                const baseTotal = (pricing?.basePrice || pricing?.totalPrice || 0) +
                                   (addonServices
                                     .filter(service => formData.selectedAddonServices.includes(service._id))
                                     .reduce((sum, service) => sum + service.price, 0)
                                   );
-                                
+
                                 // Luggage is not charged; total is baseTotal
                                 const totalWithoutLuggage = baseTotal;
-                                
+
                                 if (discountInfo) {
                                   return formatCurrency(discountInfo.finalAmount);
                                 } else {
                                   let finalAmount = totalWithoutLuggage;
-                                  
+
                                   // Apply auto discount
                                   if (pricing?.autoDiscountAmount) {
                                     finalAmount -= pricing.autoDiscountAmount;
                                   }
-                                  
+
                                   // Apply VIP discount
                                   if (isVIP && currentUser) {
                                     const vipDiscount = (totalWithoutLuggage - (pricing?.autoDiscountAmount || 0)) * (currentUser.vipDiscount / 100);
                                     finalAmount -= vipDiscount;
                                   }
-                                  
+
                                   return formatCurrency(Math.round(finalAmount));
                                 }
                               })()}
@@ -1585,7 +1630,7 @@ const BookingPage: React.FC = () => {
                   <span>個人資料</span>
                   {isVIP && (
                     <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0">
-                      👑 VIP Member 
+                      👑 VIP Member
                     </Badge>
                   )}
                 </CardTitle>
@@ -1611,7 +1656,7 @@ const BookingPage: React.FC = () => {
                         {showVIPCodeInput ? '隱藏' : '輸入VIP碼'}
                       </Button>
                     </div>
-                    
+
                     {showVIPCodeInput && (
                       <div className="space-y-3">
                         <div className="flex space-x-2">
@@ -1645,7 +1690,7 @@ const BookingPage: React.FC = () => {
                       <span className="text-green-800 font-medium">🎫 您有折扣碼嗎？</span>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-3">
                     <div className="flex space-x-2">
                       <Input
@@ -1667,7 +1712,7 @@ const BookingPage: React.FC = () => {
                       💡 輸入有效的折扣碼以獲得額外優惠
                     </p>
                   </div>
-                  
+
                 </div> */}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
@@ -1705,7 +1750,7 @@ const BookingPage: React.FC = () => {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-sm font-medium text-gray-700">信箱</Label>
@@ -1727,10 +1772,10 @@ const BookingPage: React.FC = () => {
                     />
                   </div>
                 </div>
-                
-                
+
+
                 {/* <div className="space-y-2">
-                  <Label htmlFor="notes" className="text-sm font-medium text-gray-700">備註</Label>  
+                  <Label htmlFor="notes" className="text-sm font-medium text-gray-700">備註</Label>
                   <Textarea
                     id="notes"
                     placeholder="輸入備註 (如果有的話)"
@@ -1773,7 +1818,7 @@ const BookingPage: React.FC = () => {
                       </div>
                     </div>
                   ))}
-                  
+
                   {(!systemSettings || !systemSettings?.termsCheckboxes || systemSettings.termsCheckboxes.length === 0) && (
                     <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
                       <Checkbox
@@ -1835,8 +1880,8 @@ const BookingPage: React.FC = () => {
               {steps.map((step, index) => (
                 <div key={step.id} className="flex items-center flex-shrink-0">
                   <div className={`flex items-center justify-center w-8 h-8 sm:w-12 sm:h-12 rounded-full border-2 transition-all duration-300 ${
-                    currentStep >= step.id 
-                      ? 'bg-[#39653f] border-[#39653f] text-white shadow-lg' 
+                    currentStep >= step.id
+                      ? 'bg-[#39653f] border-[#39653f] text-white shadow-lg'
                       : 'bg-white border-gray-300 text-gray-500'
                   }`}>
                     {currentStep > step.id ? (
@@ -1917,7 +1962,7 @@ const BookingPage: React.FC = () => {
               <ArrowLeft className="h-4 w-4 mr-2" />
               返回
             </Button>
-            
+
             <div className="flex space-x-3 order-1 sm:order-2">
               {currentStep < steps.length ? (
             <Button
@@ -1969,4 +2014,4 @@ const BookingPage: React.FC = () => {
   );
 };
 
-export default BookingPage; 
+export default BookingPage;
