@@ -1,4 +1,4 @@
-export const PASSENGERS_PER_VEHICLE = 5;
+export const PASSENGERS_PER_VEHICLE = 10;
 
 export function getPassengerLimit(vehicleCount?: number | string | null): number {
   const parsed = Number.parseInt(String(vehicleCount ?? 1), 10);
