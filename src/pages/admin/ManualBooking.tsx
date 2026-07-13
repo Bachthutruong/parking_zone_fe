@@ -35,7 +35,7 @@ import { checkParkingTypeMaintenance } from '@/services/maintenance';
 import { checkVIPStatus } from '@/services/auth';
 import { api } from '@/services';
 import { formatDate, formatDateWithWeekday, getDateStrTaiwan, getNextDayStrTaiwan, startOfDayISO, endOfDayISO, startOfDayISOFromDateStr, endOfDayISOFromDateStr } from '@/lib/dateUtils';
-import { clampPassengerCount, getPassengerLimit, PASSENGERS_PER_VEHICLE } from '@/lib/bookingLimits';
+import { clampPassengerCount, getPassengerLimit } from '@/lib/bookingLimits';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import ConflictNotification from '@/components/ConflictNotification';
 
@@ -933,7 +933,7 @@ const AdminManualBooking: React.FC = () => {
                 </div>
 
                 <div className="text-lg text-blue-600 bg-blue-100 p-2 rounded">
-                  💡 每車上限{PASSENGERS_PER_VEHICLE}人，目前{formData.vehicleCount}輛共{passengerLimit}人。回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
+                  💡 接駁車免費，回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
                 </div>
               </div>
             </div>

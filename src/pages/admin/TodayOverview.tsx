@@ -41,7 +41,7 @@ import ParkingSlotPicker from '@/components/admin/ParkingSlotPicker';
 import { calculatePrice } from '@/services/booking';
 import { formatDateTime, formatDateWithWeekday } from '@/lib/dateUtils';
 import { getDeparturePassengerCount, getTerminalLabel, normalizeTerminal } from '@/lib/bookingDisplay';
-import { clampPassengerCount, getPassengerLimit, PASSENGERS_PER_VEHICLE } from '@/lib/bookingLimits';
+import { clampPassengerCount, getPassengerLimit } from '@/lib/bookingLimits';
 import DateInput from '@/components/ui/date-input';
 import {
   Tooltip,
@@ -1404,7 +1404,7 @@ const AdminTodayOverview: React.FC = () => {
                 </div>
               </div>
               <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
-                💡 每車上限{PASSENGERS_PER_VEHICLE}人，目前{editForm.vehicleCount}輛共{editPassengerLimit}人。回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
+                💡 接駁車免費，回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
               </div>
             </div>
             <div className="space-y-2">

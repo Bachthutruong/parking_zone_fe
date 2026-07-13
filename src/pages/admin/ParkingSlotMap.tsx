@@ -38,7 +38,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { formatDateTime } from '@/lib/dateUtils';
-import { clampPassengerCount, getPassengerLimit, PASSENGERS_PER_VEHICLE } from '@/lib/bookingLimits';
+import { clampPassengerCount, getPassengerLimit } from '@/lib/bookingLimits';
 import type { Booking } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
@@ -916,7 +916,7 @@ const ParkingSlotMap: React.FC = () => {
                   </div>
                 </div>
                 <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
-                  💡 每車上限{PASSENGERS_PER_VEHICLE}人，目前{editForm.vehicleCount}輛共{editPassengerLimit}人。回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
+                  💡 接駁車免費，回程免費接駁人數以去程實際進場人數為準，若回程多出人數，每人加收 $100。
                 </div>
               </div>
               <div className="space-y-2">
