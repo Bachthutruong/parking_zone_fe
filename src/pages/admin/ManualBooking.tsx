@@ -847,7 +847,7 @@ const AdminManualBooking: React.FC = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="departurePassengerCount">接駁人數 (上限{passengerLimit}人)</Label>
+                      <Label htmlFor="departurePassengerCount">接駁人數</Label>
                       <Input
                         id="departurePassengerCount"
                         type="number"
@@ -898,7 +898,7 @@ const AdminManualBooking: React.FC = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="returnPassengerCount">接駁人數 (上限{passengerLimit}人)</Label>
+                      <Label htmlFor="returnPassengerCount">接駁人數</Label>
                       <Input
                         id="returnPassengerCount"
                         type="number"

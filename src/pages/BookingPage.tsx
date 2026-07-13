@@ -33,7 +33,7 @@ import { getSystemSettings, getAllParkingTypes, getAllAddonServices as getAddonS
 import { checkParkingTypeMaintenance } from '@/services/maintenance';
 import { checkVIPStatus } from '@/services/auth';
 import { formatDate, formatDateWithWeekday, formatDateTime, startOfDayISO, endOfDayISO, getDateStrTaiwan, getNextDayStrTaiwan, startOfDayISOFromDateStr, endOfDayISOFromDateStr } from '@/lib/dateUtils';
-import { clampPassengerCount, getPassengerLimit, PASSENGERS_PER_VEHICLE } from '@/lib/bookingLimits';
+import { clampPassengerCount, getPassengerLimit } from '@/lib/bookingLimits';
 import type { SystemSettings, ParkingType, AddonService, BookingFormData } from '@/types';
 import ImageGallery from '@/components/ImageGallery';
 
@@ -1044,7 +1044,7 @@ const BookingPage: React.FC = () => {
                             </div>
 
                             <div className="space-y-2">
-                              <Label htmlFor="departurePassengerCount" className="text-sm font-medium text-gray-700">接駁人數 (上限{passengerLimit}人)</Label>
+                              <Label htmlFor="departurePassengerCount" className="text-sm font-medium text-gray-700">接駁人數</Label>
                               <Input
                                 id="departurePassengerCount"
                                 type="number"
@@ -1062,9 +1062,7 @@ const BookingPage: React.FC = () => {
                                 })}
                                 placeholder="0"
                               />
-                              <p className="text-xs text-gray-500">
-                                每車上限{PASSENGERS_PER_VEHICLE}人，目前共{passengerLimit}人；多一個人現場收100元/人
-                              </p>
+
                             </div>
 
                             <div className="space-y-2">
@@ -1105,7 +1103,7 @@ const BookingPage: React.FC = () => {
                             </div>
 
                             <div className="space-y-2">
-                              <Label htmlFor="returnPassengerCount" className="text-sm font-medium text-gray-700">接駁人數 (上限{passengerLimit}人)</Label>
+                              <Label htmlFor="returnPassengerCount" className="text-sm font-medium text-gray-700">接駁人數</Label>
                               <Input
                                 id="returnPassengerCount"
                                 type="number"
@@ -1145,7 +1143,7 @@ const BookingPage: React.FC = () => {
                         </div>
 
                         <div className="text-lg text-blue-600 bg-blue-100 p-2 rounded mt-4">
-                          💡 溫馨提醒：請務必填寫正確人數與行李數，以便安排車輛接送。接駁人數每車上限{PASSENGERS_PER_VEHICLE}人，目前{formData.vehicleCount}輛共{passengerLimit}人。
+                          💡 溫馨提醒：請務必填寫正確人數與行李數，以便安排車輛接送。
                         </div>
                       </div>
 

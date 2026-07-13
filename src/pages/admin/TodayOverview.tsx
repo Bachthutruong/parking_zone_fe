@@ -1337,7 +1337,7 @@ const AdminTodayOverview: React.FC = () => {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="today-edit-departurePassengerCount">接駁人數 (上限{editPassengerLimit}人)</Label>
+                    <Label htmlFor="today-edit-departurePassengerCount">接駁人數</Label>
                     <Input
                       id="today-edit-departurePassengerCount"
                       type="number"
@@ -1378,7 +1378,7 @@ const AdminTodayOverview: React.FC = () => {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="today-edit-returnPassengerCount">接駁人數 (上限{editPassengerLimit}人)</Label>
+                    <Label htmlFor="today-edit-returnPassengerCount">接駁人數</Label>
                     <Input
                       id="today-edit-returnPassengerCount"
                       type="number"
